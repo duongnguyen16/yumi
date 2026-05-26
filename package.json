@@ -1,0 +1,14 @@
+{
+  "name": "wdp301",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:web\" \"pnpm dev:mobile\"",
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:mobile": "pnpm --filter mobile start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
