@@ -10,11 +10,14 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   app.use(helmet());
-  app.enableCors();
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  });
   app.setGlobalPrefix('api');
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const config = new DocumentBuilder()
     .setTitle('WDP301 API')
@@ -27,4 +30,6 @@ async function bootstrap() {
   const port = parseInt(configService.get<string>('PORT') ?? '3000', 10);
   await app.listen(port);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.log('Error starting the server: ', err);
+});
