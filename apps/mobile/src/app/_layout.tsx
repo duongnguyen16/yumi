@@ -1,12 +1,15 @@
-import { View } from 'react-native';
-import '../../global.css';
-import { Stack } from 'expo-router';
+import { Stack } from "expo-router";
+import "../../global.css";
+import UserContextProvider from "@/contexts/userContext";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Text } from "react-native-paper";
 
 export default function RootLayout() {
   return (
-  <View style={{flex:1}}>
- <Stack screenOptions={{ headerShown: false }} />
-  </View>
- 
-);
+    <SafeAreaProvider>
+      <UserContextProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </UserContextProvider>
+    </SafeAreaProvider>
+  );
 }

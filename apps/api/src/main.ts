@@ -28,7 +28,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = parseInt(configService.get<string>('PORT') ?? '3000', 10);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap().catch((err) => {
   console.log('Error starting the server: ', err);

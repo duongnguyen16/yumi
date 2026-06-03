@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  Post,
-  Req,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
 import { LoginDTO } from './dto/login.dto';
 import AuthService from './auth.service';
 
@@ -22,7 +15,8 @@ export class AuthController {
       }
       return result;
     } catch (error) {
-      throw new UnauthorizedException(error.message || 'Login failed');
+      console.error('Login error:', error);
+      throw new UnauthorizedException('Login failed');
     }
   }
 }

@@ -40,7 +40,6 @@ export default class AuthService {
           expiresIn: '1h',
         },
       );
-      console.log(this.configService.get('REFRESH_TOKEN_SECRET'));
       const refreshToken = this.jwtService.sign(
         { userId: user._id },
         {
@@ -50,6 +49,7 @@ export default class AuthService {
       );
       return {
         success: true,
+        user,
         accessToken,
         refreshToken,
       };
