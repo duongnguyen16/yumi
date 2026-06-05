@@ -1,12 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Platform } from "react-native";
+import {
+  deleteAllTokens,
+  getAccessToken,
+  getAccessTokenAsync,
+  getRefreshTokens,
+  saveAccessTokens,
+  setAccessToken,
+} from "./tokenStorage";
 
 const getBaseUrl = () => {
   if (__DEV__ && Platform.OS === "android") {
     return "http://10.0.2.2:9999/api";
   }
-  return "http://192.168.120.53:9999/api";
+  return "http://10.33.93.119:9999/api";
 };
 
 const BASE_URL = getBaseUrl();
@@ -20,11 +28,46 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem("accessToken");
+  const token = getAccessToken();
+  console.log("Attaching access token to request:", token);
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const originalReq = error.config;
+    const originalRequest = error.config;
+    if (error?.response?.status === 401 && !originalReq._retry) {
+      originalReq._retry = true;
+      try {
+        const refreshToken = await getRefreshTokens();
+        console.log(
+          "Attempting to refresh token with refresh token:",
+          refreshToken,
+        );
+        if (!refreshToken) {
+          Promise.reject(error);
+        }
+        const res = await axios.post(`${BASE_URL}/auth/refresh`, {
+          refreshToken: refreshToken,
+        });
+        if (res.data?.success) {
+          setAccessToken(res.data.accessToken);
+          await saveAccessTokens(res.data.accessToken);
+          originalRequest.headers["Authorization"] =
+            `Bearer ${res.data.accessToken}`;
+          return api(originalRequest);
+        }
+      } catch (err) {
+        console.error("Error refreshing token:", err);
+        await deleteAllTokens();
+      }
+    }
+  },
+);
 
 export default api;

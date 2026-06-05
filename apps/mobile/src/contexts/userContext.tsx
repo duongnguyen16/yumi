@@ -1,11 +1,14 @@
-import { useRootNavigationState, useRouter } from "expo-router";
+import { authMe } from "@/service/authService";
+import {
+  getAccessToken,
+  getAccessTokenAsync,
+  setAccessToken,
+} from "@/service/tokenStorage";
+import { useRouter } from "expo-router";
 import { createContext, ReactNode, useEffect, useState } from "react";
 import { View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 
-type token = {
-  accessToken: string;
-  refreshToken: string;
-};
 export const userContext = createContext<any>(null);
 
 export default function UserContextProvider({
@@ -14,40 +17,46 @@ export default function UserContextProvider({
   children: ReactNode;
 }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const rootNavigationState = useRootNavigationState();
+  const [loading, setLoading] = useState(true);
+  const accessToken = getAccessToken();
   const router = useRouter();
 
   useEffect(() => {
-    if (!rootNavigationState?.key) return;
-    if (loading) {
-      return;
-    }
-    if (accessToken) {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(false);
-    }
-  }, [accessToken, loading]);
-
-  useEffect(() => {
-    if (!rootNavigationState?.key) return;
-    if (loading) {
-      return;
-    }
-    if (!isLoggedIn) {
-      setUser(null);
-      console.log("User is not logged in, redirecting to login page");
-      router.replace("/auth/login");
-    } else {
-      router.replace("/home");
-    }
-  }, [isLoggedIn, loading]);
+    const checkAccessToken = async () => {
+      const token = await getAccessTokenAsync();
+      if (token) {
+        setAccessToken(token);
+        try {
+          const res = await authMe();
+          if (res.success) {
+            setUser(res.user);
+            router.replace("/home");
+          } else {
+            setUser(null);
+            setAccessToken(null);
+            router.replace("/auth/login");
+          }
+        } catch (error) {
+          setUser(null);
+          setAccessToken(null);
+          router.replace("/auth/login");
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+        router.replace("/auth/login");
+      }
+    };
+    checkAccessToken();
+  }, []);
 
   if (loading) {
-    return <View></View>;
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
   }
   return (
     <userContext.Provider
@@ -56,8 +65,6 @@ export default function UserContextProvider({
         setUser,
         accessToken,
         setAccessToken,
-        isLoggedIn,
-        setIsLoggedIn,
       }}
     >
       {children}

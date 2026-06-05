@@ -1,28 +1,45 @@
+import { userContext } from "@/contexts/userContext";
 import { login } from "@/service/authService";
-import { Stack } from "expo-router";
+import { Redirect, Stack, useRouter } from "expo-router";
 import { Link } from "expo-router/react-navigation";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
-  console.log("Login page");
   const [showPassword, setShowPassword] = useState<boolean>(true);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const { user, setUser, setAccessToken } = useContext(userContext);
+  const router = useRouter();
   const handleLogin = async () => {
     try {
-      console.log("Attempting to log in with email:", email);
+      setLoading(true);
+      setError("");
       const response = await login(email, password);
-      console.log("Login response:", response);
-      if (response.success) {
-        console.log("Login successful:", response);
+      if (response?.success) {
+        setUser(response.user);
+        setAccessToken(response.accessToken);
+        router.replace("/home");
+      } else {
+        setError(
+          response?.message ||
+            "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
+        );
       }
     } catch (error) {
+      setError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
       console.error("Error occurred while logging in:", error);
+    } finally {
+      setLoading(false);
     }
   };
+  if (user) {
+    return <Redirect href="/home" />;
+  }
   return (
     <SafeAreaView style={{ flex: 1, padding: 10 }}>
       <Stack.Screen
@@ -61,11 +78,14 @@ export default function Login() {
               onChangeText={setPassword}
               right={
                 <TextInput.Icon
-                  icon=""
+                  icon="eye"
                   onPress={() => setShowPassword(!showPassword)}
                 />
               }
             />
+            {error ? (
+              <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
+            ) : null}
             <Text
               style={{ color: "orange", fontSize: 16, marginTop: 5 }}
               onPress={() => console.log("Quen MK")}
@@ -74,12 +94,15 @@ export default function Login() {
             </Text>
           </View>
         </View>
+
         <View style={{ flex: 1, justifyContent: "flex-end", gap: 10 }}>
           <Button
             mode="contained"
             buttonColor="orange"
             style={{ padding: 10 }}
             onPress={handleLogin}
+            loading={loading}
+            disabled={loading}
           >
             Đăng nhập
           </Button>

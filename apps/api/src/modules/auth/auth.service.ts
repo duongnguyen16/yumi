@@ -19,7 +19,7 @@ export default class AuthService {
       if (!user) {
         return {
           success: false,
-          message: 'Wrong email or password',
+          message: 'Sai mật khẩu hoặc email',
         };
       }
       // const isPasswordValid = await bcrypt.compare(
@@ -30,7 +30,7 @@ export default class AuthService {
       if (!isPasswordValid) {
         return {
           success: false,
-          message: 'Wrong email or password',
+          message: 'Sai mật khẩu hoặc email',
         };
       }
       const accessToken = this.jwtService.sign(
@@ -56,10 +56,30 @@ export default class AuthService {
     } catch (error) {
       console.error('Login error:', error);
       return {
-        message: 'An error occurred while logging in',
+        message: 'Đã xảy ra lỗi khi đăng nhập',
         success: false,
       };
     }
   }
-  async logout(userId: string) {}
+  async authMe(userId: string) {
+    try {
+      const user = await this.userModel.findById(userId, '-password_hash');
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+      return {
+        success: true,
+        user,
+      };
+    } catch (error) {
+      console.error('AuthMe error:', error);
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi xác thực người dùng',
+      };
+    }
+  }
 }
