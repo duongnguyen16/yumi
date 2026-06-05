@@ -28,8 +28,8 @@ export default function UserContextProvider({
         setAccessToken(token);
         try {
           const res = await authMe();
-          if (res.success) {
-            setUser(res.user);
+          if (res?.success) {
+            setUser(res?.user);
             router.replace("/home");
           } else {
             setUser(null);

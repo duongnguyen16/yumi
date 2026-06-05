@@ -21,8 +21,8 @@ export default function Login() {
       setError("");
       const response = await login(email, password);
       if (response?.success) {
-        setUser(response.user);
-        setAccessToken(response.accessToken);
+        setUser(response?.user);
+        setAccessToken(response?.accessToken);
         router.replace("/home");
       } else {
         setError(
