@@ -25,7 +25,7 @@ export class AuthController {
       return result;
     } catch (error) {
       console.error('Login error:', error);
-      throw new UnauthorizedException('Đăng nhập thất bại');
+      throw new UnauthorizedException(error.message || 'Đăng nhập thất bại');
     }
   }
   @Get('me')
@@ -41,7 +41,9 @@ export class AuthController {
       return await this.authService.authMe(userId);
     } catch (error) {
       console.error('AuthMe error:', error);
-      throw new UnauthorizedException('Đã xảy ra lỗi khi xác thực người dùng');
+      throw new UnauthorizedException(
+        error.message || 'Đã xảy ra lỗi khi xác thực người dùng',
+      );
     }
   }
 }
