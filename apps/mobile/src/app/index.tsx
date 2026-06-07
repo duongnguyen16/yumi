@@ -4,11 +4,11 @@ import { useContext } from "react";
 import { Text, View } from "react-native";
 
 export default function Index() {
-  const { isLoggedIn } = useContext(userContext);
-  if (isLoggedIn) {
+  const { user } = useContext(userContext);
+  if (user) {
     return <Redirect href="/home" />;
   }
-  if (!isLoggedIn) {
+  if (!user) {
     return <Redirect href="/auth/login" />;
   }
   return (
