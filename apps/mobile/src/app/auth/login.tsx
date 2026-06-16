@@ -19,6 +19,11 @@ export default function Login() {
     try {
       setLoading(true);
       setError("");
+      if (!email || !password) {
+        setError("Vui lòng nhập đầy đủ thông tin.");
+        setLoading(false);
+        return;
+      }
       const response = await login(email, password);
       if (response?.success) {
         setUser(response?.user);
@@ -84,7 +89,7 @@ export default function Login() {
               }
             />
             {error ? (
-              <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
+              <Text style={{ color: "red", marginTop: 5 }}>{error}</Text>
             ) : null}
             <Text
               style={{ color: "orange", fontSize: 16, marginTop: 5 }}
@@ -99,10 +104,10 @@ export default function Login() {
           <Button
             mode="contained"
             buttonColor="orange"
-            style={{ padding: 10 }}
             onPress={handleLogin}
             loading={loading}
             disabled={loading}
+            style={{ height: "12%", justifyContent: "center" }}
           >
             Đăng nhập
           </Button>
