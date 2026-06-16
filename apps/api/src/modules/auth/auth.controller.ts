@@ -10,6 +10,7 @@ import {
 import { LoginDTO } from './dto/login.dto';
 import AuthService from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
+import { NodeEventHandler } from 'rxjs/internal/observable/fromEvent';
 
 @Controller('auth')
 export class AuthController {
@@ -25,7 +26,7 @@ export class AuthController {
       return result;
     } catch (error) {
       console.error('Login error:', error);
-      throw new UnauthorizedException(error.message || 'Đăng nhập thất bại');
+      throw new UnauthorizedException(error?.message || 'Đăng nhập thất bại');
     }
   }
   @Get('me')
