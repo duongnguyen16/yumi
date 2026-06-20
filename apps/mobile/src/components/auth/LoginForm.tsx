@@ -5,6 +5,7 @@ import { Link } from "expo-router/react-navigation";
 import { useContext, useState } from "react";
 import { View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
+import { KeyboardAvoidingView } from "react-native";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState<boolean>(true);
@@ -44,11 +45,12 @@ export default function LoginForm() {
   return (
     <View style={{ flex: 1, gap: 10 }}>
       <View>
-        <Text style={{ fontSize: 30, fontWeight: "bold", color: "black" }}>
-          Xin chào!
+        <Text style={{ fontSize: 50 }}>
+          <Text style={{ color: "orange" }}>Yu</Text>
+          <Text style={{ color: "pink" }}>Mi</Text>
         </Text>
-        <Text style={{ fontSize: 16, marginTop: 5 }}>
-          Đăng nhập để lưu địa điểm và viết review của bạn
+        <Text style={{ fontSize: 19, marginTop: 5 }}>
+          Xin chào, hôm nay bạn muốn đi đâu? =))
         </Text>
       </View>
       <View style={{ marginTop: 20 }}>
@@ -71,7 +73,7 @@ export default function LoginForm() {
             onChangeText={setPassword}
             right={
               <TextInput.Icon
-                icon="eye"
+                icon={showPassword ? "eye-off" : "eye"}
                 onPress={() => setShowPassword(!showPassword)}
               />
             }
@@ -95,7 +97,7 @@ export default function LoginForm() {
           onPress={handleLogin}
           loading={loading}
           disabled={loading}
-          style={{ height: "12%", justifyContent: "center" }}
+          style={{ justifyContent: "center", height: 50 }}
         >
           Đăng nhập
         </Button>
