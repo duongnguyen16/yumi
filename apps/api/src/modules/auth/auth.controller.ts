@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
+  InternalServerErrorException,
   Post,
   Request,
   UnauthorizedException,
@@ -10,7 +12,7 @@ import {
 import { LoginDTO } from './dto/login.dto';
 import AuthService from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
-import { NodeEventHandler } from 'rxjs/internal/observable/fromEvent';
+// import { NodeEventHandler } from 'rxjs/internal/observable/fromEvent';
 
 @Controller('auth')
 export class AuthController {
@@ -21,12 +23,18 @@ export class AuthController {
       const { email, password } = body;
       const result = await this.authService.login(email, password);
       if (!result.success) {
-        throw new UnauthorizedException(result.message);
+        if (result.statusCode === 403) {
+          throw new ForbiddenException(result.message);
+        } else if (result.statusCode === 500) {
+          throw new InternalServerErrorException(result.message);
+        } else {
+          throw new UnauthorizedException(result.message);
+        }
       }
       return result;
     } catch (error) {
       console.error('Login error:', error);
-      throw new UnauthorizedException(error?.message || 'Đăng nhập thất bại');
+      throw new UnauthorizedException('Đã xảy ra lỗi khi đăng nhập');
     }
   }
   @Get('me')
@@ -42,9 +50,7 @@ export class AuthController {
       return await this.authService.authMe(userId);
     } catch (error) {
       console.error('AuthMe error:', error);
-      throw new UnauthorizedException(
-        error.message || 'Đã xảy ra lỗi khi xác thực người dùng',
-      );
+      throw new UnauthorizedException('Đã xảy ra lỗi khi xác thực người dùng');
     }
   }
 }
