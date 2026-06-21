@@ -1,10 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Platform } from "react-native";
 import {
   deleteAllTokens,
   getAccessToken,
-  getAccessTokenAsync,
   getRefreshTokens,
   saveAccessTokens,
   setAccessToken,
@@ -50,7 +48,7 @@ api.interceptors.response.use(
           refreshToken,
         );
         if (!refreshToken) {
-          Promise.reject(error);
+          return Promise.reject(error);
         }
         const res = await axios.post(`${BASE_URL}/auth/refresh`, {
           refreshToken: refreshToken,
@@ -65,8 +63,10 @@ api.interceptors.response.use(
       } catch (err) {
         console.error("Error refreshing token:", err);
         await deleteAllTokens();
+        return Promise.reject(err);
       }
     }
+    return Promise.reject(error);
   },
 );
 
