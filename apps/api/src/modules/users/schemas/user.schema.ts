@@ -19,17 +19,17 @@ export class User {
   @Prop({ required: true, enum: ['user', 'admin', 'vendor'], default: 'user' })
   role!: string;
 
-  @Prop({ allowNull: true })
-  name?: string;
+  @Prop({ default: null })
+  name?: string | null;
 
-  @Prop({ allowNull: true })
-  phone?: string;
+  @Prop({ default: null })
+  phone?: string | null;
 
   @Prop({ default: false })
   phone_verified!: boolean;
 
-  @Prop({ allowNull: true })
-  avatar_url?: string;
+  @Prop({ default: null })
+  avatar_url?: string | null;
 
   @Prop({
     required: true,
@@ -37,6 +37,9 @@ export class User {
     default: 'active',
   })
   status!: string;
+
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

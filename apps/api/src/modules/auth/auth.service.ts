@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { UserDocument } from './schemas/user.schema';
+import { UserDocument } from '../users/schemas/user.schema';
 import { Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
