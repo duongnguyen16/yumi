@@ -2,11 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
   app.use(helmet());
@@ -17,6 +19,9 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
   });
   app.setGlobalPrefix('api');
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/api/uploads/',
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const config = new DocumentBuilder()
