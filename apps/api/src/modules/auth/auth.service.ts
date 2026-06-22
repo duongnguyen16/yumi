@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { UserDocument } from '../users/schemas/user.schema';
 import { Model } from 'mongoose';
-import bcrypt from 'bcryptjs';
+// import bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
@@ -20,6 +20,7 @@ export default class AuthService {
         return {
           success: false,
           message: 'Sai mật khẩu hoặc email',
+          statusCode: 401,
         };
       }
       // const isPasswordValid = await bcrypt.compare(
@@ -31,6 +32,7 @@ export default class AuthService {
         return {
           success: false,
           message: 'Sai mật khẩu hoặc email',
+          statusCode: 401,
         };
       }
       const accessToken = this.jwtService.sign(
@@ -47,6 +49,20 @@ export default class AuthService {
           expiresIn: '7d',
         },
       );
+      if (!accessToken || !refreshToken) {
+        return {
+          success: false,
+          message: 'Đã xảy ra lỗi khi tạo phiên đăng nhập',
+          statusCode: 500,
+        };
+      }
+      if (user.status === 'banned') {
+        return {
+          success: false,
+          message: 'Tài khoản của bạn đã bị cấm',
+          statusCode: 403,
+        };
+      }
       return {
         success: true,
         user,
@@ -58,6 +74,7 @@ export default class AuthService {
       return {
         message: 'Đã xảy ra lỗi khi đăng nhập',
         success: false,
+        statusCode: 500,
       };
     }
   }
