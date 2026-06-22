@@ -1,6 +1,6 @@
 import { userContext } from "@/contexts/userContext";
 import { login } from "@/service/authService";
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import { View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
@@ -107,7 +107,7 @@ export default function LoginForm() {
           Đăng nhập
         </Button>
         <Text style={{ textAlign: "center", fontSize: 16 }}>
-          Chưa có tài khoản? <Link href="/auth/register">Đăng ký</Link>
+          Chưa có tài khoản? Liên hệ quản trị viên để được hỗ trợ.
         </Text>
       </View>
     </View>

@@ -19,16 +19,16 @@ export class User {
   @Prop({ required: true, enum: ['user', 'admin', 'vendor'], default: 'user' })
   role!: string;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   name?: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   phone?: string | null;
 
   @Prop({ default: false })
   phone_verified!: boolean;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   avatar_url?: string | null;
 
   @Prop({
