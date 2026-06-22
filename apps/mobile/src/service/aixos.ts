@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import {
   deleteAllTokens,
@@ -9,10 +9,14 @@ import {
 } from "./tokenStorage";
 
 const getBaseUrl = () => {
+  const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
+  }
   if (__DEV__ && Platform.OS === "android") {
     return "http://10.0.2.2:9999/api";
   }
-  return "http://10.33.93.119:9999/api";
+  return "http://localhost:9999/api";
 };
 
 const BASE_URL = getBaseUrl();
@@ -22,12 +26,11 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 5000,
+  timeout: 10000,
 });
 
 api.interceptors.request.use(async (config) => {
   const token = getAccessToken();
-  console.log("Attaching access token to request:", token);
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -37,16 +40,19 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const originalReq = error.config;
-    const originalRequest = error.config;
-    if (error?.response?.status === 401 && !originalReq._retry) {
-      originalReq._retry = true;
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+    const isAuthRequest = originalRequest?.url?.startsWith("/auth/");
+    if (
+      error?.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthRequest
+    ) {
+      originalRequest._retry = true;
       try {
         const refreshToken = await getRefreshTokens();
-        console.log(
-          "Attempting to refresh token with refresh token:",
-          refreshToken,
-        );
         if (!refreshToken) {
           return Promise.reject(error);
         }
@@ -60,8 +66,8 @@ api.interceptors.response.use(
             `Bearer ${res.data.accessToken}`;
           return api(originalRequest);
         }
+        await deleteAllTokens();
       } catch (err) {
-        console.error("Error refreshing token:", err);
         await deleteAllTokens();
         return Promise.reject(err);
       }

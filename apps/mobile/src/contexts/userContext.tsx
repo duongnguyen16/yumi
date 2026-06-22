@@ -5,18 +5,39 @@ import {
   setAccessToken,
 } from "@/service/tokenStorage";
 import { useRouter } from "expo-router";
-import { createContext, ReactNode, useEffect, useState } from "react";
+import {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
 import { View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 
-export const userContext = createContext<any>(null);
+type AuthenticatedUser = Record<string, unknown>;
+
+type UserContextValue = {
+  user: AuthenticatedUser | null;
+  setUser: Dispatch<SetStateAction<AuthenticatedUser | null>>;
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
+};
+
+export const userContext = createContext<UserContextValue>({
+  user: null,
+  setUser: () => undefined,
+  accessToken: null,
+  setAccessToken: () => undefined,
+});
 
 export default function UserContextProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState(true);
   const accessToken = getAccessToken();
   const router = useRouter();
@@ -36,7 +57,7 @@ export default function UserContextProvider({
             setAccessToken(null);
             router.replace("/auth/login");
           }
-        } catch (error) {
+        } catch {
           setUser(null);
           setAccessToken(null);
           router.replace("/auth/login");
@@ -49,7 +70,7 @@ export default function UserContextProvider({
       }
     };
     checkAccessToken();
-  }, []);
+  }, [router]);
 
   if (loading) {
     return (
