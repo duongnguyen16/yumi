@@ -12,6 +12,7 @@ import { Throttle } from '@nestjs/throttler';
 import AuthService from './auth.service';
 import { ForgotPasswordDTO } from './dto/forgot-password.dto';
 import { LoginDTO } from './dto/login.dto';
+import { RefreshTokenDTO } from './dto/refresh-token.dto';
 import { ResetPasswordDTO } from './dto/reset-password.dto';
 
 @Controller('auth')
@@ -21,6 +22,12 @@ export class AuthController {
   @Post('login')
   async login(@Body() body: LoginDTO) {
     return this.authService.login(body.email, body.password);
+  }
+
+  @Post('refresh')
+  @Throttle({ default: { limit: 10, ttl: 15 * 60 * 1000 } })
+  async refresh(@Body() body: RefreshTokenDTO) {
+    return this.authService.refresh(body.refreshToken);
   }
 
   @Post('forgot-password')

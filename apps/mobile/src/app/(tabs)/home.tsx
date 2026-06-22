@@ -1,7 +1,7 @@
 import { userContext } from "@/contexts/userContext";
 import { deleteAllTokens, setAccessToken } from "@/service/tokenStorage";
 import { Redirect, useRouter } from "expo-router";
-import React, { useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import { Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 

@@ -48,6 +48,7 @@ function createService() {
       .fn()
       .mockReturnValueOnce('access-token')
       .mockReturnValueOnce('refresh-token'),
+    verifyAsync: jest.fn(),
   };
   const configService = {
     get: jest.fn((key: string) => {
@@ -160,6 +161,43 @@ describe('AuthService password recovery', () => {
     );
   });
 
+  it('does not reveal an existing account when email delivery fails', async () => {
+    const { service, userModel, passwordResetCodeModel, emailService } =
+      createService();
+    userModel.findOne.mockResolvedValue({ _id: 'user-id' });
+    passwordResetCodeModel.findOne.mockResolvedValue(null);
+    passwordResetCodeModel.updateMany.mockResolvedValue({});
+    passwordResetCodeModel.create.mockResolvedValue({ _id: 'code-id' });
+    passwordResetCodeModel.deleteOne.mockResolvedValue({});
+    emailService.sendCode.mockRejectedValue(new Error('Resend unavailable'));
+
+    const result = await service.forgotPassword(email);
+
+    expect(result.success).toBe(true);
+    expect(passwordResetCodeModel.deleteOne).toHaveBeenCalledWith({
+      _id: 'code-id',
+    });
+  });
+
+  it('issues a new access token from a valid refresh token', async () => {
+    const { service, userModel, jwtService } = createService();
+    jwtService.verifyAsync.mockResolvedValue({ userId: 'user-id' });
+    userModel.findById.mockResolvedValue({
+      _id: 'user-id',
+      status: 'active',
+    });
+
+    const result = await service.refresh('valid-refresh-token');
+
+    expect(result).toEqual({
+      success: true,
+      accessToken: 'access-token',
+    });
+    expect(jwtService.verifyAsync).toHaveBeenCalledWith('valid-refresh-token', {
+      secret: 'refresh-secret',
+    });
+  });
+
   it('rejects an incorrect code and increments its attempts', async () => {
     const { service, passwordResetCodeModel } = createService();
     const resetCode = {
@@ -211,6 +249,35 @@ describe('AuthService password recovery', () => {
     const update = userModel.updateOne.mock.calls[0][1];
     expect(await bcrypt.compare('password123', update.$set.password_hash)).toBe(
       true,
+    );
+  });
+
+  it('restores a claimed code when the password update fails', async () => {
+    const { service, userModel, passwordResetCodeModel } = createService();
+    const resetCode = {
+      _id: 'code-id',
+      user_id: 'user-id',
+      email,
+      code_digest: digestPasswordResetCode(email, '123456', resetSecret),
+      expires_at: new Date(Date.now() + 60_000),
+      attempts: 0,
+    };
+    passwordResetCodeModel.findOne.mockReturnValue({
+      sort: jest.fn().mockResolvedValue(resetCode),
+    });
+    passwordResetCodeModel.findOneAndUpdate.mockResolvedValue(resetCode);
+    passwordResetCodeModel.updateOne.mockResolvedValue({});
+    userModel.updateOne.mockRejectedValue(new Error('database unavailable'));
+
+    await expect(
+      service.resetPassword(email, '123456', 'password123'),
+    ).rejects.toThrow('database unavailable');
+    expect(passwordResetCodeModel.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: 'code-id',
+        consumed_at: expect.any(Date),
+      }),
+      { $set: { consumed_at: null } },
     );
   });
 });

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
+import { UserDocument } from '../users/schemas/user.schema';
 import { PasswordResetEmailService } from './password-reset-email.service';
 import {
   digestPasswordResetCode,
@@ -18,7 +20,6 @@ import {
   verifyPasswordResetCodeDigest,
 } from './password-reset.util';
 import { PasswordResetCodeDocument } from './schemas/password-reset-code.schema';
-import { UserDocument } from './schemas/user.schema';
 
 const RESET_CODE_TTL_MS = 10 * 60 * 1000;
 const RESET_CODE_RESEND_COOLDOWN_MS = 60 * 1000;
@@ -30,6 +31,8 @@ const INVALID_RESET_CODE_MESSAGE = 'Mã xác nhận không hợp lệ hoặc đ�
 
 @Injectable()
 export default class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel('User') private readonly userModel: Model<UserDocument>,
     @InjectModel('PasswordResetCode')
@@ -99,6 +102,51 @@ export default class AuthService {
     };
   }
 
+  async refresh(refreshToken: string) {
+    const refreshTokenSecret = this.configService.get<string>(
+      'REFRESH_TOKEN_SECRET',
+    );
+    const accessTokenSecret = this.configService.get<string>(
+      'ACCESS_TOKEN_SECRET',
+    );
+    if (!refreshTokenSecret || !accessTokenSecret) {
+      throw new InternalServerErrorException(
+        'Dịch vụ đăng nhập chưa được cấu hình',
+      );
+    }
+
+    let payload: { userId?: string };
+    try {
+      payload = await this.jwtService.verifyAsync<{ userId?: string }>(
+        refreshToken,
+        { secret: refreshTokenSecret },
+      );
+    } catch {
+      throw new UnauthorizedException(
+        'Refresh token không hợp lệ hoặc đã hết hạn',
+      );
+    }
+
+    if (!payload.userId) {
+      throw new UnauthorizedException(
+        'Refresh token không hợp lệ hoặc đã hết hạn',
+      );
+    }
+
+    const user = await this.userModel.findById(payload.userId);
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException('Tài khoản không còn khả dụng');
+    }
+
+    return {
+      success: true,
+      accessToken: this.jwtService.sign(
+        { userId: user._id },
+        { secret: accessTokenSecret, expiresIn: '1h' },
+      ),
+    };
+  }
+
   async forgotPassword(email: string) {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await this.userModel.findOne({ email: normalizedEmail });
@@ -140,7 +188,10 @@ export default class AuthService {
       await this.passwordResetEmailService.sendCode(normalizedEmail, code);
     } catch (error) {
       await this.passwordResetCodeModel.deleteOne({ _id: resetCode._id });
-      throw error;
+      this.logger.error(
+        `Failed to send password reset email for user ${String(user._id)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
 
     return { success: true, message: GENERIC_FORGOT_MESSAGE };
@@ -208,13 +259,25 @@ export default class AuthService {
       throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);
-    const updateResult = await this.userModel.updateOne(
-      { _id: consumedCode.user_id, email: normalizedEmail },
-      { $set: { password_hash: passwordHash } },
-    );
-    if (updateResult.matchedCount !== 1) {
-      throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
+    try {
+      const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);
+      const updateResult = await this.userModel.updateOne(
+        { _id: consumedCode.user_id, email: normalizedEmail },
+        { $set: { password_hash: passwordHash } },
+      );
+      if (updateResult.matchedCount !== 1) {
+        throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
+      }
+    } catch (error) {
+      await this.passwordResetCodeModel.updateOne(
+        {
+          _id: consumedCode._id,
+          consumed_at: now,
+          expires_at: { $gt: new Date() },
+        },
+        { $set: { consumed_at: null } },
+      );
+      throw error;
     }
 
     await this.passwordResetCodeModel.updateMany(
