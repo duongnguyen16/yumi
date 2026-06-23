@@ -1,7 +1,6 @@
 import { userContext } from "@/contexts/userContext";
 import { login } from "@/service/authService";
-import { useRouter } from "expo-router";
-import { Link } from "expo-router/react-navigation";
+import { useRouter, Link } from "expo-router";
 import { useContext, useState } from "react";
 import { View } from "react-native";
 import { Button, Text, TextInput } from "react-native-paper";
