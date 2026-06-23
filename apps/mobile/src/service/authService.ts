@@ -19,10 +19,16 @@ const login = async (email: string, password: string) => {
         message: response.data.message,
       };
     }
-  } catch (error) {
-    console.error("Error logging in:", error);
     return {
       success: false,
+      message: response.data?.message || "Đăng nhập thất bại",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error.response?.data?.message ||
+        "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
     };
   }
 };
