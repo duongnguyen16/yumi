@@ -22,7 +22,9 @@ export default class AuthService {
   ) {}
   async login(email: string, password: string) {
     try {
-      const user = await this.userModel.findOne({ email });
+      const user = await this.userModel
+        .findOne({ email })
+        .select('+passwordHash');
       if (!user) {
         throw new UnauthorizedException('Sai mật khẩu hoặc email');
       }
@@ -30,6 +32,7 @@ export default class AuthService {
       //   password,
       //   user.password_hash,
       // );
+      console.log(user.passwordHash, password);
       const isPasswordValid = password === user.passwordHash;
       if (!isPasswordValid) {
         throw new UnauthorizedException('Sai mật khẩu hoặc email');
@@ -58,10 +61,10 @@ export default class AuthService {
         refreshToken,
       };
     } catch (error) {
+      console.log('Login error:', error);
       if (error instanceof HttpException) {
         throw error;
       }
-      console.error('Login error:', error);
       throw new InternalServerErrorException('Đã xảy ra lỗi khi đăng nhập');
     }
   }
