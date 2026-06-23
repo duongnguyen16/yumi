@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
+import { SchemaModule } from './common/schemas/schema.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthModule } from './modules/auth/auth.module';
       throttlers: [{ ttl: 60000, limit: 10 }],
     }),
     AuthModule,
+    SchemaModule,
   ],
 })
 export class AppModule {}

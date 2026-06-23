@@ -6,23 +6,33 @@ export type ReportDocument = HydratedDocument<Report>;
 
 @Schema({ timestamps: true, collection: 'reports' })
 export class Report {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, index: true })
-  reporterId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
+  reporterId!: Types.ObjectId;
 
   @Prop({ type: String, enum: ReportTargetType, required: true, index: true })
-  targetType: ReportTargetType;
+  targetType!: ReportTargetType;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true, index: true })
-  targetId: Types.ObjectId;
+  targetId!: Types.ObjectId;
 
   @Prop({ trim: true, required: true })
-  reason: string;
+  reason!: string;
 
   @Prop({ trim: true })
   description?: string;
 
-  @Prop({ type: String, enum: ReportStatus, default: ReportStatus.PENDING, index: true })
-  status: ReportStatus;
+  @Prop({
+    type: String,
+    enum: ReportStatus,
+    default: ReportStatus.PENDING,
+    index: true,
+  })
+  status!: ReportStatus;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
   handledBy?: Types.ObjectId;

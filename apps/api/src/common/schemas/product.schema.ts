@@ -5,11 +5,16 @@ export type ProductDocument = HydratedDocument<Product>;
 
 @Schema({ timestamps: true, collection: 'products' })
 export class Product {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Location', required: true, index: true })
-  locationId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Location',
+    required: true,
+    index: true,
+  })
+  locationId!: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
-  name: string;
+  name!: string;
 
   @Prop({ trim: true })
   imageUrl?: string;

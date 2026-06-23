@@ -4,16 +4,24 @@ import { TrustEventType } from './common.enums';
 
 export type TrustEventDocument = HydratedDocument<TrustEvent>;
 
-@Schema({ timestamps: { createdAt: true, updatedAt: false }, collection: 'trust_events' })
+@Schema({
+  timestamps: { createdAt: true, updatedAt: false },
+  collection: 'trust_events',
+})
 export class TrustEvent {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
+  userId!: Types.ObjectId;
 
   @Prop({ type: String, enum: TrustEventType, required: true, index: true })
-  type: TrustEventType;
+  type!: TrustEventType;
 
   @Prop({ type: Number, required: true })
-  pointChange: number;
+  pointChange!: number;
 
   @Prop({ trim: true })
   reason?: string;

@@ -6,13 +6,13 @@ import { ImageAsset, ImageAssetSchema } from './common.embedded';
 @Schema({ _id: false })
 export class ReviewReply {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  vendorId: Types.ObjectId;
+  vendorId!: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
-  content: string;
+  content!: string;
 
   @Prop({ type: Date, default: Date.now })
-  createdAt: Date;
+  createdAt!: Date;
 }
 export const ReviewReplySchema = SchemaFactory.createForClass(ReviewReply);
 
@@ -20,23 +20,38 @@ export type ReviewDocument = HydratedDocument<Review>;
 
 @Schema({ timestamps: true, collection: 'reviews' })
 export class Review {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Location', required: true, index: true })
-  locationId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Location',
+    required: true,
+    index: true,
+  })
+  locationId!: Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
+  userId!: Types.ObjectId;
 
   @Prop({ type: Number, required: true, min: 1, max: 5 })
-  rating: number;
+  rating!: number;
 
   @Prop({ required: true, trim: true, minlength: 20 })
-  comment: string;
+  comment!: string;
 
   @Prop({ type: [ImageAssetSchema], default: [] })
-  images: ImageAsset[];
+  images!: ImageAsset[];
 
-  @Prop({ type: String, enum: ReviewStatus, default: ReviewStatus.PUBLISHED, index: true })
-  status: ReviewStatus;
+  @Prop({
+    type: String,
+    enum: ReviewStatus,
+    default: ReviewStatus.PUBLISHED,
+    index: true,
+  })
+  status!: ReviewStatus;
 
   // 1 reply / review, so embed instead of separate collection
   @Prop({ type: ReviewReplySchema })

@@ -6,35 +6,56 @@ export type UserDocument = HydratedDocument<User>;
 
 @Schema({ timestamps: true, collection: 'users' })
 export class User {
-  @Prop({ required: true, unique: true, lowercase: true, trim: true, index: true })
-  email: string;
+  @Prop({
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    index: true,
+  })
+  email!: string;
 
   @Prop({ required: true, select: false })
-  passwordHash: string;
+  passwordHash!: string;
 
-  @Prop({ type: String, enum: UserRole, default: UserRole.CUSTOMER, index: true })
-  role: UserRole;
+  @Prop({
+    type: String,
+    enum: UserRole,
+    default: UserRole.CUSTOMER,
+    index: true,
+  })
+  role!: UserRole;
 
   @Prop({ required: true, trim: true })
-  fullName: string;
+  fullName!: string;
 
   @Prop({ trim: true, index: true })
   phone?: string;
 
   @Prop({ default: false })
-  phoneVerified: boolean;
+  phoneVerified!: boolean;
 
   @Prop({ trim: true })
   avatarUrl?: string;
 
-  @Prop({ type: String, enum: UserStatus, default: UserStatus.ACTIVE, index: true })
-  status: UserStatus;
+  @Prop({
+    type: String,
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+    index: true,
+  })
+  status!: UserStatus;
 
   @Prop({ type: Number, default: 0 })
-  trustScore: number;
+  trustScore!: number;
 
-  @Prop({ type: String, enum: TrustLevel, default: TrustLevel.NEW, index: true })
-  trustLevel: TrustLevel;
+  @Prop({
+    type: String,
+    enum: TrustLevel,
+    default: TrustLevel.NEW,
+    index: true,
+  })
+  trustLevel!: TrustLevel;
 
   @Prop({ type: Date })
   lastLoginAt?: Date;
