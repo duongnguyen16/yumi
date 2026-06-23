@@ -4,34 +4,34 @@ import { Schema as MongooseSchema, Types } from 'mongoose';
 @Schema({ _id: false })
 export class GeoPoint {
   @Prop({ type: String, enum: ['Point'], default: 'Point' })
-  type: 'Point';
+  type!: 'Point';
 
   // GeoJSON order: [longitude, latitude]
   @Prop({ type: [Number], required: true })
-  coordinates: [number, number];
+  coordinates!: [number, number];
 }
 export const GeoPointSchema = SchemaFactory.createForClass(GeoPoint);
 
 @Schema({ _id: false })
 export class ImageAsset {
   @Prop({ required: true, trim: true })
-  url: string;
+  url!: string;
 
   @Prop({ default: false })
-  isCover: boolean;
+  isCover!: boolean;
 
   @Prop({ type: Date, default: Date.now })
-  uploadedAt: Date;
+  uploadedAt!: Date;
 }
 export const ImageAssetSchema = SchemaFactory.createForClass(ImageAsset);
 
 @Schema({ _id: false })
 export class EvidenceFile {
   @Prop({ required: true, trim: true })
-  url: string;
+  url!: string;
 
   @Prop({ enum: ['IMAGE', 'VIDEO', 'DOCUMENT'], required: true })
-  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  fileType!: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
 
   @Prop({ type: GeoPointSchema })
   geo?: GeoPoint;

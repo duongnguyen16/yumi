@@ -5,11 +5,16 @@ export type NotificationDocument = HydratedDocument<Notification>;
 
 @Schema({ timestamps: true, collection: 'notifications' })
 export class Notification {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, index: true })
-  userId: Types.ObjectId;
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
+  userId!: Types.ObjectId;
 
   @Prop({ required: true, trim: true, index: true })
-  type: string;
+  type!: string;
 
   @Prop({ trim: true })
   refCollection?: string;
@@ -18,13 +23,13 @@ export class Notification {
   refId?: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
-  title: string;
+  title!: string;
 
   @Prop({ required: true, trim: true })
-  body: string;
+  body!: string;
 
   @Prop({ default: false, index: true })
-  isRead: boolean;
+  isRead!: boolean;
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
