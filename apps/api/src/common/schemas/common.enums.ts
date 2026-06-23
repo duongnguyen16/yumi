@@ -1,0 +1,120 @@
+export enum UserRole {
+  CUSTOMER = 'CUSTOMER',
+  VENDOR = 'VENDOR',
+  ADMIN = 'ADMIN',
+}
+
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  WARNED = 'WARNED',
+  BANNED = 'BANNED',
+}
+
+export enum TrustLevel {
+  RESTRICTED = 'RESTRICTED',
+  NEW = 'NEW',
+  TRUSTED = 'TRUSTED',
+}
+
+export enum LocationStatus {
+  SUBMITTED = 'SUBMITTED',
+  PUBLISHED = 'PUBLISHED',
+  HIDDEN = 'HIDDEN',
+  REJECTED = 'REJECTED',
+  PENDING_RE_APPROVAL = 'PENDING_RE_APPROVAL',
+  DELETED = 'DELETED',
+}
+
+export enum LocationSource {
+  CUSTOMER = 'CUSTOMER',
+  VENDOR = 'VENDOR',
+  ADMIN = 'ADMIN',
+}
+
+export enum ReviewStatus {
+  PUBLISHED = 'PUBLISHED',
+  DELETED = 'DELETED',
+  REMOVED_BY_ADMIN = 'REMOVED_BY_ADMIN',
+}
+
+export enum ClaimRequestType {
+  CLAIM_EXISTING_LOCATION = 'CLAIM_EXISTING_LOCATION',
+  VENDOR_NEW_LOCATION = 'VENDOR_NEW_LOCATION',
+}
+
+export enum ClaimRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  RELEASED = 'RELEASED',
+  REVOKED = 'REVOKED',
+}
+
+export enum RequestAccessStatus {
+  PENDING = 'PENDING',
+  GRANTED = 'GRANTED',
+  REJECTED = 'REJECTED',
+  EXPIRED = 'EXPIRED',
+  AUTO_GRANTED = 'AUTO_GRANTED',
+  ESCALATED = 'ESCALATED',
+}
+
+export enum EditSuggestionStatus {
+  PENDING = 'PENDING',
+  APPLIED = 'APPLIED',
+  DISCARDED = 'DISCARDED',
+}
+
+export enum RoutingTarget {
+  VENDOR = 'VENDOR',
+  ADMIN = 'ADMIN',
+}
+
+export enum DisputeStatus {
+  OPEN = 'OPEN',
+  RESOLVED_KEEP = 'RESOLVED_KEEP',
+  RESOLVED_TRANSFER = 'RESOLVED_TRANSFER',
+  RESOLVED_REVOKE = 'RESOLVED_REVOKE',
+}
+
+export enum AppealType {
+  LOCATION_REJECTED = 'LOCATION_REJECTED',
+  CLAIM_REJECTED = 'CLAIM_REJECTED',
+  DUPLICATE_HIDDEN = 'DUPLICATE_HIDDEN',
+  OWNERSHIP_REVOKED = 'OWNERSHIP_REVOKED',
+  REVIEW_REMOVED = 'REVIEW_REMOVED',
+  USER_BANNED = 'USER_BANNED',
+}
+
+export enum AppealStatus {
+  PENDING = 'PENDING',
+  OVERTURNED = 'OVERTURNED',
+  UPHELD = 'UPHELD',
+}
+
+export enum ReportTargetType {
+  LOCATION = 'LOCATION',
+  REVIEW = 'REVIEW',
+  USER = 'USER',
+  OWNERSHIP = 'OWNERSHIP',
+}
+
+export enum ReportStatus {
+  PENDING = 'PENDING',
+  RESOLVED = 'RESOLVED',
+  DISMISSED = 'DISMISSED',
+}
+
+export enum OwnershipHoldStatus {
+  ACTIVE = 'ACTIVE',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum TrustEventType {
+  LOCATION_APPROVED = 'LOCATION_APPROVED',
+  VALID_REPORT = 'VALID_REPORT',
+  REVIEW_KEPT = 'REVIEW_KEPT',
+  CONTENT_REJECTED = 'CONTENT_REJECTED',
+  FALSE_REPORT = 'FALSE_REPORT',
+  ADMIN_ADJUSTMENT = 'ADMIN_ADJUSTMENT',
+}
