@@ -24,11 +24,11 @@ export class AuthController {
       const result = await this.authService.login(email, password);
       if (!result.success) {
         if (result.statusCode === 403) {
-          throw new ForbiddenException(result.message);
+          return new ForbiddenException(result.message);
         } else if (result.statusCode === 500) {
-          throw new InternalServerErrorException(result.message);
+          return new InternalServerErrorException(result.message);
         } else {
-          throw new UnauthorizedException(result.message);
+          return new UnauthorizedException(result.message);
         }
       }
       return result;
