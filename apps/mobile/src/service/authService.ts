@@ -1,5 +1,6 @@
 import api from "./aixos";
 import {
+  deleteAllTokens,
   saveAccessTokens,
   saveRefreshTokens,
   setAccessToken,
@@ -49,6 +50,41 @@ const authMe = async () => {
   }
 };
 
+const restoreSession = async (token: string) => {
+  try {
+    const response = await api.post("/auth/refresh", { refreshToken: token });
+    if (response.data?.success) {
+      setAccessToken(response.data.accessToken);
+      await saveRefreshTokens(response.data.refreshToken);
+      await saveAccessTokens(response.data.accessToken);
+      return {
+        success: true,
+        accessToken: response.data.accessToken,
+        message: response.data.message,
+      };
+    }
+    return {
+      success: false,
+      message: response.data?.message || "Không thể khôi phục phiên đăng nhập",
+    };
+  } catch (error) {
+    console.error("Error restoring session:", error);
+    return {
+      success: false,
+      message: "Không thể khôi phục phiên đăng nhập",
+    };
+  }
+};
+
+const clearSession = async () => {
+  try {
+    setAccessToken(null);
+    await deleteAllTokens();
+  } catch (error) {
+    console.error("Error clearing session:", error);
+  }
+};
+
 // const logout = async () => {
 //   try {
 //     const res = await api.post("/auth/logout");
@@ -63,4 +99,4 @@ const authMe = async () => {
 //   }
 // };
 
-export { login, authMe };
+export { login, authMe, restoreSession, clearSession };

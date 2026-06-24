@@ -5,6 +5,7 @@ import {
   getAccessToken,
   getRefreshTokens,
   saveAccessTokens,
+  saveRefreshTokens,
   setAccessToken,
 } from "./tokenStorage";
 import Constants from "expo-constants";
@@ -20,7 +21,6 @@ const getBaseUrl = () => {
 };
 
 const BASE_URL = getBaseUrl();
-console.log("Using BASE_URL:", BASE_URL);
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -31,7 +31,6 @@ const api = axios.create({
 
 api.interceptors.request.use(async (config) => {
   const token = getAccessToken();
-  console.log("Attaching access token to request:", token);
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -46,7 +45,11 @@ api.interceptors.response.use(
     if (!error.response || !originalRequest) {
       return Promise.reject(error);
     }
-    if (originalRequest.url?.includes("/auth/login")) {
+    if (
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/register") ||
+      originalRequest.url?.includes("/auth/refresh")
+    ) {
       return Promise.reject(error);
     }
     if (error?.response?.status === 401 && !originalReq._retry) {
@@ -60,12 +63,13 @@ api.interceptors.response.use(
         if (!refreshToken) {
           return Promise.reject(error);
         }
-        const res = await axios.post(`${BASE_URL}/auth/me`, {
+        const res = await axios.post(`${BASE_URL}/auth/refresh`, {
           refreshToken: refreshToken,
         });
         if (res.data?.success) {
           setAccessToken(res.data.accessToken);
           await saveAccessTokens(res.data.accessToken);
+          await saveRefreshTokens(res.data.refreshToken);
           originalRequest.headers["Authorization"] =
             `Bearer ${res.data.accessToken}`;
           return api(originalRequest);
@@ -73,6 +77,8 @@ api.interceptors.response.use(
       } catch (err) {
         console.error("Error refreshing token:", err);
         await deleteAllTokens();
+        setAccessToken(null);
+        return Promise.reject(err);
       }
     }
   },
