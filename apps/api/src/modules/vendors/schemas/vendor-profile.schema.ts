@@ -24,7 +24,7 @@ export class VendorProfile {
   @Prop({ required: true })
   business_phone!: string;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   business_address?: string | null;
 
   @Prop({
@@ -34,10 +34,10 @@ export class VendorProfile {
   })
   verification_status!: string;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   id_card_image_url?: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   rejection_reason?: string | null;
 
   created_at?: Date;
