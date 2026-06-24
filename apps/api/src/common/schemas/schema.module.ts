@@ -3,7 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './user.schema';
 import { Category, CategorySchema } from './category.schema';
 import { SubCategory, SubCategorySchema } from './sub-category.schema';
-import { Tag, TagSchema } from './tag.schema';
 import { Location, LocationSchema } from './location.schema';
 import { Product, ProductSchema } from './product.schema';
 import { Review, ReviewSchema } from './review.schema';
@@ -17,7 +16,6 @@ import { Bookmark, BookmarkSchema } from './bookmark.schema';
 import { Notification, NotificationSchema } from './notification.schema';
 import { AuditLog, AuditLogSchema } from './audit-log.schema';
 import { TrustEvent, TrustEventSchema } from './trust-event.schema';
-import { OwnershipHold, OwnershipHoldSchema } from './ownership-hold.schema';
 
 @Module({
   imports: [
@@ -25,7 +23,6 @@ import { OwnershipHold, OwnershipHoldSchema } from './ownership-hold.schema';
       { name: User.name, schema: UserSchema },
       { name: Category.name, schema: CategorySchema },
       { name: SubCategory.name, schema: SubCategorySchema },
-      { name: Tag.name, schema: TagSchema },
       { name: Location.name, schema: LocationSchema },
       { name: Product.name, schema: ProductSchema },
       { name: Review.name, schema: ReviewSchema },
@@ -39,7 +36,6 @@ import { OwnershipHold, OwnershipHoldSchema } from './ownership-hold.schema';
       { name: Notification.name, schema: NotificationSchema },
       { name: AuditLog.name, schema: AuditLogSchema },
       { name: TrustEvent.name, schema: TrustEventSchema },
-      { name: OwnershipHold.name, schema: OwnershipHoldSchema },
     ]),
   ],
   exports: [MongooseModule],
