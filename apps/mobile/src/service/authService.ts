@@ -24,6 +24,7 @@ const login = async (email: string, password: string) => {
       message: response.data?.message || "Đăng nhập thất bại",
     };
   } catch (error) {
+    console.log(error);
     return {
       success: false,
       message:
