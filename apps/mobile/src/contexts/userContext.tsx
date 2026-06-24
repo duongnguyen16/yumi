@@ -1,8 +1,9 @@
-import { authMe } from "@/service/authService";
+import { authMe, restoreSession } from "@/service/authService";
 import {
   deleteAllTokens,
   getAccessToken,
   getAccessTokenAsync,
+  getRefreshTokens,
   setAccessToken,
 } from "@/service/tokenStorage";
 import { useRouter } from "expo-router";
@@ -33,33 +34,45 @@ export default function UserContextProvider({
     }
   };
   useEffect(() => {
-    const checkAccessToken = async () => {
-      const token = await getAccessTokenAsync();
+    const restoreUserSession = async () => {
+      const token = await getRefreshTokens();
       if (token) {
-        setAccessToken(token);
         try {
-          const res = await authMe();
+          const res = await restoreSession(token);
           if (res?.success) {
-            setUser(res?.user);
-            router.replace("/home");
+            const userInfo = await authMe();
+            if (userInfo?.success) {
+              setUser(userInfo?.user);
+              router.replace("/home");
+            } else {
+              setUser(null);
+              setAccessToken(null);
+              await deleteAllTokens();
+              router.replace("/auth/login");
+            }
           } else {
             setUser(null);
             setAccessToken(null);
+            await deleteAllTokens();
             router.replace("/auth/login");
           }
         } catch (error) {
           setUser(null);
           setAccessToken(null);
+          await deleteAllTokens();
           router.replace("/auth/login");
         } finally {
           setLoading(false);
         }
       } else {
         setLoading(false);
+        setUser(null);
+        setAccessToken(null);
+        await deleteAllTokens();
         router.replace("/auth/login");
       }
     };
-    checkAccessToken();
+    restoreUserSession();
   }, []);
 
   if (loading) {
