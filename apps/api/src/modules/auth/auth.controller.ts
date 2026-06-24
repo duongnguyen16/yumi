@@ -32,8 +32,10 @@ export class AuthController {
     const { email, password } = body;
     const result = await this.authService.login(email, password);
     if (!result.success) {
-      if (result.statusCode === 403) throw new ForbiddenException(result.message);
-      if (result.statusCode === 500) throw new InternalServerErrorException(result.message);
+      if (result.statusCode === 403)
+        throw new ForbiddenException(result.message);
+      if (result.statusCode === 500)
+        throw new InternalServerErrorException(result.message);
       throw new UnauthorizedException(result.message);
     }
     return result;
@@ -43,7 +45,8 @@ export class AuthController {
   async register(@Body() body: RegisterDTO) {
     const result = await this.authService.register(body);
     if (!result.success) {
-      if (result.statusCode === 409) throw new ConflictException(result.message);
+      if (result.statusCode === 409)
+        throw new ConflictException(result.message);
       throw new InternalServerErrorException(result.message);
     }
     return result;
@@ -53,8 +56,10 @@ export class AuthController {
   async refresh(@Body() body: RefreshTokenDTO) {
     const result = await this.authService.refresh(body.refreshToken);
     if (!result.success) {
-      if (result.statusCode === 403) throw new ForbiddenException(result.message);
-      if (result.statusCode === 500) throw new InternalServerErrorException(result.message);
+      if (result.statusCode === 403)
+        throw new ForbiddenException(result.message);
+      if (result.statusCode === 500)
+        throw new InternalServerErrorException(result.message);
       throw new UnauthorizedException(result.message);
     }
     return result;
@@ -65,7 +70,8 @@ export class AuthController {
   async requestVendorOtp(@Body() body: RequestVendorOtpDTO) {
     const result = await this.authService.requestVendorOtp(body);
     if (!result.success) {
-      if (result.statusCode === 409) throw new ConflictException(result.message);
+      if (result.statusCode === 409)
+        throw new ConflictException(result.message);
       throw new InternalServerErrorException(result.message);
     }
     return result;
@@ -76,18 +82,22 @@ export class AuthController {
   async verifyVendorOtp(@Body() body: VerifyVendorOtpDTO) {
     const result = await this.authService.verifyVendorOtp(body);
     if (!result.success) {
-      if (result.statusCode === 404) throw new NotFoundException(result.message);
-      if (result.statusCode === 409) throw new ConflictException(result.message);
+      if (result.statusCode === 404)
+        throw new NotFoundException(result.message);
+      if (result.statusCode === 409)
+        throw new ConflictException(result.message);
       if (result.statusCode === 429) {
-        throw new HttpException(result.message ?? 'Quá nhiều lần thử', HttpStatus.TOO_MANY_REQUESTS);
+        throw new HttpException(
+          result.message ?? 'Quá nhiều lần thử',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
       }
-      if (result.statusCode === 400) throw new BadRequestException(result.message);
+      if (result.statusCode === 400)
+        throw new BadRequestException(result.message);
       throw new InternalServerErrorException(result.message);
     }
     return result;
   }
-
-  
 
   @Get('me')
   @UseGuards(AuthGuard('jwt-at'))

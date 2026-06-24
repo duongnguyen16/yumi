@@ -30,7 +30,9 @@ export class SmsService {
     const brandname = this.configService.get<string>('ESMS_BRANDNAME');
 
     if (!apiKey || !secretKey) {
-      throw new Error('Thiếu cấu hình ESMS_API_KEY / ESMS_SECRET_KEY trong .env');
+      throw new Error(
+        'Thiếu cấu hình ESMS_API_KEY / ESMS_SECRET_KEY trong .env',
+      );
     }
 
     const response = await fetch(this.ESMS_SEND_URL, {
