@@ -6,8 +6,8 @@ import AuthService from './auth.service';
 import { SmsService } from './services/sms.service';
 import { AtStrategy } from 'src/common/guard/at.strategy';
 import { RtStrategy } from 'src/common/guard/rt.strategy';
-import { UserSchema } from '../users/schemas/user.schema';
 import { VendorsModule } from '../vendors/vendors.module';
+import { UserSchema } from 'src/common/schemas/user.schema';
 
 @Module({
   imports: [

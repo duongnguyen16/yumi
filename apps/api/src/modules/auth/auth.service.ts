@@ -5,7 +5,6 @@ import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserDocument } from '../users/schemas/user.schema';
 import { VendorProfileDocument } from '../vendors/schemas/vendor-profile.schema';
 import { PendingVendorRegistrationDocument } from '../vendors/schemas/pending-vendor-registration.schema';
 import { RegisterDTO } from './dto/register.dto';
@@ -13,6 +12,8 @@ import { RequestVendorOtpDTO } from './dto/request-vendor-otp.dto';
 import { VerifyVendorOtpDTO } from './dto/verify-vendor-otp.dto';
 import { SmsService } from './services/sms.service';
 import { JwtPayLoad } from '../../types/jwt.types';
+import { UserDocument } from 'src/common/schemas/user.schema';
+import { UserRole, UserStatus } from 'src/common/schemas/common.enums';
 
 const OTP_TTL_MINUTES = 5;
 const MAX_OTP_ATTEMPTS = 5;
@@ -21,7 +22,8 @@ const MAX_OTP_ATTEMPTS = 5;
 export default class AuthService {
   constructor(
     @InjectModel('User') private userModel: Model<UserDocument>,
-    @InjectModel('VendorProfile') private vendorProfileModel: Model<VendorProfileDocument>,
+    @InjectModel('VendorProfile')
+    private vendorProfileModel: Model<VendorProfileDocument>,
     @InjectModel('PendingVendorRegistration')
     private pendingVendorModel: Model<PendingVendorRegistrationDocument>,
     private jwtService: JwtService,
@@ -33,23 +35,41 @@ export default class AuthService {
     try {
       const user = await this.userModel.findOne({ email });
       if (!user) {
-        return { success: false, message: 'Sai mật khẩu hoặc email', statusCode: 401 };
+        return {
+          success: false,
+          message: 'Sai mật khẩu hoặc email',
+          statusCode: 401,
+        };
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
       if (!isPasswordValid) {
-        return { success: false, message: 'Sai mật khẩu hoặc email', statusCode: 401 };
+        return {
+          success: false,
+          message: 'Sai mật khẩu hoặc email',
+          statusCode: 401,
+        };
       }
 
-      if (user.status === 'banned') {
-        return { success: false, message: 'Tài khoản của bạn đã bị cấm', statusCode: 403 };
+      if (user.status === UserStatus.BANNED) {
+        return {
+          success: false,
+          message: 'Tài khoản của bạn đã bị cấm',
+          statusCode: 403,
+        };
       }
 
-      const { accessToken, refreshToken } = this.generateTokens(String(user._id));
+      const { accessToken, refreshToken } = this.generateTokens(
+        String(user._id),
+      );
       return { success: true, user, accessToken, refreshToken };
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, message: 'Đã xảy ra lỗi khi đăng nhập', statusCode: 500 };
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi đăng nhập',
+        statusCode: 500,
+      };
     }
   }
 
@@ -57,23 +77,39 @@ export default class AuthService {
     try {
       const existingUser = await this.userModel.findOne({ email: dto.email });
       if (existingUser) {
-        return { success: false, message: 'Email đã được sử dụng', statusCode: 409 };
+        return {
+          success: false,
+          message: 'Email đã được sử dụng',
+          statusCode: 409,
+        };
       }
 
       const passwordHash = await bcrypt.hash(dto.password, 10);
       const newUser = await this.userModel.create({
         email: dto.email,
-        password_hash: passwordHash,
+        passwordHash: passwordHash,
         name: dto.name,
-        role: 'user',
-        status: 'active',
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
       });
 
-      const { accessToken, refreshToken } = this.generateTokens(String(newUser._id));
-      return { success: true, message: 'Đăng ký thành công', user: newUser, accessToken, refreshToken };
+      const { accessToken, refreshToken } = this.generateTokens(
+        String(newUser._id),
+      );
+      return {
+        success: true,
+        message: 'Đăng ký thành công',
+        user: newUser,
+        accessToken,
+        refreshToken,
+      };
     } catch (error) {
       console.error('Register error:', error);
-      return { success: false, message: 'Đã xảy ra lỗi khi đăng ký', statusCode: 500 };
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi đăng ký',
+        statusCode: 500,
+      };
     }
   }
 
@@ -94,18 +130,30 @@ export default class AuthService {
 
       const user = await this.userModel.findById(payload.userId);
       if (!user) {
-        return { success: false, message: 'Không tìm thấy người dùng', statusCode: 401 };
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 401,
+        };
       }
 
-      if (user.status === 'banned') {
-        return { success: false, message: 'Tài khoản của bạn đã bị cấm', statusCode: 403 };
+      if (user.status === UserStatus.BANNED) {
+        return {
+          success: false,
+          message: 'Tài khoản của bạn đã bị cấm',
+          statusCode: 403,
+        };
       }
 
       const tokens = this.generateTokens(String(user._id));
       return { success: true, ...tokens };
     } catch (error) {
       console.error('Refresh error:', error);
-      return { success: false, message: 'Đã xảy ra lỗi khi làm mới token', statusCode: 500 };
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi làm mới token',
+        statusCode: 500,
+      };
     }
   }
 
@@ -117,7 +165,11 @@ export default class AuthService {
     try {
       const existingUser = await this.userModel.findOne({ email: dto.email });
       if (existingUser) {
-        return { success: false, message: 'Email đã được sử dụng', statusCode: 409 };
+        return {
+          success: false,
+          message: 'Email đã được sử dụng',
+          statusCode: 409,
+        };
       }
 
       const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -152,7 +204,11 @@ export default class AuthService {
       };
     } catch (error) {
       console.error('RequestVendorOtp error:', error);
-      return { success: false, message: 'Đã xảy ra lỗi khi gửi OTP', statusCode: 500 };
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi gửi OTP',
+        statusCode: 500,
+      };
     }
   }
 
@@ -162,11 +218,14 @@ export default class AuthService {
    */
   async verifyVendorOtp(dto: VerifyVendorOtpDTO) {
     try {
-      const pending = await this.pendingVendorModel.findOne({ email: dto.email });
+      const pending = await this.pendingVendorModel.findOne({
+        email: dto.email,
+      });
       if (!pending) {
         return {
           success: false,
-          message: 'Không tìm thấy yêu cầu đăng ký hoặc OTP đã hết hạn, vui lòng đăng ký lại',
+          message:
+            'Không tìm thấy yêu cầu đăng ký hoặc OTP đã hết hạn, vui lòng đăng ký lại',
           statusCode: 404,
         };
       }
@@ -193,33 +252,41 @@ export default class AuthService {
 
       // Email đã được check trùng ở bước request-otp, nhưng check lại
       // để tránh race condition nếu user đăng ký bằng email khác trong lúc chờ OTP
-      const existingUser = await this.userModel.findOne({ email: pending.email });
+      const existingUser = await this.userModel.findOne({
+        email: pending.email,
+      });
       if (existingUser) {
         await this.pendingVendorModel.deleteOne({ email: pending.email });
-        return { success: false, message: 'Email đã được sử dụng', statusCode: 409 };
+        return {
+          success: false,
+          message: 'Email đã được sử dụng',
+          statusCode: 409,
+        };
       }
 
       const newUser = await this.userModel.create({
         email: pending.email,
-        password_hash: pending.password_hash,
+        passwordHash: pending.password_hash,
         name: pending.name,
         phone: pending.phone,
-        phone_verified: true,
-        role: 'vendor',
-        status: 'active',
+        phoneVerified: true,
+        role: UserRole.VENDOR,
+        status: UserStatus.ACTIVE,
       });
 
       await this.vendorProfileModel.create({
-        user_id: newUser._id,
-        business_name: pending.business_name,
-        business_phone: pending.business_phone,
-        business_address: pending.business_address,
-        verification_status: 'pending',
+        userId: newUser._id,
+        businessName: pending.business_name,
+        businessPhone: pending.business_phone,
+        businessAddress: pending.business_address,
+        verificationStatus: 'pending',
       });
 
       await this.pendingVendorModel.deleteOne({ email: pending.email });
 
-      const { accessToken, refreshToken } = this.generateTokens(String(newUser._id));
+      const { accessToken, refreshToken } = this.generateTokens(
+        String(newUser._id),
+      );
 
       return {
         success: true,
@@ -230,7 +297,11 @@ export default class AuthService {
       };
     } catch (error) {
       console.error('VerifyVendorOtp error:', error);
-      return { success: false, message: 'Đã xảy ra lỗi khi xác minh OTP', statusCode: 500 };
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi xác minh OTP',
+        statusCode: 500,
+      };
     }
   }
 
@@ -243,11 +314,12 @@ export default class AuthService {
       return { success: true, user };
     } catch (error) {
       console.error('AuthMe error:', error);
-      return { success: false, message: 'Đã xảy ra lỗi khi xác thực người dùng' };
+      return {
+        success: false,
+        message: 'Đã xảy ra lỗi khi xác thực người dùng',
+      };
     }
   }
-
-  
 
   private generateOtp(): string {
     // 6 số, dùng crypto.randomInt (an toàn hơn Math.random) — luôn đủ 6 ký tự kể cả khi có số 0 đứng đầu
@@ -257,11 +329,17 @@ export default class AuthService {
   private generateTokens(userId: string) {
     const accessToken = this.jwtService.sign(
       { userId },
-      { secret: this.configService.get('ACCESS_TOKEN_SECRET'), expiresIn: '1h' },
+      {
+        secret: this.configService.get('ACCESS_TOKEN_SECRET'),
+        expiresIn: '1h',
+      },
     );
     const refreshToken = this.jwtService.sign(
       { userId },
-      { secret: this.configService.get('REFRESH_TOKEN_SECRET'), expiresIn: '7d' },
+      {
+        secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+        expiresIn: '7d',
+      },
     );
     return { accessToken, refreshToken };
   }
