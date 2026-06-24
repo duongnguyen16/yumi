@@ -12,7 +12,6 @@ const MAP_URL = `${process.env.EXPO_PUBLIC_MAP_URL}=${MAP_API}`;
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const [mapStyle, setMapStyle] = useState(null);
-  console.log(MAP_URL);
   useEffect(() => {
     const loadStyle = async () => {
       try {
@@ -54,11 +53,7 @@ export default function MapScreen() {
     loadStyle();
   }, []);
   return (
-    <Map
-      mapStyle={mapStyle}
-      style={styles.map}
-      onPress={(e) => console.log("Map pressed at:", e.nativeEvent.coordinate)}
-    >
+    <Map mapStyle={mapStyle} style={styles.map}>
       <Camera initialViewState={{ center: location, zoom: 10 }} />
       <NativeUserLocation />
     </Map>
