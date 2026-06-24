@@ -10,7 +10,8 @@ import {
   setAccessToken,
 } from "./tokenStorage";
 
-const BASE_URL_ENV = process.env.BASE_URL || "http://192.168.120.53:9999/api";
+const BASE_URL_ENV =
+  process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.120.53:9999/api";
 
 const getBaseUrl = () => {
   if (__DEV__ && Platform.OS === "android") {
