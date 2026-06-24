@@ -5,6 +5,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Text } from "react-native-paper";
 import { View } from "react-native";
 import { Button } from "@expo/ui";
+import * as Location from "expo-location";
+import { useEffect } from "react";
+import LocationContextProvider from "@/contexts/locationContext";
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
@@ -17,10 +20,21 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 }
 
 export default function RootLayout() {
+  const requestLocationPermission = async () => {
+    const permission = await Location.getForegroundPermissionsAsync();
+    if (permission.status === "undetermined") {
+      await Location.requestForegroundPermissionsAsync();
+    }
+  };
+  useEffect(() => {
+    requestLocationPermission();
+  }, []);
   return (
     <SafeAreaProvider>
       <UserContextProvider>
-        <Stack screenOptions={{ headerShown: false }} />
+        <LocationContextProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </LocationContextProvider>
       </UserContextProvider>
     </SafeAreaProvider>
   );
