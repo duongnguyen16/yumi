@@ -8,6 +8,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
+          headerShown: false,
           tabBarIcon: (color) => (
             <AntDesign name="home" size={24} color={color.color} />
           ),
@@ -16,6 +17,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          headerShown: false,
           tabBarIcon: (color) => (
             <Feather name="user" size={24} color={color.color} />
           ),
