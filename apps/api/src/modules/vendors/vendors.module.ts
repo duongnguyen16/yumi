@@ -7,7 +7,10 @@ import { PendingVendorRegistrationSchema } from './schemas/pending-vendor-regist
   imports: [
     MongooseModule.forFeature([
       { name: 'VendorProfile', schema: VendorProfileSchema },
-      { name: 'PendingVendorRegistration', schema: PendingVendorRegistrationSchema },
+      {
+        name: 'PendingVendorRegistration',
+        schema: PendingVendorRegistrationSchema,
+      },
     ]),
   ],
   exports: [MongooseModule],

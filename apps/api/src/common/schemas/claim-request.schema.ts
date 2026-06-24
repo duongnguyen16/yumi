@@ -43,6 +43,9 @@ export class ClaimRequest {
   @Prop({ type: Date })
   otpVerifiedAt?: Date;
 
+  @Prop({ type: Number, min: 0 })
+  deviceDistanceMeters?: number;
+
   @Prop({
     type: String,
     enum: ClaimRequestStatus,

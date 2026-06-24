@@ -18,7 +18,7 @@ export class Location {
     required: true,
     index: true,
   })
-  creatorId!: Types.ObjectId;
+  submittedBy!: Types.ObjectId;
 
   // null/undefined = community-owned/no-owner
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', index: true })
@@ -84,19 +84,9 @@ export class Location {
   })
   subCategoryIds!: Types.ObjectId[];
 
-  @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Tag' }],
-    default: [],
-    index: true,
-  })
-  tagIds!: Types.ObjectId[];
-
   // MongoDB style replacement for Location_Image table
   @Prop({ type: [ImageAssetSchema], default: [] })
   images!: ImageAsset[];
-
-  @Prop({ type: Number, min: 0 })
-  deviceDistanceMeters?: number;
 
   @Prop({ type: Date })
   submittedAt?: Date;

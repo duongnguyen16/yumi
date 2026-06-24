@@ -88,7 +88,7 @@ export default class AuthService {
       const newUser = await this.userModel.create({
         email: dto.email,
         passwordHash: passwordHash,
-        name: dto.name,
+        fullName: dto.name,
         role: UserRole.CUSTOMER,
         status: UserStatus.ACTIVE,
       });
@@ -121,6 +121,7 @@ export default class AuthService {
           secret: this.configService.get('REFRESH_TOKEN_SECRET'),
         });
       } catch (error) {
+        console.error('Register error:', error);
         return {
           success: false,
           message: 'Refresh token không hợp lệ hoặc đã hết hạn',
@@ -267,7 +268,7 @@ export default class AuthService {
       const newUser = await this.userModel.create({
         email: pending.email,
         passwordHash: pending.password_hash,
-        name: pending.name,
+        fullName: pending.name,
         phone: pending.phone,
         phoneVerified: true,
         role: UserRole.VENDOR,
@@ -275,11 +276,11 @@ export default class AuthService {
       });
 
       await this.vendorProfileModel.create({
-        userId: newUser._id,
-        businessName: pending.business_name,
-        businessPhone: pending.business_phone,
-        businessAddress: pending.business_address,
-        verificationStatus: 'pending',
+        user_id: newUser._id,
+        business_name: pending.business_name,
+        business_phone: pending.business_phone,
+        business_address: pending.business_address,
+        verification_status: 'pending',
       });
 
       await this.pendingVendorModel.deleteOne({ email: pending.email });

@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
-export type PendingVendorRegistrationDocument = HydratedDocument<PendingVendorRegistration>;
+export type PendingVendorRegistrationDocument =
+  HydratedDocument<PendingVendorRegistration>;
 
 @Schema({
   timestamps: {
@@ -15,7 +16,6 @@ export class PendingVendorRegistration {
 
   @Prop({ required: true, unique: true })
   phone!: string;
-
 
   @Prop({ required: true })
   password_hash!: string;
@@ -35,7 +35,6 @@ export class PendingVendorRegistration {
   @Prop({ default: null })
   id_card_image_url?: string | null;
 
-
   @Prop({ required: true })
   otp_hash!: string;
 
@@ -52,5 +51,7 @@ export const PendingVendorRegistrationSchema = SchemaFactory.createForClass(
   PendingVendorRegistration,
 );
 
-
-PendingVendorRegistrationSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
+PendingVendorRegistrationSchema.index(
+  { expires_at: 1 },
+  { expireAfterSeconds: 0 },
+);
