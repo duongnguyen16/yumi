@@ -1,27 +1,26 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Platform } from "react-native";
 import {
   deleteAllTokens,
   getAccessToken,
-  getAccessTokenAsync,
   getRefreshTokens,
   saveAccessTokens,
   setAccessToken,
 } from "./tokenStorage";
+import Constants from "expo-constants";
 
 const BASE_URL_ENV =
   process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.120.53:9999/api";
 
 const getBaseUrl = () => {
-  if (__DEV__ && Platform.OS === "android") {
-    return "http://10.0.2.2:9999/api";
-  }
+  // if (__DEV__ && Platform.OS === "android" && !Constants.isDevice) {
+  //   return "http://10.0.2.2:9999/api";
+  // }
   return BASE_URL_ENV;
 };
 
 const BASE_URL = getBaseUrl();
-
+console.log("Using BASE_URL:", BASE_URL);
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
