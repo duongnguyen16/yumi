@@ -10,7 +10,12 @@ export type VendorProfileDocument = HydratedDocument<VendorProfile>;
   },
 })
 export class VendorProfile {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true, unique: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    unique: true,
+  })
   user_id!: Types.ObjectId;
 
   @Prop({ required: true })
