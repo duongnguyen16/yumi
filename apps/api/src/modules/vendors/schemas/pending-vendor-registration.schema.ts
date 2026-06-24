@@ -29,16 +29,16 @@ export class PendingVendorRegistration {
   @Prop({ required: true })
   business_phone!: string;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   business_address?: string | null;
 
-  @Prop({ default: null })
+  @Prop({ type: String, default: null })
   id_card_image_url?: string | null;
 
   @Prop({ required: true })
   otp_hash!: string;
 
-  @Prop({ default: 0 })
+  @Prop({ type: Number, default: 0 })
   attempts!: number;
 
   @Prop({ required: true })
