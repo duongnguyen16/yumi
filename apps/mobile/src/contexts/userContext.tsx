@@ -1,5 +1,6 @@
 import { authMe } from "@/service/authService";
 import {
+  deleteAllTokens,
   getAccessToken,
   getAccessTokenAsync,
   setAccessToken,
@@ -9,7 +10,7 @@ import { createContext, ReactNode, useEffect, useState } from "react";
 import { View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
 
-export const userContext = createContext<any>(null);
+export const userContext = createContext(null);
 
 export default function UserContextProvider({
   children,
@@ -21,6 +22,16 @@ export default function UserContextProvider({
   const accessToken = getAccessToken();
   const router = useRouter();
 
+  const handleLogout = async () => {
+    try {
+      setUser(null);
+      setAccessToken(null);
+      await deleteAllTokens();
+      router.replace("/auth/login");
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
   useEffect(() => {
     const checkAccessToken = async () => {
       const token = await getAccessTokenAsync();
@@ -65,6 +76,7 @@ export default function UserContextProvider({
         setUser,
         accessToken,
         setAccessToken,
+        handleLogout,
       }}
     >
       {children}

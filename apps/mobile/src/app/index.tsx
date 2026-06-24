@@ -5,6 +5,7 @@ import { Text, View } from "react-native";
 
 export default function Index() {
   const { user } = useContext(userContext);
+
   if (user) {
     return <Redirect href="/home" />;
   }
