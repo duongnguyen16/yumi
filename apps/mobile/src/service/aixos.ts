@@ -10,11 +10,13 @@ import {
   setAccessToken,
 } from "./tokenStorage";
 
+const BASE_URL_ENV = process.env.BASE_URL || "http://192.168.120.53:9999/api";
+
 const getBaseUrl = () => {
   if (__DEV__ && Platform.OS === "android") {
     return "http://10.0.2.2:9999/api";
   }
-  return "http://10.33.93.119:9999/api";
+  return BASE_URL_ENV;
 };
 
 const BASE_URL = getBaseUrl();
