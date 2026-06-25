@@ -12,7 +12,7 @@ export default function Home() {
     return <Redirect href="/auth/login" />;
   }
   return (
-    <SafeAreaView style={{ flex: 1, padding: 10 }}>
+    <SafeAreaView style={{ flex: 1 }}>
       <MapScreen />
     </SafeAreaView>
   );

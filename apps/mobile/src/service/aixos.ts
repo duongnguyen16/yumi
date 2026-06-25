@@ -8,13 +8,12 @@ import {
   saveRefreshTokens,
   setAccessToken,
 } from "./tokenStorage";
-import Constants from "expo-constants";
 
 const BASE_URL_ENV =
   process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.120.53:9999/api";
 
 const getBaseUrl = () => {
-  // if (__DEV__ && Platform.OS === "android" && !Constants.isDevice) {
+  // if (__DEV__ && Platform.OS === "android") {
   //   return "http://10.0.2.2:9999/api";
   // }
   return BASE_URL_ENV;
