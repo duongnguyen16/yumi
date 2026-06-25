@@ -5,7 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
 import { SchemaModule } from './common/schemas/schema.module';
-import { UsersModule } from './modules/users/users.module';
+import { LocationModule } from './modules/locations/location.module';
 
 @Module({
   imports: [
@@ -22,6 +22,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     AuthModule,
     SchemaModule,
+    LocationModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
