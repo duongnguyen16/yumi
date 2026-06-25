@@ -4,22 +4,41 @@ import {
   Map,
   Camera,
   NativeUserLocation,
+  GeoJSONSource,
+  Layer,
 } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
+import { getAllLocations } from "@/service/locationService";
 
 const MAP_API = process.env.EXPO_PUBLIC_MAP_API;
-const MAP_URL = `${process.env.EXPO_PUBLIC_MAP_URL}=${MAP_API}`;
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const [mapStyle, setMapStyle] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [geoJson, setGeoJson] = useState(null);
+
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const response = await getAllLocations();
+        if (response.success) {
+          setGeoJson(response.locations);
+        }
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+    fetchLocation();
+  }, []);
+
   useEffect(() => {
     const loadStyle = async () => {
       try {
-        const response = await fetch(MAP_URL);
+        console.log("Loading map style from API:", MAP_API);
+        const response = await fetch(MAP_API);
         const styleJson = await response.json();
         styleJson.layers = styleJson.layers.map((layer: any) => {
           const id = String(layer.id).toLowerCase();
-
           const shouldHide =
             layer.type === "symbol" &&
             (id.includes("poi") ||
@@ -44,19 +63,37 @@ export default function MapScreen() {
             },
           };
         });
-
         setMapStyle(styleJson);
+        setLoading(false);
       } catch (error) {
         console.error("Error loading map style:", error);
+        setLoading(false);
       }
     };
     loadStyle();
   }, []);
+  if (loading || !mapStyle || !location) {
+    return <View style={styles.container} />;
+  }
   return (
-    <Map mapStyle={mapStyle} style={styles.map}>
-      <Camera initialViewState={{ center: location, zoom: 10 }} />
-      <NativeUserLocation />
-    </Map>
+    <View style={styles.container}>
+      <Map mapStyle={mapStyle} style={styles.map}>
+        <Camera initialViewState={{ center: location, zoom: 10 }} />
+        <NativeUserLocation />
+        <GeoJSONSource id="geojson" data={geoJson} />
+        <Layer
+          id="locations-circle"
+          type="circle"
+          source="geojson"
+          paint={{
+            "circle-radius": 8,
+            "circle-color": "#ff5a5f",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          }}
+        />
+      </Map>
+    </View>
   );
 }
 
