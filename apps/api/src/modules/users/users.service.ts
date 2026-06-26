@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import { extname, join } from 'path';
 import { Model } from 'mongoose';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserDocument } from './schemas/user.schema';
+import { UserDocument } from 'src/common/schemas/user.schema';
 
 type AvatarUploadFile = {
   buffer: Buffer;
@@ -42,7 +42,7 @@ export class UsersService {
     }
 
     if (dto.name !== undefined) {
-      user.name = dto.name.trim();
+      user.fullName = dto.name.trim();
     }
 
     if (dto.phone !== undefined) {
@@ -50,9 +50,9 @@ export class UsersService {
     }
 
     if (avatarFile) {
-      user.avatar_url = await this.saveAvatarFile(
+      user.avatarUrl = await this.saveAvatarFile(
         avatarFile,
-        user.avatar_url ?? undefined,
+        user.avatarUrl ?? undefined,
       );
     }
 
@@ -68,12 +68,12 @@ export class UsersService {
   private toProfileResponse(user: UserDocument) {
     return {
       id: user.id,
-      display_name: user.name ?? null,
-      avatar_url: user.avatar_url ?? null,
+      display_name: user.fullName ?? null,
+      avatar_url: user.avatarUrl ?? null,
       phone: user.phone ?? null,
       email: user.email,
       role: user.role,
-      joined_at: user.created_at ?? null,
+      joined_at: user.createdAt ?? null,
     };
   }
 

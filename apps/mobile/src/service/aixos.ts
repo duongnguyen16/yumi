@@ -1,26 +1,21 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
-import { Platform } from "react-native";
 import {
   deleteAllTokens,
   getAccessToken,
   getRefreshTokens,
   saveAccessTokens,
+  saveRefreshTokens,
   setAccessToken,
 } from "./tokenStorage";
 
-const getBaseUrl = () => {
-  const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, "");
-  }
-  if (__DEV__ && Platform.OS === "android") {
-    return "http://10.0.2.2:9999/api";
-  }
-  return "http://localhost:9999/api";
-};
+const BASE_URL_ENV =
+  process.env.EXPO_PUBLIC_BASE_URL ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  "http://192.168.120.53:9999/api";
+
+const getBaseUrl = () => BASE_URL_ENV.trim().replace(/\/+$/, "");
 
 const BASE_URL = getBaseUrl();
-
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -43,10 +38,20 @@ api.interceptors.response.use(
     const originalRequest = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
-    const isAuthRequest = originalRequest?.url?.startsWith("/auth/");
+    if (!error.response || !originalRequest) {
+      return Promise.reject(error);
+    }
+
+    const authUrl = originalRequest.url ?? "";
+    const isAuthRequest =
+      authUrl.includes("/auth/login") ||
+      authUrl.includes("/auth/register") ||
+      authUrl.includes("/auth/refresh") ||
+      authUrl.includes("/auth/forgot-password") ||
+      authUrl.includes("/auth/reset-password");
+
     if (
-      error?.response?.status === 401 &&
-      originalRequest &&
+      error.response.status === 401 &&
       !originalRequest._retry &&
       !isAuthRequest
     ) {
@@ -57,18 +62,20 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
         const res = await axios.post(`${BASE_URL}/auth/refresh`, {
-          refreshToken: refreshToken,
+          refreshToken,
         });
         if (res.data?.success) {
           setAccessToken(res.data.accessToken);
           await saveAccessTokens(res.data.accessToken);
-          originalRequest.headers["Authorization"] =
-            `Bearer ${res.data.accessToken}`;
+          await saveRefreshTokens(res.data.refreshToken);
+          originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
           return api(originalRequest);
         }
         await deleteAllTokens();
+        setAccessToken(null);
       } catch (err) {
         await deleteAllTokens();
+        setAccessToken(null);
         return Promise.reject(err);
       }
     }

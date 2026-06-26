@@ -11,6 +11,7 @@ const getAccessToken = () => accessToken;
 const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
+
 const saveAccessTokens = async (accessToken: string) => {
   try {
     await SecureStore.setItemAsync(
