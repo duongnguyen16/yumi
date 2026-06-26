@@ -1,8 +1,10 @@
 import {
+  Body,
   Controller,
   Get,
   InternalServerErrorException,
   NotFoundException,
+  Param,
   UseGuards,
 } from '@nestjs/common';
 import { LocationService } from './location.service';
@@ -21,6 +23,18 @@ export class LocationController {
       } else {
         throw new InternalServerErrorException('Xảy ra lỗi khi lấy địa điểm');
       }
+    }
+    return result;
+  }
+
+  @Get(':locationId')
+  async getLocationById(@Param('locationId') locationId: string) {
+    if (!locationId) {
+      throw new NotFoundException('Không tìm thấy địa điểm với ID này');
+    }
+    const result = await this.locationService.getLocationById(locationId);
+    if (!result.success) {
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
     return result;
   }
