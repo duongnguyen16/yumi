@@ -93,7 +93,6 @@ export class LocationService {
           },
         },
       ]);
-      console.log(rating, 'rating:', rating);
       return {
         success: true,
         location: {
