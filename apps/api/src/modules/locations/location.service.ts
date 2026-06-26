@@ -70,4 +70,44 @@ export class LocationService {
       };
     }
   }
+
+  async getLocationById(locationId: string) {
+    try {
+      const location = await this.locationModel.findById(locationId).exec();
+      if (!location) {
+        return {
+          success: false,
+          message: 'Không tìm thấy địa điểm',
+          statusCode: 404,
+        };
+      }
+      const rating = await this.reviewModel.aggregate([
+        {
+          $match: { locationId: location._id },
+        },
+        {
+          $group: {
+            _id: '$locationId',
+            avgRating: { $avg: '$rating' },
+            reviewCount: { $sum: 1 },
+          },
+        },
+      ]);
+      console.log(rating, 'rating:', rating);
+      return {
+        success: true,
+        location: {
+          ...location.toObject(),
+          rating: rating[0],
+        },
+      };
+    } catch (error) {
+      console.log('Error retrieving location by ID:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi lấy thông tin địa điểm',
+        statusCode: 500,
+      };
+    }
+  }
 }
