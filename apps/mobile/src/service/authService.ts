@@ -1,6 +1,7 @@
 import axios from "axios";
 import api from "./aixos";
 import {
+  deleteAllTokens,
   saveAccessTokens,
   saveRefreshTokens,
   setAccessToken,
@@ -40,7 +41,7 @@ const login = async (email: string, password: string) => {
     }
     return {
       success: false,
-      message: response.data?.message,
+      message: response.data?.message || "Đăng nhập thất bại",
     };
   } catch (error) {
     return {
@@ -98,4 +99,46 @@ const authMe = async () => {
   }
 };
 
-export { authMe, forgotPassword, login, resetPassword };
+const restoreSession = async (token: string) => {
+  try {
+    const response = await api.post("/auth/refresh", { refreshToken: token });
+    if (response.data?.success) {
+      setAccessToken(response.data.accessToken);
+      await saveRefreshTokens(response.data.refreshToken);
+      await saveAccessTokens(response.data.accessToken);
+      return {
+        success: true,
+        accessToken: response.data.accessToken,
+        message: response.data.message,
+      };
+    }
+    return {
+      success: false,
+      message:
+        response.data?.message || "Không thể khôi phục phiên đăng nhập",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "Không thể khôi phục phiên đăng nhập"),
+    };
+  }
+};
+
+const clearSession = async () => {
+  try {
+    setAccessToken(null);
+    await deleteAllTokens();
+  } catch (error) {
+    console.error("Error clearing session:", error);
+  }
+};
+
+export {
+  authMe,
+  clearSession,
+  forgotPassword,
+  login,
+  resetPassword,
+  restoreSession,
+};

@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthController } from './auth.controller';
-import AuthService from './auth.service';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AtStrategy } from 'src/common/guard/at.strategy';
 import { RtStrategy } from 'src/common/guard/rt.strategy';
-import { MongooseModule } from '@nestjs/mongoose';
-import { PasswordResetCodeSchema } from './schemas/password-reset-code.schema';
+import { UserSchema } from 'src/common/schemas/user.schema';
+import { VendorsModule } from '../vendors/vendors.module';
+import { AuthController } from './auth.controller';
+import AuthService from './auth.service';
 import { PasswordResetEmailService } from './password-reset-email.service';
-import { UserSchema } from '../users/schemas/user.schema';
+import { PasswordResetCodeSchema } from './schemas/password-reset-code.schema';
+import { SmsService } from './services/sms.service';
 
 @Module({
   imports: [
@@ -16,8 +18,15 @@ import { UserSchema } from '../users/schemas/user.schema';
       { name: 'User', schema: UserSchema },
       { name: 'PasswordResetCode', schema: PasswordResetCodeSchema },
     ]),
+    VendorsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, PasswordResetEmailService, AtStrategy, RtStrategy],
+  providers: [
+    AuthService,
+    AtStrategy,
+    RtStrategy,
+    SmsService,
+    PasswordResetEmailService,
+  ],
 })
 export class AuthModule {}

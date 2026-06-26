@@ -13,7 +13,7 @@ const email = 'user@example.com';
 const resetSecret = 'reset-secret';
 
 type PasswordUpdate = {
-  $set: { password_hash: string };
+  $set: { passwordHash: string };
 };
 
 type ResetCodeCreatePayload = {
@@ -43,6 +43,14 @@ function createService() {
       jest.fn<(payload: ResetCodeCreatePayload) => Promise<{ _id: string }>>(),
     deleteOne: jest.fn(),
   };
+  const vendorProfileModel = {
+    create: jest.fn(),
+  };
+  const pendingVendorModel = {
+    findOne: jest.fn(),
+    findOneAndUpdate: jest.fn(),
+    deleteOne: jest.fn(),
+  };
   const jwtService = {
     sign: jest
       .fn()
@@ -63,12 +71,18 @@ function createService() {
   const emailService = {
     sendCode: jest.fn(),
   };
+  const smsService = {
+    sendOtp: jest.fn(),
+  };
 
   const service = new AuthService(
     userModel as never,
+    vendorProfileModel as never,
+    pendingVendorModel as never,
     passwordResetCodeModel as never,
     jwtService as unknown as JwtService,
     configService as unknown as ConfigService,
+    smsService as never,
     emailService as unknown as PasswordResetEmailService,
   );
 
@@ -78,6 +92,9 @@ function createService() {
     passwordResetCodeModel,
     jwtService,
     emailService,
+    smsService,
+    vendorProfileModel,
+    pendingVendorModel,
   };
 }
 
@@ -85,38 +102,42 @@ describe('AuthService password recovery', () => {
   it('supports bcrypt login without exposing the password hash', async () => {
     const { service, userModel } = createService();
     const passwordHash = await bcrypt.hash('password123', 4);
-    userModel.findOne.mockResolvedValue({
+    userModel.findOne.mockReturnValue({
+      select: jest.fn().mockResolvedValue({
       _id: 'user-id',
       email,
-      password_hash: passwordHash,
+      passwordHash,
       status: 'active',
       toObject: () => ({
         _id: 'user-id',
         email,
-        password_hash: passwordHash,
+        passwordHash,
         status: 'active',
+      }),
       }),
     });
 
     const result = await service.login(email, 'password123');
 
     expect(result.success).toBe(true);
-    expect(result.user).not.toHaveProperty('password_hash');
+    expect(result.user).not.toHaveProperty('passwordHash');
     expect(userModel.updateOne).not.toHaveBeenCalled();
   });
 
   it('upgrades a legacy plaintext password after successful login', async () => {
     const { service, userModel } = createService();
-    userModel.findOne.mockResolvedValue({
+    userModel.findOne.mockReturnValue({
+      select: jest.fn().mockResolvedValue({
       _id: 'user-id',
       email,
-      password_hash: 'password123',
+      passwordHash: 'password123',
       status: 'active',
       toObject: () => ({
         _id: 'user-id',
         email,
-        password_hash: 'password123',
+        passwordHash: 'password123',
         status: 'active',
+      }),
       }),
     });
     userModel.updateOne.mockResolvedValue({ matchedCount: 1 });
@@ -125,7 +146,7 @@ describe('AuthService password recovery', () => {
 
     const passwordUpdate = userModel.updateOne.mock.calls[0][1];
     expect(
-      await bcrypt.compare('password123', passwordUpdate.$set.password_hash),
+      await bcrypt.compare('password123', passwordUpdate.$set.passwordHash),
     ).toBe(true);
   });
 
@@ -192,6 +213,7 @@ describe('AuthService password recovery', () => {
     expect(result).toEqual({
       success: true,
       accessToken: 'access-token',
+      refreshToken: 'refresh-token',
     });
     expect(jwtService.verifyAsync).toHaveBeenCalledWith('valid-refresh-token', {
       secret: 'refresh-secret',
@@ -247,7 +269,7 @@ describe('AuthService password recovery', () => {
 
     expect(result.success).toBe(true);
     const update = userModel.updateOne.mock.calls[0][1];
-    expect(await bcrypt.compare('password123', update.$set.password_hash)).toBe(
+    expect(await bcrypt.compare('password123', update.$set.passwordHash)).toBe(
       true,
     );
   });
