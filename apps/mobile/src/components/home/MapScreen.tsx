@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Map,
@@ -6,16 +6,23 @@ import {
   NativeUserLocation,
   GeoJSONSource,
   Layer,
+  CameraRef,
 } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
-import { getAllLocations } from "@/service/locationService";
+import { getAllLocations, getCurrentLocation } from "@/service/locationService";
+import { IconButton } from "react-native-paper";
+import { useRouter } from "expo-router";
 
-const MAP_API = process.env.EXPO_PUBLIC_MAP_API;
+const MAP_API =
+  process.env.EXPO_PUBLIC_MAP_APw ||
+  "https://demotiles.maplibre.org/style.json";
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const [mapStyle, setMapStyle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [geoJson, setGeoJson] = useState(null);
+  const cameraRef = useRef<CameraRef>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -74,15 +81,62 @@ export default function MapScreen() {
     };
     loadStyle();
   }, []);
+
+  const setCurrentLocation = async () => {
+    try {
+      const currentLocation = await getCurrentLocation();
+
+      console.log("Current location fetched:", currentLocation);
+
+      if (!currentLocation) {
+        console.error("Current location is null or undefined");
+        return;
+      }
+
+      const coords: [number, number] = [
+        currentLocation.coords.longitude,
+        currentLocation.coords.latitude,
+      ];
+
+      setLocation(coords);
+
+      cameraRef.current?.setStop({
+        center: [
+          currentLocation.coords.longitude,
+          currentLocation.coords.latitude,
+        ],
+        zoom: 15,
+        duration: 1000,
+        easing: "ease",
+      });
+    } catch (error) {
+      console.error("Error getting current location:", error);
+    }
+  };
+
   if (loading || !mapStyle || !location) {
     return <View style={styles.container} />;
   }
   return (
     <View style={styles.container}>
       <Map mapStyle={mapStyle} style={styles.map}>
-        <Camera initialViewState={{ center: location, zoom: 10 }} />
+        <Camera
+          initialViewState={{ center: location, zoom: 10 }}
+          ref={cameraRef}
+        />
         <NativeUserLocation />
-        <GeoJSONSource id="geojson" data={geoJson} />
+        <GeoJSONSource
+          id="geojson"
+          data={geoJson}
+          onPress={(e) => {
+            const feature = e.nativeEvent.features?.[0];
+            if (!feature) return;
+            router.push({
+              pathname: "/location/[locationDetail]",
+              params: { id: feature.properties.id },
+            });
+          }}
+        />
         <Layer
           id="locations-circle"
           type="circle"
@@ -113,6 +167,17 @@ export default function MapScreen() {
           }}
         />
       </Map>
+      <View style={styles.buttonGroup}>
+        <IconButton
+          mode="contained"
+          size={35}
+          icon="crosshairs-gps"
+          onPress={() => {
+            setCurrentLocation();
+          }}
+        />
+        <IconButton mode="contained" size={35} icon="plus" />
+      </View>
     </View>
   );
 }
@@ -120,6 +185,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: "relative",
   },
   map: {
     flex: 1,
@@ -134,5 +200,10 @@ const styles = StyleSheet.create({
   },
   markerText: {
     fontSize: 22,
+  },
+  buttonGroup: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
   },
 });
