@@ -27,8 +27,8 @@ export class LocationController {
     return result;
   }
 
-  @Get(':locationId')
-  async getLocationById(@Param('locationId') locationId: string) {
+  @Get(':id')
+  async getLocationById(@Param('id') locationId: string) {
     if (!locationId) {
       throw new NotFoundException('Không tìm thấy địa điểm với ID này');
     }
