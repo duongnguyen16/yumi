@@ -18,7 +18,7 @@ export default function LocationDetail() {
       try {
         const response = await getLocationById(id as string);
         if (response.success) {
-          setLocationData(response.location);
+          setLocationData(response);
         } else {
           console.log("Error fetching location data:", response.message);
           setDialogVisible(true);
@@ -45,10 +45,10 @@ export default function LocationDetail() {
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <Stack.Screen
         options={{
-          headerTitle: locationData?.name || "Chi tiết vị trí",
+          headerTitle: locationData?.location?.name || "Chi tiết vị trí",
           headerShown: true,
           headerRight: () => (
-            <Badge status={locationData?.status || "CLOSED"} />
+            <Badge status={locationData?.location?.status || "CLOSED"} />
           ),
         }}
       />
