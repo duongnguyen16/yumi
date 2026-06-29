@@ -128,13 +128,44 @@ export default function MapScreen() {
         <GeoJSONSource
           id="geojson"
           data={geoJson}
+          cluster={true}
+          clusterRadius={20}
+          clusterMaxZoom={14}
           onPress={(e) => {
             const feature = e.nativeEvent.features?.[0];
             if (!feature) return;
+            if (!feature.properties.id) return;
             router.push({
-              pathname: "/location/[locationDetail]",
+              pathname: "/location/[id]",
               params: { id: feature.properties.id },
             });
+          }}
+        />
+        <Layer
+          id="locations-cluster"
+          type="circle"
+          source="geojson"
+          filter={["has", "point_count"]}
+          paint={{
+            "circle-radius": 18,
+            "circle-color": "#ff5a5f",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#ffffff",
+          }}
+        />
+
+        <Layer
+          id="locations-cluster-count"
+          type="symbol"
+          source="geojson"
+          filter={["has", "point_count"]}
+          layout={{
+            "text-field": ["get", "point_count"],
+            "text-size": 14,
+            "text-anchor": "center",
+          }}
+          paint={{
+            "text-color": "#ffffff",
           }}
         />
         <Layer
