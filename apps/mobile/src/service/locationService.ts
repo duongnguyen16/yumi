@@ -31,9 +31,7 @@ const getAllLocations = async () => {
   try {
     const response = await api.get("/location");
     console.log("Fetched locations:", response.data);
-    if (response.data.success) {
-      return { locations: response.data.locations, success: true };
-    }
+    return response.data;
   } catch (error) {
     console.log("Error fetching locations:", error);
     return {
@@ -44,4 +42,31 @@ const getAllLocations = async () => {
   }
 };
 
-export { getCurrentLocation, checkPermission, getAllLocations };
+const getLocationById = async (id: string) => {
+  try {
+    const response = await api.get(`/location/${id}`);
+    return response.data;
+  } catch (error) {
+    console.log("Error while getLocationById: ", error);
+    return {
+      success: false,
+      message: error?.response?.data.message || "Lỗi khi lấy dữ liệu",
+    };
+  }
+};
+
+const viewCount = async (locationId: string) => {
+  try {
+    await api.post(`/location/view-count/${locationId}`);
+  } catch (error) {
+    console.log("Error while viewCount: ", error);
+  }
+};
+
+export {
+  getCurrentLocation,
+  checkPermission,
+  getAllLocations,
+  getLocationById,
+  viewCount,
+};
