@@ -55,9 +55,18 @@ const getLocationById = async (id: string) => {
   }
 };
 
+const viewCount = async (locationId: string) => {
+  try {
+    await api.post(`/location/view-count/${locationId}`);
+  } catch (error) {
+    console.log("Error while viewCount: ", error);
+  }
+};
+
 export {
   getCurrentLocation,
   checkPermission,
   getAllLocations,
   getLocationById,
+  viewCount,
 };
