@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -7,6 +7,12 @@ import {
 } from 'src/common/schemas/location-view';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
+
+type LocationRating = {
+  _id: unknown;
+  avgRating?: number;
+  reviewCount: number;
+};
 
 @Injectable()
 export class LocationService {
@@ -78,6 +84,8 @@ export class LocationService {
   }
 
   async getLocationById(locationId: string, userId: string) {
+    void userId;
+
     try {
       const location = await this.locationModel.findById(locationId).exec();
       if (!location) {
@@ -87,7 +95,7 @@ export class LocationService {
           statusCode: 404,
         };
       }
-      const rating = await this.reviewModel.aggregate([
+      const rating = await this.reviewModel.aggregate<LocationRating>([
         {
           $match: { locationId: location._id },
         },
@@ -139,7 +147,7 @@ export class LocationService {
         counted: true,
       };
     } catch (error) {
-      if (error.code === 11000) {
+      if (isDuplicateKeyError(error)) {
         return {
           success: true,
           counted: false,
@@ -148,4 +156,13 @@ export class LocationService {
       throw error;
     }
   }
+}
+
+function isDuplicateKeyError(error: unknown): error is { code: number } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 11000
+  );
 }
