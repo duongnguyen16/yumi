@@ -8,6 +8,7 @@ import {
   Layer,
   CameraRef,
 } from "@maplibre/maplibre-react-native";
+import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
 import { getAllLocations, getCurrentLocation } from "@/service/locationService";
 import { IconButton } from "react-native-paper";
@@ -16,9 +17,22 @@ import { useRouter } from "expo-router";
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APw ||
   "https://demotiles.maplibre.org/style.json";
+
+type MapStyleLayer = {
+  id: string | number;
+  type?: string;
+  layout?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
+  glyphs?: string;
+  layers: MapStyleLayer[];
+};
+
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
-  const [mapStyle, setMapStyle] = useState(null);
+  const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
   const [geoJson, setGeoJson] = useState(null);
   const cameraRef = useRef<CameraRef>(null);
@@ -43,10 +57,10 @@ export default function MapScreen() {
       try {
         console.log("Loading map style from API:", MAP_API);
         const response = await fetch(MAP_API);
-        const styleJson = await response.json();
+        const styleJson = (await response.json()) as MutableMapStyle;
         styleJson.glyphs =
           "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
-        styleJson.layers = styleJson.layers.map((layer: any) => {
+        styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
             layer.type === "symbol" &&
@@ -72,7 +86,7 @@ export default function MapScreen() {
             },
           };
         });
-        setMapStyle(styleJson);
+        setMapStyle(styleJson as unknown as StyleSpecification);
         setLoading(false);
       } catch (error) {
         console.error("Error loading map style:", error);
