@@ -13,14 +13,14 @@ import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
 
-export default function LocationDetailScreen({ data }: any) {
+export default function LocationDetailScreen({ data }) {
   const [tab, setTab] = useState("general");
   const handleShare = async () => {
     try {
       const url = Linking.createURL(`location/${data?.location?._id}`);
       await Share.share({
         title: "Chia sẻ địa điểm",
-        message: "Xem địa điểm này: " + url,
+        message: url,
         url: url,
       });
     } catch (error) {
