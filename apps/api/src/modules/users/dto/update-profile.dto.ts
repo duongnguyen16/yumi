@@ -1,4 +1,10 @@
-import { IsEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 const VN_PHONE_REGEX = /^(?:\+84|0)(?:3|5|7|8|9)\d{8}$/;
 

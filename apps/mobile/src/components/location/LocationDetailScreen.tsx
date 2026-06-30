@@ -1,12 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Image, ScrollView, View, Share } from "react-native";
-import {
-  Button,
-  Icon,
-  IconButton,
-  SegmentedButtons,
-  Text,
-} from "react-native-paper";
+import { Icon, IconButton, SegmentedButtons, Text } from "react-native-paper";
 import * as Linking from "expo-linking";
 import GeneralTab from "./tabs/GeneralTab";
 import ReviewTab from "./tabs/ReviewTab";
@@ -15,9 +9,15 @@ import { viewCount } from "@/service/locationService";
 
 export default function LocationDetailScreen({ data }) {
   const [tab, setTab] = useState("general");
+  const locationId = data?.location?._id;
+
   const handleShare = async () => {
+    if (!locationId) {
+      return;
+    }
+
     try {
-      const url = Linking.createURL(`location/${data?.location?._id}`);
+      const url = Linking.createURL(`location/${locationId}`);
       await Share.share({
         title: "Chia sẻ địa điểm",
         message: url,
@@ -28,11 +28,15 @@ export default function LocationDetailScreen({ data }) {
     }
   };
   useEffect(() => {
+    if (!locationId) {
+      return;
+    }
+
     const timer = setTimeout(() => {
-      viewCount(data?.location?._id);
+      viewCount(locationId);
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [locationId]);
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: "white" }}
@@ -95,8 +99,8 @@ export default function LocationDetailScreen({ data }) {
       {/* Nội dung tab */}
       <View style={{ padding: 16 }}>
         {tab === "general" && <GeneralTab data={data} />}
-        {tab === "review" && <ReviewTab data={data} />}
-        {tab === "picture" && <PictureTab data={data} />}
+        {tab === "review" && <ReviewTab />}
+        {tab === "picture" && <PictureTab />}
       </View>
     </ScrollView>
   );
