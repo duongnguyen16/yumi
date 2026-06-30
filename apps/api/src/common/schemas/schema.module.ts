@@ -16,6 +16,7 @@ import { Bookmark, BookmarkSchema } from './bookmark.schema';
 import { Notification, NotificationSchema } from './notification.schema';
 import { AuditLog, AuditLogSchema } from './audit-log.schema';
 import { TrustEvent, TrustEventSchema } from './trust-event.schema';
+import { LocationView, LocationViewSchema } from './location-view';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { TrustEvent, TrustEventSchema } from './trust-event.schema';
       { name: Notification.name, schema: NotificationSchema },
       { name: AuditLog.name, schema: AuditLogSchema },
       { name: TrustEvent.name, schema: TrustEventSchema },
+      { name: LocationView.name, schema: LocationViewSchema },
     ]),
   ],
   exports: [MongooseModule],
