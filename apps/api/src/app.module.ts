@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { SchemaModule } from './common/schemas/schema.module';
 import { LocationModule } from './modules/locations/location.module';
 import { TrustEngineModule } from './modules/trust-engine/trust-engine.module';
+import { AdminCategoryModule } from './modules/admin-category/admin-category.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TrustEngineModule } from './modules/trust-engine/trust-engine.module';
     SchemaModule,
     LocationModule,
     TrustEngineModule,
+    AdminCategoryModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
