@@ -35,3 +35,13 @@ export class TrustEvent {
 
 export const TrustEventSchema = SchemaFactory.createForClass(TrustEvent);
 TrustEventSchema.index({ userId: 1, createdAt: -1 });
+TrustEventSchema.index(
+  { userId: 1, type: 1, refCollection: 1, refId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      refCollection: { $exists: true },
+      refId: { $exists: true },
+    },
+  },
+);

@@ -3,7 +3,6 @@ import Badge from "@/components/ui/Badge";
 import { getLocationById } from "@/service/locationService";
 import { Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
 import { ActivityIndicator, Button, Dialog, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
