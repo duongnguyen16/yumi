@@ -26,8 +26,7 @@ declare module 'passport-jwt' {
   }
 
   export type StrategyOptions =
-    | StrategyOptionsWithRequest
-    | StrategyOptionsWithoutRequest;
+    StrategyOptionsWithRequest | StrategyOptionsWithoutRequest;
 
   export type SecretOrKeyProvider = (
     request: any,
