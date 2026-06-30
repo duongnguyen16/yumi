@@ -7,27 +7,7 @@ import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
 
-type LocationDetailData = {
-  location?: {
-    _id?: string;
-    name?: string;
-    address?: string;
-    openingHours?: string;
-    description?: string;
-    viewCount?: number;
-    rating?: {
-      avgRating?: number;
-    };
-  };
-};
-
-type LocationDetailScreenProps = {
-  data?: LocationDetailData | null;
-};
-
-export default function LocationDetailScreen({
-  data,
-}: LocationDetailScreenProps) {
+export default function LocationDetailScreen({ data }) {
   const [tab, setTab] = useState("general");
   const locationId = data?.location?._id;
 
@@ -40,7 +20,7 @@ export default function LocationDetailScreen({
       const url = Linking.createURL(`location/${locationId}`);
       await Share.share({
         title: "Chia sẻ địa điểm",
-        message: "Xem địa điểm này: " + url,
+        message: url,
         url: url,
       });
     } catch (error) {
