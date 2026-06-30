@@ -2,7 +2,18 @@ import React from "react";
 import { View } from "react-native";
 import { Card, Icon, Text } from "react-native-paper";
 
-export default function GeneralTab({ data }: any) {
+type GeneralTabProps = {
+  data?: {
+    location?: {
+      address?: string;
+      openingHours?: string;
+      description?: string;
+      viewCount?: number;
+    };
+  } | null;
+};
+
+export default function GeneralTab({ data }: GeneralTabProps) {
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
