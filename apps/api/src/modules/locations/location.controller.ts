@@ -13,6 +13,7 @@ import {
 import { LocationService } from './location.service';
 import { AuthGuard } from '@nestjs/passport';
 import { SearchDto } from './dto/search.dto';
+import { Throttle } from '@nestjs/throttler';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -38,6 +39,7 @@ export class LocationController {
   }
 
   @Get('search')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @UseGuards(AuthGuard('jwt-at'))
   async searchLocation(@Query() query: SearchDto) {
     const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
@@ -50,6 +52,7 @@ export class LocationController {
       categoryId,
       subCategoryId,
     );
+    console.log('Search response:', response);
     return response;
   }
 
