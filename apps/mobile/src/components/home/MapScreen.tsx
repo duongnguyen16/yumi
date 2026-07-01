@@ -19,6 +19,11 @@ const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APw ||
   "https://demotiles.maplibre.org/style.json";
 
+const emptyGeoJson = {
+  type: "FeatureCollection" as const,
+  features: [],
+};
+
 type MapStyleLayer = {
   id: string | number;
   type?: string;
@@ -35,7 +40,7 @@ export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
-  const [geoJson, setGeoJson] = useState(null);
+  const [geoJson, setGeoJson] = useState(emptyGeoJson);
   const cameraRef = useRef<CameraRef>(null);
   const router = useRouter();
   const searchInputRef = useRef(null);
@@ -46,9 +51,7 @@ export default function MapScreen() {
     const fetchLocation = async () => {
       try {
         const response = await getAllLocations();
-        if (response.success) {
-          setGeoJson(response.locations);
-        }
+        setGeoJson(response.locations ?? emptyGeoJson);
       } catch (error) {
         console.error("Error fetching locations:", error);
       }
@@ -61,7 +64,10 @@ export default function MapScreen() {
       try {
         console.log("Loading map style from API:", MAP_API);
         const response = await fetch(MAP_API);
-        const styleJson = await response.json();
+        if (!response.ok) {
+          throw new Error(`Map style request failed: ${response.status}`);
+        }
+        const styleJson = (await response.json()) as MutableMapStyle;
         styleJson.glyphs =
           "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
@@ -298,7 +304,14 @@ export default function MapScreen() {
               }}
             />
 
-            <IconButton mode="contained" size={35} icon="plus" />
+            <IconButton
+              mode="contained"
+              size={35}
+              icon="plus"
+              onPress={() => {
+                router.push("/contribute" as never);
+              }}
+            />
           </View>
         </View>
       )}
