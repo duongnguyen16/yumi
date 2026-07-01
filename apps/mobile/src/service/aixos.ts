@@ -1,4 +1,5 @@
 import axios from "axios";
+import { Platform } from "react-native";
 import {
   deleteAllTokens,
   getAccessToken,
@@ -9,12 +10,12 @@ import {
 } from "./tokenStorage";
 
 const BASE_URL_ENV =
-  process.env.EXPO_PUBLIC_BASE_URL || "http://192.168.120.53:9999/api";
+  process.env.EXPO_PUBLIC_BASE_URL ||
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:3000/api"
+    : "http://localhost:3000/api");
 
 const getBaseUrl = () => {
-  // if (__DEV__ && Platform.OS === "android") {
-  //   return "http://10.0.2.2:9999/api";
-  // }
   return BASE_URL_ENV;
 };
 console.log(getBaseUrl());
@@ -79,6 +80,8 @@ api.interceptors.response.use(
         return Promise.reject(err);
       }
     }
+
+    return Promise.reject(error);
   },
 );
 
