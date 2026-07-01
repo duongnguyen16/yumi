@@ -23,7 +23,6 @@ build/
 web-build/
 
 # Environment files
-.env
 apps/api/.env
 .env.local
 .env.*.local
@@ -43,3 +42,6 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Local implementation guides (not shared)
+/guideline/
