@@ -26,7 +26,7 @@ import { ImagesModule } from './modules/images/images.module';
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60000, limit: 10 }],
+      throttlers: [{ ttl: 5000, limit: 10 }],
     }),
     AuthModule,
     SchemaModule,

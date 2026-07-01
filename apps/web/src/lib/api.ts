@@ -1,19 +1,16 @@
-import axios, {
-  AxiosError,
-  type InternalAxiosRequestConfig,
-} from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import {
   clearAuth,
   getAccessToken,
   getRefreshToken,
   updateTokens,
-} from './auth';
+} from "./auth";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9999/api";
 
 export const api = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
   timeout: 15000,
 });
 
@@ -32,10 +29,10 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const original = error.config as RetriableConfig | undefined;
     const status = error.response?.status;
-    const url = original?.url ?? '';
+    const url = original?.url ?? "";
 
     const isAuthRoute =
-      url.includes('/auth/login') || url.includes('/auth/refresh');
+      url.includes("/auth/login") || url.includes("/auth/refresh");
 
     if (status === 401 && original && !original._retry && !isAuthRoute) {
       original._retry = true;
@@ -57,8 +54,8 @@ api.interceptors.response.use(
         }
       }
       clearAuth();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/admin/login';
+      if (typeof window !== "undefined") {
+        window.location.href = "/admin/login";
       }
     }
 
