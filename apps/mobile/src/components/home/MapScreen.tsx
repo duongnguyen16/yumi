@@ -99,6 +99,12 @@ export default function MapScreen() {
     };
     loadStyle();
   }, []);
+  const closeSearch = () => {
+    searchInputRef.current?.blur();
+    Keyboard.dismiss();
+    setSearchQuery("");
+    setSearchScreen(false);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -149,11 +155,6 @@ export default function MapScreen() {
     }
   };
 
-  const closeSearch = () => {
-    searchInputRef.current?.blur();
-    setSearchScreen(false);
-  };
-
   if (loading || !mapStyle || !location) {
     return <View style={styles.container} />;
   }
@@ -162,6 +163,7 @@ export default function MapScreen() {
     <View style={styles.container}>
       <TextInput
         style={styles.searchInput}
+        value={searchQuery}
         mode="outlined"
         outlineStyle={{ borderRadius: 20 }}
         placeholder="Tìm kiếm..."
