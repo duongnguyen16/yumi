@@ -2,7 +2,7 @@ import { ErrorBoundaryProps, Stack } from "expo-router";
 import "../../global.css";
 import UserContextProvider from "@/contexts/userContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Text } from "react-native-paper";
+import { PaperProvider, Text } from "react-native-paper";
 import { View } from "react-native";
 import { Button } from "@expo/ui";
 import * as Location from "expo-location";
@@ -31,11 +31,13 @@ export default function RootLayout() {
   }, []);
   return (
     <SafeAreaProvider>
-      <UserContextProvider>
-        <LocationContextProvider>
-          <Stack screenOptions={{ headerShown: false }} />
-        </LocationContextProvider>
-      </UserContextProvider>
+      <PaperProvider theme={{ dark: false }}>
+        <UserContextProvider>
+          <LocationContextProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </LocationContextProvider>
+        </UserContextProvider>
+      </PaperProvider>
     </SafeAreaProvider>
   );
 }

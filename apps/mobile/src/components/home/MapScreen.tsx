@@ -106,10 +106,9 @@ export default function MapScreen() {
         "hardwareBackPress",
         () => {
           if (searchScreen) {
-            setSearchScreen(false);
+            closeSearch();
             return true;
           }
-
           return false;
         },
       );
@@ -150,6 +149,11 @@ export default function MapScreen() {
     }
   };
 
+  const closeSearch = () => {
+    searchInputRef.current?.blur();
+    setSearchScreen(false);
+  };
+
   if (loading || !mapStyle || !location) {
     return <View style={styles.container} />;
   }
@@ -162,12 +166,18 @@ export default function MapScreen() {
         outlineStyle={{ borderRadius: 20 }}
         placeholder="Tìm kiếm..."
         ref={searchInputRef}
-        onFocus={() => setSearchScreen(true)}
+        onChangeText={(text) => setSearchQuery(text)}
+        onFocus={() => {
+          setSearchScreen(true);
+        }}
         left={
           searchScreen ? (
             <TextInput.Icon
               icon="arrow-left"
-              onPress={() => setSearchScreen(false)}
+              forceTextInputFocus={false}
+              onPress={() => {
+                closeSearch();
+              }}
             />
           ) : null
         }
@@ -183,17 +193,14 @@ export default function MapScreen() {
       />
 
       {searchScreen ? (
-        <LocationSearchScreen />
+        <LocationSearchScreen
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchRef={searchInputRef}
+        />
       ) : (
         <View style={styles.container}>
-          <Map
-            mapStyle={mapStyle}
-            style={styles.map}
-            onPress={() => {
-              searchInputRef.current?.blur();
-              Keyboard.dismiss();
-            }}
-          >
+          <Map mapStyle={mapStyle} style={styles.map}>
             <Camera
               initialViewState={{ center: location, zoom: 10 }}
               ref={cameraRef}

@@ -8,6 +8,7 @@ import { SchemaModule } from './common/schemas/schema.module';
 import { LocationModule } from './modules/locations/location.module';
 import { TrustEngineModule } from './modules/trust-engine/trust-engine.module';
 import { AdminCategoryModule } from './modules/admin-category/admin-category.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminCategoryModule } from './modules/admin-category/admin-category.mod
     LocationModule,
     TrustEngineModule,
     AdminCategoryModule,
+    CategoriesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
