@@ -17,6 +17,10 @@ import { Notification, NotificationSchema } from './notification.schema';
 import { AuditLog, AuditLogSchema } from './audit-log.schema';
 import { TrustEvent, TrustEventSchema } from './trust-event.schema';
 import { LocationView, LocationViewSchema } from './location-view';
+import {
+  LocationRequest,
+  LocationRequestSchema,
+} from './location-request';
 
 @Module({
   imports: [
@@ -38,6 +42,7 @@ import { LocationView, LocationViewSchema } from './location-view';
       { name: AuditLog.name, schema: AuditLogSchema },
       { name: TrustEvent.name, schema: TrustEventSchema },
       { name: LocationView.name, schema: LocationViewSchema },
+      { name: LocationRequest.name, schema: LocationRequestSchema },
     ]),
   ],
   exports: [MongooseModule],
