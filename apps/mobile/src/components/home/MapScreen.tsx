@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, View, Keyboard } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { StyleSheet, View, Keyboard, BackHandler } from "react-native";
 import {
   Map,
   Camera,
@@ -12,7 +12,8 @@ import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
 import { getAllLocations, getCurrentLocation } from "@/service/locationService";
 import { IconButton, Text, TextInput } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import LocationSearchScreen from "../location/LocationSearchScreen";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APw ||
@@ -39,6 +40,7 @@ export default function MapScreen() {
   const router = useRouter();
   const searchInputRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchScreen, setSearchScreen] = useState(false);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -98,6 +100,24 @@ export default function MapScreen() {
     loadStyle();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          if (searchScreen) {
+            setSearchScreen(false);
+            return true;
+          }
+
+          return false;
+        },
+      );
+
+      return () => subscription.remove();
+    }, [searchScreen]),
+  );
+
   const setCurrentLocation = async () => {
     try {
       const currentLocation = await getCurrentLocation();
@@ -133,6 +153,7 @@ export default function MapScreen() {
   if (loading || !mapStyle || !location) {
     return <View style={styles.container} />;
   }
+
   return (
     <View style={styles.container}>
       <TextInput
@@ -141,116 +162,137 @@ export default function MapScreen() {
         outlineStyle={{ borderRadius: 20 }}
         placeholder="Tìm kiếm..."
         ref={searchInputRef}
+        onFocus={() => setSearchScreen(true)}
+        left={
+          searchScreen ? (
+            <TextInput.Icon
+              icon="arrow-left"
+              onPress={() => setSearchScreen(false)}
+            />
+          ) : null
+        }
         right={
           <TextInput.Icon
             icon={() => (
               <View style={styles.rightIcons}>
                 <IconButton icon="magnify" size={20} />
-                <View>
-                  <Text>M</Text>
-                </View>
               </View>
             )}
           />
         }
       />
-      <Map
-        mapStyle={mapStyle}
-        style={styles.map}
-        onPress={() => {
-          searchInputRef.current?.blur();
-          Keyboard.dismiss();
-        }}
-      >
-        <Camera
-          initialViewState={{ center: location, zoom: 10 }}
-          ref={cameraRef}
-        />
-        <NativeUserLocation />
-        <GeoJSONSource
-          id="geojson"
-          data={geoJson}
-          cluster={true}
-          clusterRadius={20}
-          clusterMaxZoom={14}
-          onPress={(e) => {
-            const feature = e.nativeEvent.features?.[0];
-            if (!feature) return;
-            if (!feature.properties.id) return;
-            router.push({
-              pathname: "/location/[id]",
-              params: { id: feature.properties.id },
-            });
-          }}
-        />
-        <Layer
-          id="locations-cluster"
-          type="circle"
-          source="geojson"
-          filter={["has", "point_count"]}
-          paint={{
-            "circle-radius": 18,
-            "circle-color": "#ff5a5f",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          }}
-        />
 
-        <Layer
-          id="locations-cluster-count"
-          type="symbol"
-          source="geojson"
-          filter={["has", "point_count"]}
-          layout={{
-            "text-field": ["get", "point_count"],
-            "text-size": 14,
-            "text-anchor": "center",
-          }}
-          paint={{
-            "text-color": "#ffffff",
-          }}
-        />
-        <Layer
-          id="locations-circle"
-          type="circle"
-          source="geojson"
-          paint={{
-            "circle-radius": 8,
-            "circle-color": "#ff5a5f",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#ffffff",
-          }}
-        />
-        <Layer
-          id="locations-label"
-          type="symbol"
-          source="geojson"
-          layout={{
-            "text-field": ["get", "name"],
-            "text-size": 12,
-            "text-offset": [0, 1.5],
-            "text-anchor": "top",
-            "text-allow-overlap": false,
-            "text-ignore-placement": false,
-          }}
-          paint={{
-            "text-color": "#111111",
-            "text-halo-color": "#ffffff",
-            "text-halo-width": 1.5,
-          }}
-        />
-      </Map>
-      <View style={styles.buttonGroup}>
-        <IconButton
-          mode="contained"
-          size={35}
-          icon="crosshairs-gps"
-          onPress={() => {
-            setCurrentLocation();
-          }}
-        />
-        <IconButton mode="contained" size={35} icon="plus" />
-      </View>
+      {searchScreen ? (
+        <LocationSearchScreen />
+      ) : (
+        <View>
+          <Map
+            mapStyle={mapStyle}
+            style={styles.map}
+            onPress={() => {
+              searchInputRef.current?.blur();
+              Keyboard.dismiss();
+            }}
+          >
+            <Camera
+              initialViewState={{ center: location, zoom: 10 }}
+              ref={cameraRef}
+            />
+
+            <NativeUserLocation />
+
+            <GeoJSONSource
+              id="geojson"
+              data={geoJson}
+              cluster={true}
+              clusterRadius={20}
+              clusterMaxZoom={14}
+              onPress={(e) => {
+                const feature = e.nativeEvent.features?.[0];
+                if (!feature) return;
+                if (!feature.properties.id) return;
+
+                router.push({
+                  pathname: "/location/[id]",
+                  params: { id: feature.properties.id },
+                });
+              }}
+            />
+
+            <Layer
+              id="locations-cluster"
+              type="circle"
+              source="geojson"
+              filter={["has", "point_count"]}
+              paint={{
+                "circle-radius": 18,
+                "circle-color": "#ff5a5f",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+              }}
+            />
+
+            <Layer
+              id="locations-cluster-count"
+              type="symbol"
+              source="geojson"
+              filter={["has", "point_count"]}
+              layout={{
+                "text-field": ["get", "point_count"],
+                "text-size": 14,
+                "text-anchor": "center",
+              }}
+              paint={{
+                "text-color": "#ffffff",
+              }}
+            />
+
+            <Layer
+              id="locations-circle"
+              type="circle"
+              source="geojson"
+              paint={{
+                "circle-radius": 8,
+                "circle-color": "#ff5a5f",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+              }}
+            />
+
+            <Layer
+              id="locations-label"
+              type="symbol"
+              source="geojson"
+              layout={{
+                "text-field": ["get", "name"],
+                "text-size": 12,
+                "text-offset": [0, 1.5],
+                "text-anchor": "top",
+                "text-allow-overlap": false,
+                "text-ignore-placement": false,
+              }}
+              paint={{
+                "text-color": "#111111",
+                "text-halo-color": "#ffffff",
+                "text-halo-width": 1.5,
+              }}
+            />
+          </Map>
+
+          <View style={styles.buttonGroup}>
+            <IconButton
+              mode="contained"
+              size={35}
+              icon="crosshairs-gps"
+              onPress={() => {
+                setCurrentLocation();
+              }}
+            />
+
+            <IconButton mode="contained" size={35} icon="plus" />
+          </View>
+        </View>
+      )}
     </View>
   );
 }
