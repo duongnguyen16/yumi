@@ -18,7 +18,6 @@ export class CategoriesService {
   async getAllCategory() {
     try {
       const result = await this.CategoryModel.find();
-      console.log(result);
       if (!result) {
         return {
           success: false,
@@ -32,6 +31,32 @@ export class CategoriesService {
       };
     } catch (error) {
       console.log(error);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Đã xảy ra lỗi',
+      };
+    }
+  }
+
+  async getSubCategory(categoryId: string) {
+    try {
+      console.log(categoryId);
+      const result = await this.SubCategoryModel.find({
+        categoryId: categoryId,
+      });
+      if (!result) {
+        return {
+          success: false,
+          statusCode: 404,
+        };
+      }
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      console.log('Error at getSubCategory: ', error);
       return {
         success: false,
         statusCode: 500,
