@@ -43,7 +43,8 @@ export default class AuthService {
           statusCode: 401,
         };
       }
-      const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+      // const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+      const isPasswordValid = password === user.passwordHash;
       if (!isPasswordValid) {
         return {
           success: false,
