@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { stringify } from 'node:querystring';
 import {
   LocationView,
   LocationViewDocument,
@@ -156,9 +157,70 @@ export class LocationService {
       throw error;
     }
   }
-  async searchLocation(keyword, categoryId, subCategoryId, limit, page) {
-    try{
-      
+  async searchLocation(
+    limit: number,
+    page: number,
+    lat: string,
+    lng: string,
+    keyword?: string,
+    categoryId?: string,
+    subCategoryId?: string,
+  ) {
+    try {
+      const filter: any = {
+        status: 'PUBLISHED',
+      };
+      if (keyword) {
+        const regex = keyword.trim();
+        filter.$or = [
+          { name: regex },
+          { description: regex },
+          { address: regex },
+        ];
+      }
+      if (categoryId) {
+        filter.categoryId = categoryId;
+      }
+      if (subCategoryId) {
+        const ids = subCategoryId.split(',');
+        if (ids.length > 0) {
+          filter.subCategoryIds = {
+            $in: ids,
+          };
+        }
+      }
+      const skip = (page - 1) * limit;
+      const result = await this.locationModel.aggregate([
+        {
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
+            },
+            distanceField: 'distance',
+            spherical: true,
+            query: filter,
+          },
+        },
+        {
+          $facet: {
+            locations: [{ $skip: skip }, { $limit: limit }],
+            total: [{ $count: 'count' }],
+          },
+        },
+      ]);
+      const locations = result[0].location || [];
+      const total = result[0].total[0]?.count || 0;
+      return {
+        success: true,
+        locations,
+        total,
+        page,
+        limit,
+        hasMore: page * limit < total,
+      };
+    } catch (error) {
+      console.log('Error occur at searchLocation: ', error);
     }
   }
 }
