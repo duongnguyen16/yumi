@@ -63,7 +63,7 @@ export default function LocationSearchScreen({
   };
 
   useEffect(() => {
-    if (!searchQuery && !selectedCategory && !selectedSubCategory.length) {
+    if (!searchQuery && !selectedCategory && selectedSubCategory.length <= 0) {
       setSearchResults([]);
       return;
     }
