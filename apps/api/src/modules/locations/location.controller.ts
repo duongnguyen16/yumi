@@ -6,11 +6,13 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { LocationService } from './location.service';
 import { AuthGuard } from '@nestjs/passport';
+import { SearchDto } from './dto/search.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -66,5 +68,23 @@ export class LocationController {
     }
     const userId = req.user.userId;
     await this.locationService.viewCount(userId, locationId);
+  }
+
+  @Post('search')
+  @UseGuards(AuthGuard('jwt-at'))
+  async searchLocation(@Query() query: SearchDto) {
+    const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
+    const parseLimit = Number.parseInt(limit);
+    const parsePage = Number.parseInt(page);
+    const response = await this.locationService.searchLocation(
+      parseLimit,
+      parsePage,
+      lat,
+      lng,
+      keyword,
+      categoryId,
+      subCategoryId,
+    );
+    return response;
   }
 }
