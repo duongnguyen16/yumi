@@ -1,16 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { User } from './user.schema';
 import { Location } from './location.schema';
 
 export type LocationRequestDocument = HydratedDocument<LocationRequest>;
-
-export enum LocationRequestType {
-  CREATE = 'CREATE',
-  UPDATE = 'UPDATE',
-  RE_APPROVAL = 'RE_APPROVAL',
-  DELETE = 'DELETE',
-}
 
 export enum LocationRequestStatus {
   PENDING = 'PENDING',
@@ -22,7 +15,7 @@ export enum LocationRequestStatus {
 @Schema({ timestamps: true, collection: 'location_requests' })
 export class LocationRequest {
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: User.name,
     required: true,
     index: true,
@@ -30,36 +23,12 @@ export class LocationRequest {
   submittedBy!: Types.ObjectId;
 
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: Location.name,
     required: true,
     index: true,
   })
   locationId!: Types.ObjectId;
-
-  @Prop({
-    type: String,
-    enum: LocationRequestType,
-    required: true,
-    default: LocationRequestType.CREATE,
-    index: true,
-  })
-  requestType!: LocationRequestType;
-
-  @Prop({
-    type: Types.ObjectId,
-    ref: User.name,
-    default: null,
-    index: true,
-  })
-  reviewerId?: Types.ObjectId | null;
-
-  @Prop({
-    type: String,
-    trim: true,
-    default: null,
-  })
-  rejectReason?: string | null;
 
   @Prop({
     type: String,
@@ -70,11 +39,32 @@ export class LocationRequest {
   status!: LocationRequestStatus;
 
   @Prop({
-    type: Boolean,
-    default: false,
-    index: true,
+    type: MongooseSchema.Types.Mixed,
+    required: true,
   })
-  isPotentialDuplicate!: boolean;
+  submittedDataSnapshot!: Record<string, any>;
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  imageUrls!: string[];
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: null,
+  })
+  pinLocation?: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: null,
+  })
+  deviceLocation?: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
 
   @Prop({
     type: Number,
@@ -82,6 +72,40 @@ export class LocationRequest {
     default: null,
   })
   deviceDistanceMeters?: number | null;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+    index: true,
+  })
+  isPotentialDuplicate!: boolean;
+
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: Location.name }],
+    default: [],
+  })
+  suspectedDuplicateLocationIds!: Types.ObjectId[];
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: User.name,
+    default: null,
+    index: true,
+  })
+  reviewerId?: Types.ObjectId | null;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  reviewedAt?: Date | null;
+
+  @Prop({
+    type: String,
+    trim: true,
+    default: null,
+  })
+  rejectReason?: string | null;
 }
 
 export const LocationRequestSchema =
@@ -90,9 +114,15 @@ export const LocationRequestSchema =
 LocationRequestSchema.index({
   submittedBy: 1,
   status: 1,
+  createdAt: -1,
 });
 
 LocationRequestSchema.index({
   locationId: 1,
   status: 1,
+});
+
+LocationRequestSchema.index({
+  status: 1,
+  createdAt: -1,
 });
