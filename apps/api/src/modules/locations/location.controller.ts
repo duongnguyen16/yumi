@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { LocationService } from './location.service';
 import { AuthGuard } from '@nestjs/passport';
-import { JwtPayLoad } from 'src/types/jwt.types';
 
 interface AuthenticatedRequest extends Request {
   user: {
