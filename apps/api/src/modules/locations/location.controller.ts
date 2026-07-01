@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SearchDto } from './dto/search.dto';
+import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from 'src/common/guard/admin.guard';
 import { LocationRequestStatus } from 'src/common/schemas/location-request';
 import { LocationService } from './location.service';
@@ -45,6 +46,7 @@ export class LocationController {
   }
 
   @Get('search')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
   @UseGuards(AuthGuard('jwt-at'))
   async searchLocation(@Query() query: SearchDto) {
     const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
@@ -57,6 +59,7 @@ export class LocationController {
       categoryId,
       subCategoryId,
     );
+    console.log('Search response:', response);
     return response;
   }
 
@@ -136,7 +139,10 @@ export class LocationController {
       throw new NotFoundException('Khong tim thay dia diem voi ID nay');
     }
     const userId = req.user.userId;
-    const result = await this.locationService.getLocationById(locationId, userId);
+    const result = await this.locationService.getLocationById(
+      locationId,
+      userId,
+    );
     if (!result.success) {
       throw new NotFoundException('Khong tim thay dia diem');
     }
