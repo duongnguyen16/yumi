@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Category, CategoryDocument } from 'src/common/schemas/category.schema';
 import {
-  Category,
-  CategoryDocument,
-} from 'src/common/schemas/category.schema';
-import { LocationView, LocationViewDocument } from 'src/common/schemas/location-view';
+  LocationView,
+  LocationViewDocument,
+} from 'src/common/schemas/location-view';
 import {
   LocationRequest,
   LocationRequestDocument,
@@ -116,7 +116,11 @@ export class LocationService {
 
   async getContributionOptions() {
     const [categories, subCategories] = await Promise.all([
-      this.categoryModel.find({ isActive: true }).sort({ name: 1 }).lean().exec(),
+      this.categoryModel
+        .find({ isActive: true })
+        .sort({ name: 1 })
+        .lean()
+        .exec(),
       this.subCategoryModel
         .find({ isActive: true })
         .sort({ name: 1 })
@@ -124,7 +128,10 @@ export class LocationService {
         .exec(),
     ]);
 
-    const subsByCategory = new Map<string, Array<{ id: string; name: string }>>();
+    const subsByCategory = new Map<
+      string,
+      Array<{ id: string; name: string }>
+    >();
     for (const sub of subCategories) {
       const key = String(sub.categoryId);
       const current = subsByCategory.get(key) ?? [];
@@ -345,7 +352,9 @@ export class LocationService {
       throw new NotFoundException('Khong tim thay yeu cau dia diem');
     }
 
-    const location = await this.locationModel.findById(request.locationId).exec();
+    const location = await this.locationModel
+      .findById(request.locationId)
+      .exec();
     if (!location) {
       throw new NotFoundException('Khong tim thay dia diem lien ket');
     }
@@ -387,7 +396,9 @@ export class LocationService {
       throw new NotFoundException('Khong tim thay yeu cau dia diem');
     }
 
-    const location = await this.locationModel.findById(request.locationId).exec();
+    const location = await this.locationModel
+      .findById(request.locationId)
+      .exec();
     if (!location) {
       throw new NotFoundException('Khong tim thay dia diem lien ket');
     }
