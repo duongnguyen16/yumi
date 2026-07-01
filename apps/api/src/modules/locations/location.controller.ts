@@ -73,13 +73,17 @@ export class LocationController {
   @Post('search')
   @UseGuards(AuthGuard('jwt-at'))
   async searchLocation(@Query() query: SearchDto) {
-    const { keyword, categoryId, subCategoryId, limit, page } = query;
+    const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
+    const parseLimit = Number.parseInt(limit);
+    const parsePage = Number.parseInt(page);
     const response = await this.locationService.searchLocation(
+      parseLimit,
+      parsePage,
+      lat,
+      lng,
       keyword,
       categoryId,
       subCategoryId,
-      limit,
-      page,
     );
     return response;
   }
