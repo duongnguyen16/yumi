@@ -6,10 +6,15 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
 import { SchemaModule } from './common/schemas/schema.module';
 import { LocationModule } from './modules/locations/location.module';
+import { TrustEngineModule } from './modules/trust-engine/trust-engine.module';
+import { AdminCategoryModule } from './modules/admin-category/admin-category.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env', '../../.env'],
+    }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -23,6 +28,8 @@ import { LocationModule } from './modules/locations/location.module';
     AuthModule,
     SchemaModule,
     LocationModule,
+    TrustEngineModule,
+    AdminCategoryModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

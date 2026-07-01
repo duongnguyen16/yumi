@@ -26,8 +26,7 @@ declare module 'passport-jwt' {
   }
 
   export type StrategyOptions =
-    | StrategyOptionsWithRequest
-    | StrategyOptionsWithoutRequest;
+    StrategyOptionsWithRequest | StrategyOptionsWithoutRequest;
 
   export type SecretOrKeyProvider = (
     request: any,
@@ -57,9 +56,7 @@ declare module 'passport-jwt' {
   export namespace ExtractJwt {
     function fromHeader(header_name: string): JwtFromRequestFunction;
     function fromBodyField(field_name: string): JwtFromRequestFunction;
-    function fromUrlQueryParameter(
-      param_name: string,
-    ): JwtFromRequestFunction;
+    function fromUrlQueryParameter(param_name: string): JwtFromRequestFunction;
     function fromAuthHeaderWithScheme(
       auth_scheme: string,
     ): JwtFromRequestFunction;
