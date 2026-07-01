@@ -156,6 +156,11 @@ export class LocationService {
       throw error;
     }
   }
+  async searchLocation(keyword, categoryId, subCategoryId, limit, page) {
+    try{
+      
+    }
+  }
 }
 
 function isDuplicateKeyError(error: unknown): error is { code: number } {
