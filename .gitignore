@@ -23,6 +23,7 @@ build/
 web-build/
 
 # Environment files
+.env
 apps/api/.env
 .env.local
 .env.*.local
