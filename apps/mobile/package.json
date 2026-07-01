@@ -9,7 +9,7 @@
     "@maplibre/maplibre-react-native": "^11.3.5",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-vector-icons/material-design-icons": "^13.1.2",
-    "@wdp301/shared": "workspace:*",
+    "@wdp301/shared": "file:../../packages/shared",
     "axios": "^1.16.1",
     "expo": "~56.0.4",
     "expo-constants": "~56.0.15",

@@ -18,7 +18,7 @@
     "@mui/icons-material": "^9.0.1",
     "@mui/material": "^9.0.1",
     "@mui/material-nextjs": "^9.1.1",
-    "@wdp301/shared": "workspace:*",
+    "@wdp301/shared": "file:../../packages/shared",
     "axios": "^1.16.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
