@@ -2,6 +2,11 @@ import * as Location from "expo-location";
 import api from "./aixos";
 import { success } from "zod";
 
+const emptyLocations = {
+  type: "FeatureCollection" as const,
+  features: [],
+};
+
 const getCurrentLocation = async () => {
   try {
     const hasPermission = await checkPermission();
@@ -37,8 +42,8 @@ const getAllLocations = async () => {
     console.log("Error fetching locations:", error);
     return {
       success: false,
-      locations: [],
-      message: error?.response?.data?.message || "Lỗi khi lấy dữ liệu vị trí.",
+      locations: emptyLocations,
+      message: error?.response?.data?.message || "Loi khi lay du lieu vi tri.",
     };
   }
 };
@@ -51,7 +56,7 @@ const getLocationById = async (id: string) => {
     console.log("Error while getLocationById: ", error);
     return {
       success: false,
-      message: error?.response?.data.message || "Lỗi khi lấy dữ liệu",
+      message: error?.response?.data?.message || "Loi khi lay du lieu",
     };
   }
 };
