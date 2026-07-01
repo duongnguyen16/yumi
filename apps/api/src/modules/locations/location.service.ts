@@ -8,6 +8,7 @@ import {
 } from 'src/common/schemas/location-view';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
+import { Types } from 'mongoose';
 
 type LocationRating = {
   _id: unknown;
@@ -63,7 +64,6 @@ export class LocationService {
           },
         })),
       };
-      console.log('geoJson:', geoJson);
       if (!locations || locations.length === 0) {
         return {
           success: false,
@@ -160,8 +160,8 @@ export class LocationService {
   async searchLocation(
     limit: number,
     page: number,
-    lat: string,
-    lng: string,
+    lat: number,
+    lng: number,
     keyword?: string,
     categoryId?: string,
     subCategoryId?: string,
@@ -173,35 +173,39 @@ export class LocationService {
       if (keyword) {
         const regex = keyword.trim();
         filter.$or = [
-          { name: regex },
-          { description: regex },
-          { address: regex },
+          { name: { $regex: regex, $options: 'i' } },
+          { description: { $regex: regex, $options: 'i' } },
+          { address: { $regex: regex, $options: 'i' } },
         ];
       }
       if (categoryId) {
-        filter.categoryId = categoryId;
+        filter.categoryId = new Types.ObjectId(categoryId);
       }
       if (subCategoryId) {
-        const ids = subCategoryId.split(',');
+        const ids = subCategoryId
+          .split(',')
+          .map((id) => new Types.ObjectId(id));
         if (ids.length > 0) {
           filter.subCategoryIds = {
             $in: ids,
           };
         }
       }
+      console.log(filter);
       const skip = (page - 1) * limit;
       const result = await this.locationModel.aggregate([
         {
           $geoNear: {
             near: {
               type: 'Point',
-              coordinates: [Number.parseFloat(lng), Number.parseFloat(lat)],
+              coordinates: [lng, lat],
             },
             distanceField: 'distance',
             spherical: true,
             query: filter,
           },
         },
+
         {
           $facet: {
             locations: [{ $skip: skip }, { $limit: limit }],
@@ -209,8 +213,9 @@ export class LocationService {
           },
         },
       ]);
-      const locations = result[0].location || [];
+      const locations = result[0].locations || [];
       const total = result[0].total[0]?.count || 0;
+
       return {
         success: true,
         locations,

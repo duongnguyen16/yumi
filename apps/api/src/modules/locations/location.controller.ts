@@ -37,6 +37,22 @@ export class LocationController {
     return result;
   }
 
+  @Get('search')
+  @UseGuards(AuthGuard('jwt-at'))
+  async searchLocation(@Query() query: SearchDto) {
+    const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
+    const response = await this.locationService.searchLocation(
+      limit,
+      page,
+      lat,
+      lng,
+      keyword,
+      categoryId,
+      subCategoryId,
+    );
+    return response;
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard('jwt-at'))
   async getLocationById(
@@ -68,23 +84,5 @@ export class LocationController {
     }
     const userId = req.user.userId;
     await this.locationService.viewCount(userId, locationId);
-  }
-
-  @Post('search')
-  @UseGuards(AuthGuard('jwt-at'))
-  async searchLocation(@Query() query: SearchDto) {
-    const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
-    const parseLimit = Number.parseInt(limit);
-    const parsePage = Number.parseInt(page);
-    const response = await this.locationService.searchLocation(
-      parseLimit,
-      parsePage,
-      lat,
-      lng,
-      keyword,
-      categoryId,
-      subCategoryId,
-    );
-    return response;
   }
 }

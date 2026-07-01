@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import api from "./aixos";
+import { success } from "zod";
 
 const getCurrentLocation = async () => {
   try {
@@ -63,10 +64,42 @@ const viewCount = async (locationId: string) => {
   }
 };
 
+const searchLocation = async (
+  keyword: string,
+  categoryId: string,
+  subCategoryId = [],
+  page: number,
+  limit = 10,
+  lng: number,
+  lat: number,
+) => {
+  try {
+    const response = await api.get("/location/search", {
+      params: {
+        keyword: keyword?.trim() || undefined,
+        categoryId: categoryId || undefined,
+        subCategoryId:
+          subCategoryId.length > 0 ? subCategoryId.join(",") : undefined,
+        limit,
+        page,
+        lat,
+        lng,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Đã có lỗi xảy ra",
+    };
+  }
+};
+
 export {
   getCurrentLocation,
   checkPermission,
   getAllLocations,
   getLocationById,
   viewCount,
+  searchLocation,
 };
