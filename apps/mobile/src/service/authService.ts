@@ -35,6 +35,39 @@ const login = async (email: string, password: string) => {
   }
 };
 
+const register = async (email: string, password: string, name: string) => {
+  try {
+    const response = await api.post("/auth/register", {
+      email,
+      password,
+      name,
+    });
+    if (response.data?.success) {
+      setAccessToken(response.data.accessToken);
+      await saveRefreshTokens(response.data.refreshToken);
+      await saveAccessTokens(response.data.accessToken);
+      return {
+        accessToken: response.data.accessToken,
+        user: response.data.user,
+        success: true,
+        message: response.data.message,
+      };
+    }
+    return {
+      success: false,
+      message: response.data?.message || "Dang ky that bai",
+    };
+  } catch (error) {
+    console.log(error);
+    return {
+      success: false,
+      message:
+        error.response?.data?.message ||
+        "Dang ky that bai. Vui long kiem tra lai thong tin.",
+    };
+  }
+};
+
 const authMe = async () => {
   try {
     console.log("Fetching user info with authMe");
@@ -99,4 +132,4 @@ const clearSession = async () => {
 //   }
 // };
 
-export { login, authMe, restoreSession, clearSession };
+export { login, register, authMe, restoreSession, clearSession };
