@@ -33,9 +33,7 @@ export default function LocationSearchScreen({
 
     try {
       setIsLoading(true);
-
       const nextPage = page + 1;
-
       const response = await searchLocation(
         searchQuery,
         selectedCategory,
@@ -63,7 +61,7 @@ export default function LocationSearchScreen({
   };
 
   useEffect(() => {
-    if (!searchQuery && !selectedCategory && selectedSubCategory.length <= 0) {
+    if (!searchQuery && !selectedCategory) {
       setSearchResults([]);
       return;
     }
@@ -80,7 +78,6 @@ export default function LocationSearchScreen({
           location[0],
           location[1],
         );
-        console.log("Search results response:", response);
         if (response.success) {
           setSearchResults(response.locations);
         }
@@ -110,10 +107,11 @@ export default function LocationSearchScreen({
           <Button mode="outlined" onPress={() => setVisible(true)}>
             Danh mục
           </Button>
-
-          <Button mode="outlined" onPress={() => setSubVisible(true)}>
-            Danh mục con
-          </Button>
+          {selectedCategory && (
+            <Button mode="outlined" onPress={() => setSubVisible(true)}>
+              Danh mục con
+            </Button>
+          )}
         </View>
 
         <Category
@@ -124,6 +122,8 @@ export default function LocationSearchScreen({
         />
 
         <SubCategory
+          selectedCategory={selectedCategory}
+          selectedSubCategory={selectedSubCategory}
           setSelectedSubCategory={setSelectedSubCategory}
           setSubVisible={setSubVisible}
           subVisible={subVisible}
@@ -132,6 +132,7 @@ export default function LocationSearchScreen({
         <FlatList
           style={{ flex: 1, marginTop: 16 }}
           data={searchResults}
+
           keyExtractor={(item, index) =>
             item._id || item.id || index.toString()
           }
