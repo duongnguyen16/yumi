@@ -9,6 +9,8 @@ import { LocationModule } from './modules/locations/location.module';
 import { TrustEngineModule } from './modules/trust-engine/trust-engine.module';
 import { AdminCategoryModule } from './modules/admin-category/admin-category.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { UsersModule } from './modules/users/users.module';
+import { ImagesModule } from './modules/images/images.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { CategoriesModule } from './modules/categories/categories.module';
     TrustEngineModule,
     AdminCategoryModule,
     CategoriesModule,
+    UsersModule,
+    ImagesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
