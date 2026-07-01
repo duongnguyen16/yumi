@@ -61,7 +61,7 @@ export default function MapScreen() {
       try {
         console.log("Loading map style from API:", MAP_API);
         const response = await fetch(MAP_API);
-        const styleJson = (await response.json()) as MutableMapStyle;
+        const styleJson = await response.json();
         styleJson.glyphs =
           "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
@@ -90,7 +90,7 @@ export default function MapScreen() {
             },
           };
         });
-        setMapStyle(styleJson as unknown as StyleSpecification);
+        setMapStyle(styleJson);
         setLoading(false);
       } catch (error) {
         console.error("Error loading map style:", error);
@@ -185,7 +185,7 @@ export default function MapScreen() {
       {searchScreen ? (
         <LocationSearchScreen />
       ) : (
-        <View>
+        <View style={styles.container}>
           <Map
             mapStyle={mapStyle}
             style={styles.map}
