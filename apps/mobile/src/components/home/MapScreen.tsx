@@ -16,7 +16,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_APw ||
+  process.env.EXPO_PUBLIC_MAP_API ||
   "https://demotiles.maplibre.org/style.json";
 
 const emptyGeoJson = {
@@ -223,7 +223,9 @@ export default function MapScreen() {
               clusterRadius={20}
               clusterMaxZoom={14}
               onPress={(e) => {
+                e.stopPropagation();
                 const feature = e.nativeEvent.features?.[0];
+                console.log("Feature pressed:", feature);
                 if (!feature) return;
                 if (!feature.properties.id) return;
 
@@ -232,66 +234,67 @@ export default function MapScreen() {
                   params: { id: feature.properties.id },
                 });
               }}
-            />
+            >
+              <Layer
+                id="locations-cluster"
+                type="circle"
+                source="geojson"
+                filter={["has", "point_count"]}
+                paint={{
+                  "circle-radius": 18,
+                  "circle-color": "#ff5a5f",
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "#ffffff",
+                }}
+              />
 
-            <Layer
-              id="locations-cluster"
-              type="circle"
-              source="geojson"
-              filter={["has", "point_count"]}
-              paint={{
-                "circle-radius": 18,
-                "circle-color": "#ff5a5f",
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
-              }}
-            />
+              <Layer
+                id="locations-cluster-count"
+                type="symbol"
+                source="geojson"
+                filter={["has", "point_count"]}
+                layout={{
+                  "text-field": ["get", "point_count"],
+                  "text-size": 14,
+                  "text-anchor": "center",
+                }}
+                paint={{
+                  "text-color": "#ffffff",
+                }}
+              />
 
-            <Layer
-              id="locations-cluster-count"
-              type="symbol"
-              source="geojson"
-              filter={["has", "point_count"]}
-              layout={{
-                "text-field": ["get", "point_count"],
-                "text-size": 14,
-                "text-anchor": "center",
-              }}
-              paint={{
-                "text-color": "#ffffff",
-              }}
-            />
+              <Layer
+                id="locations-circle"
+                type="circle"
+                source="geojson"
+                paint={{
+                  "circle-radius": 8,
+                  "circle-color": "#ff5a5f",
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "#ffffff",
+                }}
+                filter={["!", ["has", "point_count"]]}
+              />
 
-            <Layer
-              id="locations-circle"
-              type="circle"
-              source="geojson"
-              paint={{
-                "circle-radius": 8,
-                "circle-color": "#ff5a5f",
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
-              }}
-            />
-
-            <Layer
-              id="locations-label"
-              type="symbol"
-              source="geojson"
-              layout={{
-                "text-field": ["get", "name"],
-                "text-size": 12,
-                "text-offset": [0, 1.5],
-                "text-anchor": "top",
-                "text-allow-overlap": false,
-                "text-ignore-placement": false,
-              }}
-              paint={{
-                "text-color": "#111111",
-                "text-halo-color": "#ffffff",
-                "text-halo-width": 1.5,
-              }}
-            />
+              <Layer
+                id="locations-label"
+                type="symbol"
+                source="geojson"
+                layout={{
+                  "text-field": ["get", "name"],
+                  "text-size": 12,
+                  "text-offset": [0, 1.5],
+                  "text-anchor": "top",
+                  "text-allow-overlap": false,
+                  "text-ignore-placement": false,
+                }}
+                paint={{
+                  "text-color": "#111111",
+                  "text-halo-color": "#ffffff",
+                  "text-halo-width": 1.5,
+                }}
+              />
+            </GeoJSONSource>
           </Map>
 
           <View style={styles.buttonGroup}>
