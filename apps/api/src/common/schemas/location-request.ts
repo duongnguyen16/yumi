@@ -137,6 +137,18 @@ export class LocationRequest {
     default: null,
   })
   reviewNote?: string | null;
+
+  @Prop({ type: Object })
+  verificationProof?: {
+    proofImages?: string[];
+    proofVideo?: string;
+    systemCode?: string;
+    capturedLat?: number;
+    capturedLng?: number;
+    capturedAt?: Date;
+    distanceToNewPinMeters?: number;
+    otpVerified?: boolean;
+  };
 }
 
 export const LocationRequestSchema =
