@@ -6,15 +6,16 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Category, CategoryDocument } from 'src/common/schemas/category.schema';
 import {
-  Category,
-  CategoryDocument,
-} from 'src/common/schemas/category.schema';
-import { LocationView, LocationViewDocument } from 'src/common/schemas/location-view';
+  LocationView,
+  LocationViewDocument,
+} from 'src/common/schemas/location-view';
 import {
   LocationRequest,
   LocationRequestDocument,
   LocationRequestStatus,
+  LocationRequestType,
 } from 'src/common/schemas/location-request';
 import {
   LocationSource,
@@ -116,7 +117,11 @@ export class LocationService {
 
   async getContributionOptions() {
     const [categories, subCategories] = await Promise.all([
-      this.categoryModel.find({ isActive: true }).sort({ name: 1 }).lean().exec(),
+      this.categoryModel
+        .find({ isActive: true })
+        .sort({ name: 1 })
+        .lean()
+        .exec(),
       this.subCategoryModel
         .find({ isActive: true })
         .sort({ name: 1 })
@@ -124,7 +129,10 @@ export class LocationService {
         .exec(),
     ]);
 
-    const subsByCategory = new Map<string, Array<{ id: string; name: string }>>();
+    const subsByCategory = new Map<
+      string,
+      Array<{ id: string; name: string }>
+    >();
     for (const sub of subCategories) {
       const key = String(sub.categoryId);
       const current = subsByCategory.get(key) ?? [];
@@ -254,20 +262,25 @@ export class LocationService {
       submittedAt: new Date(),
     });
 
+    const newData = {
+      name: dto.name,
+      description: dto.description,
+      categoryId: dto.categoryId,
+      tagIds: dto.tagIds ?? [],
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      address: dto.address,
+      imageUrls: dto.imageUrls,
+    };
+
     const request = await this.locationRequestModel.create({
+      type: LocationRequestType.CREATE,
       submittedBy: new Types.ObjectId(userId),
       locationId: location._id,
       status: LocationRequestStatus.PENDING,
-      submittedDataSnapshot: {
-        name: dto.name,
-        description: dto.description,
-        categoryId: dto.categoryId,
-        tagIds: dto.tagIds ?? [],
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        address: dto.address,
-        imageUrls: dto.imageUrls,
-      },
+      oldData: null,
+      newData,
+      changedFields: Object.keys(newData),
       imageUrls: dto.imageUrls,
       pinLocation: {
         type: 'Point',
@@ -345,7 +358,9 @@ export class LocationService {
       throw new NotFoundException('Khong tim thay yeu cau dia diem');
     }
 
-    const location = await this.locationModel.findById(request.locationId).exec();
+    const location = await this.locationModel
+      .findById(request.locationId)
+      .exec();
     if (!location) {
       throw new NotFoundException('Khong tim thay dia diem lien ket');
     }
@@ -353,7 +368,7 @@ export class LocationService {
     request.status = LocationRequestStatus.APPROVED;
     request.reviewerId = new Types.ObjectId(reviewerId);
     request.reviewedAt = new Date();
-    request.rejectReason = null;
+    request.reviewNote = null;
 
     location.status = LocationStatus.PUBLISHED;
     location.rejectionReason = undefined;
@@ -387,7 +402,9 @@ export class LocationService {
       throw new NotFoundException('Khong tim thay yeu cau dia diem');
     }
 
-    const location = await this.locationModel.findById(request.locationId).exec();
+    const location = await this.locationModel
+      .findById(request.locationId)
+      .exec();
     if (!location) {
       throw new NotFoundException('Khong tim thay dia diem lien ket');
     }
@@ -395,7 +412,7 @@ export class LocationService {
     request.status = LocationRequestStatus.REJECTED;
     request.reviewerId = new Types.ObjectId(reviewerId);
     request.reviewedAt = new Date();
-    request.rejectReason = rejectReason;
+    request.reviewNote = rejectReason;
 
     location.status = LocationStatus.REJECTED;
     location.rejectionReason = rejectReason;

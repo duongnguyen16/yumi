@@ -10,6 +10,12 @@ import { AiTagService } from './ai-tag.service';
 @Module({
   controllers: [LocationController],
   imports: [SchemaModule],
-  providers: [AtStrategy, RtStrategy, AdminGuard, AiTagService, LocationService],
+  providers: [
+    AtStrategy,
+    RtStrategy,
+    AdminGuard,
+    AiTagService,
+    LocationService,
+  ],
 })
 export class LocationModule {}
