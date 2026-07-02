@@ -76,7 +76,6 @@ export class Location {
   })
   categoryId!: Types.ObjectId;
 
-  // MongoDB style replacement for Location_Sub_Category table
   @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'SubCategory' }],
     default: [],
@@ -84,9 +83,8 @@ export class Location {
   })
   subCategoryIds!: Types.ObjectId[];
 
-  // MongoDB style replacement for Location_Image table
   @Prop({ type: [ImageAssetSchema], default: [] })
-  images!: ImageAsset[];
+  imagesUrls!: ImageAsset[];
 
   @Prop({ type: Date })
   submittedAt?: Date;
