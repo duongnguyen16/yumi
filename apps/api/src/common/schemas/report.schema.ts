@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { ReportStatus, ReportTargetType } from './common.enums';
+import { EvidenceFile, EvidenceFileSchema } from './common.embedded';
 
 export type ReportDocument = HydratedDocument<Report>;
 
@@ -22,6 +23,9 @@ export class Report {
 
   @Prop({ trim: true, required: true })
   reason!: string;
+
+  @Prop({ type: [EvidenceFileSchema], default: [] })
+  evidenceFiles!: EvidenceFile[];
 
   @Prop({ trim: true })
   description?: string;
