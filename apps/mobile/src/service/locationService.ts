@@ -36,14 +36,13 @@ const checkPermission = async () => {
 const getAllLocations = async () => {
   try {
     const response = await api.get("/location");
-    console.log("Fetched locations:", response.data);
     return response.data;
   } catch (error) {
     console.log("Error fetching locations:", error);
     return {
       success: false,
       locations: emptyLocations,
-      message: error?.response?.data?.message || "Loi khi lay du lieu vi tri.",
+      message: error?.response?.data?.message || "Lỗi khi lấy dữ liệu vị trí.",
     };
   }
 };
@@ -51,13 +50,12 @@ const getAllLocations = async () => {
 const getLocationById = async (id: string) => {
   try {
     const response = await api.get(`/location/${id}`);
-    console.log("Fetched location by ID:", response.data);
     return response.data;
   } catch (error) {
     console.log("Error while getLocationById: ", error);
     return {
       success: false,
-      message: error?.response?.data?.message || "Loi khi lay du lieu",
+      message: error?.response?.data?.message || "Lỗi khi lấy dữ liệu",
     };
   }
 };

@@ -17,15 +17,15 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @Matches(VN_PHONE_REGEX, {
-    message: 'So dien thoai phai dung dinh dang Viet Nam',
+    message: 'Số điện thoại phải đúng định dạng Việt Nam',
   })
   phone?: string;
 
   @IsOptional()
-  @IsEmpty({ message: 'Email khong duoc phep thay doi' })
+  @IsEmpty({ message: 'Email không được phép thay đổi' })
   email?: string;
 
   @IsOptional()
-  @IsEmpty({ message: 'Role khong duoc phep thay doi' })
+  @IsEmpty({ message: 'Role không được phép thay đổi' })
   role?: string;
 }
