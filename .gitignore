@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+guideline/
 
 # Lock files from other package managers (this project uses pnpm)
 package-lock.json

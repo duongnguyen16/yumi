@@ -4,9 +4,11 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 export type NotificationDocument = HydratedDocument<Notification>;
 
 @Schema({ timestamps: true, collection: 'notifications' })
+  
 export class Notification {
   @Prop({
-    type: MongooseSchema.Types.ObjectId,
+    type: MongooseSchema.Types.
+      ObjectId,
     ref: 'User',
     required: true,
     index: true,
