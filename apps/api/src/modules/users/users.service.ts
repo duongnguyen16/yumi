@@ -31,7 +31,7 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('Khong tim thay nguoi dung');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     return {
@@ -56,7 +56,7 @@ export class UsersService {
 
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('Khong tim thay nguoi dung');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     if (dto.name !== undefined) {
@@ -87,7 +87,7 @@ export class UsersService {
 
     return {
       success: true,
-      message: 'Cap nhat thong tin thanh cong',
+      message: 'Cập nhật thông tin thành công',
       user: this.toProfileResponse(user),
     };
   }
@@ -131,7 +131,7 @@ export class UsersService {
 
     if (error) {
       throw new InternalServerErrorException(
-        `Upload avatar len Supabase that bai: ${error.message}`,
+        `Upload avatar lên Supabase thất bại: ${error.message}`,
       );
     }
 
@@ -163,7 +163,7 @@ export class UsersService {
 
     if (error) {
       throw new InternalServerErrorException(
-        `Xoa avatar cu tren Supabase that bai: ${error.message}`,
+        `Xóa avatar cũ trên Supabase thất bại: ${error.message}`,
       );
     }
   }

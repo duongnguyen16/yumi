@@ -109,7 +109,7 @@ export class LocationService {
       return {
         success: false,
         statusCode: 500,
-        message: 'Xay ra loi khi lay dia diem',
+        message: 'Xảy ra lỗi khi lấy địa điểm',
       };
     }
   }
@@ -170,7 +170,7 @@ export class LocationService {
 
     if (distanceMeters > 50) {
       throw new BadRequestException(
-        'Ban phai dung trong pham vi 50m moi duoc tao dia diem.',
+        'Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.',
       );
     }
 
@@ -186,7 +186,7 @@ export class LocationService {
       .findOne({ _id: dto.categoryId, isActive: true })
       .exec();
     if (!category) {
-      throw new BadRequestException('Danh muc khong hop le');
+      throw new BadRequestException('Danh mục không hợp lệ');
     }
 
     if (dto.tagIds?.length) {
@@ -197,7 +197,7 @@ export class LocationService {
       });
 
       if (tagCount !== dto.tagIds.length) {
-        throw new BadRequestException('Danh sach tag khong hop le');
+        throw new BadRequestException('Danh sách tag không hợp lệ');
       }
     }
 
@@ -281,13 +281,13 @@ export class LocationService {
       type: 'LOCATION_REQUEST_PENDING',
       refCollection: 'location_requests',
       refId: request._id,
-      title: 'Dia diem dang cho phe duyet',
-      body: 'Dia diem cua ban dang cho phe duyet.',
+      title: 'Địa điểm đang chờ phê duyệt',
+      body: 'Địa điểm của bạn đang chờ phê duyệt.',
     });
 
     return {
       success: true,
-      message: 'Gui dia diem de duyet thanh cong',
+      message: 'Gửi địa điểm để duyệt thành công',
       request: {
         id: String(request._id),
         status: request.status,
@@ -324,7 +324,7 @@ export class LocationService {
       .exec();
 
     if (!request) {
-      throw new NotFoundException('Khong tim thay yeu cau dia diem');
+      throw new NotFoundException('Không tìm thấy yêu cầu địa điểm');
     }
 
     return {
@@ -336,14 +336,14 @@ export class LocationService {
   async approveRequest(requestId: string, reviewerId: string) {
     const request = await this.locationRequestModel.findById(requestId).exec();
     if (!request) {
-      throw new NotFoundException('Khong tim thay yeu cau dia diem');
+      throw new NotFoundException('Không tìm thấy yêu cầu địa điểm');
     }
 
     const location = await this.locationModel
       .findById(request.locationId)
       .exec();
     if (!location) {
-      throw new NotFoundException('Khong tim thay dia diem lien ket');
+      throw new NotFoundException('Không tìm thấy địa điểm liên kết');
     }
 
     request.status = LocationRequestStatus.APPROVED;
@@ -362,14 +362,14 @@ export class LocationService {
         type: 'LOCATION_REQUEST_APPROVED',
         refCollection: 'location_requests',
         refId: request._id,
-        title: 'Dia diem da duoc phe duyet',
-        body: 'Dia diem cua ban da duoc phe duyet.',
+        title: 'Địa điểm đã được phê duyệt',
+        body: 'Địa điểm của bạn đã được phê duyệt.',
       }),
     ]);
 
     return {
       success: true,
-      message: 'Phe duyet dia diem thanh cong',
+      message: 'Phê duyệt địa điểm thành công',
     };
   }
 
@@ -380,14 +380,14 @@ export class LocationService {
   ) {
     const request = await this.locationRequestModel.findById(requestId).exec();
     if (!request) {
-      throw new NotFoundException('Khong tim thay yeu cau dia diem');
+      throw new NotFoundException('Không tìm thấy yêu cầu địa điểm');
     }
 
     const location = await this.locationModel
       .findById(request.locationId)
       .exec();
     if (!location) {
-      throw new NotFoundException('Khong tim thay dia diem lien ket');
+      throw new NotFoundException('Không tìm thấy địa điểm liên kết');
     }
 
     request.status = LocationRequestStatus.REJECTED;
@@ -406,14 +406,14 @@ export class LocationService {
         type: 'LOCATION_REQUEST_REJECTED',
         refCollection: 'location_requests',
         refId: request._id,
-        title: 'Dia diem bi tu choi',
-        body: 'Dia diem cua ban da bi tu choi.',
+        title: 'Địa điểm bị từ chối',
+        body: 'Địa điểm của bạn đã bị từ chối.',
       }),
     ]);
 
     return {
       success: true,
-      message: 'Tu choi dia diem thanh cong',
+      message: 'Từ chối địa điểm thành công',
     };
   }
 

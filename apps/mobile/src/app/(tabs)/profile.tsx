@@ -54,7 +54,7 @@ export default function Profile() {
   const [message, setMessage] = useState("");
   const [avatarOptionsVisible, setAvatarOptionsVisible] = useState(false);
 
-  const displayName = profile?.display_name ?? profile?.fullName ?? "Nguoi dung";
+  const displayName = profile?.display_name ?? profile?.fullName ?? "Người dùng";
   const email = profile?.email ?? user?.email ?? "";
   const avatarUrl = useMemo(() => {
     if (avatar?.uri) return avatar.uri;
@@ -69,7 +69,7 @@ export default function Profile() {
       setProfile(response.user);
       setName(response.user?.display_name ?? response.user?.fullName ?? "");
     } else {
-      setMessage(response?.message || "Khong the lay ho so.");
+      setMessage(response?.message || "Không thể lấy hồ sơ.");
     }
     setLoading(false);
   };
@@ -98,7 +98,7 @@ export default function Profile() {
       setAvatarOptionsVisible(false);
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setMessage("Can cap quyen truy cap anh de doi avatar.");
+        setMessage("Cần cấp quyền truy cập ảnh để đổi avatar.");
         return;
       }
 
@@ -114,7 +114,7 @@ export default function Profile() {
       setPickedAvatar(result.assets[0]);
     } catch (error) {
       console.error("Error picking avatar:", error);
-      setMessage("Khong the mo thu vien anh. Hay thu lai.");
+      setMessage("Không thể mở thư viện ảnh. Hãy thử lại.");
     }
   };
 
@@ -123,7 +123,7 @@ export default function Profile() {
       setAvatarOptionsVisible(false);
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        setMessage("Can cap quyen camera de chup avatar.");
+        setMessage("Cần cấp quyền camera để chụp avatar.");
         return;
       }
 
@@ -139,13 +139,13 @@ export default function Profile() {
       setPickedAvatar(result.assets[0]);
     } catch (error) {
       console.error("Error taking avatar photo:", error);
-      setMessage("Khong the mo camera. Hay thu lai.");
+      setMessage("Không thể mở camera. Hãy thử lại.");
     }
   };
 
   const saveProfile = async () => {
     if (!name.trim()) {
-      setMessage("Ten khong duoc de trong.");
+      setMessage("Tên không được để trống.");
       return;
     }
 
@@ -167,9 +167,9 @@ export default function Profile() {
       });
       setAvatar(null);
       setEditing(false);
-      setMessage("Da luu ho so.");
+      setMessage("Đã lưu hồ sơ.");
     } else {
-      setMessage(response?.message || "Khong the cap nhat ho so.");
+      setMessage(response?.message || "Không thể cập nhật hồ sơ.");
     }
     setSaving(false);
   };
@@ -188,7 +188,7 @@ export default function Profile() {
         <View style={styles.header}>
           <IconButton icon="arrow-left" size={22} style={styles.backButton} />
           <Text variant="headlineSmall" style={styles.title}>
-            Ho so
+            Hồ sơ
           </Text>
         </View>
 
@@ -212,7 +212,7 @@ export default function Profile() {
           {editing ? (
             <View style={styles.form}>
               <TextInput
-                label="Ten"
+                label="Tên"
                 mode="outlined"
                 value={name}
                 onChangeText={setName}
@@ -226,10 +226,10 @@ export default function Profile() {
               />
               <View style={styles.actions}>
                 <Button mode="outlined" onPress={() => setEditing(false)}>
-                  Huy
+                  Hủy
                 </Button>
                 <Button mode="contained" loading={saving} onPress={saveProfile}>
-                  Luu
+                  Lưu
                 </Button>
               </View>
             </View>
@@ -239,31 +239,31 @@ export default function Profile() {
                 {displayName}
               </Text>
               <Text style={styles.email}>{email}</Text>
-              <Text style={styles.badge}>Sinh vien</Text>
+              <Text style={styles.badge}>Sinh viên</Text>
             </>
           )}
         </View>
 
         <View style={styles.stats}>
-          <Stat value="12" label="Dong gop" />
+          <Stat value="12" label="Đóng góp" />
           <Stat value="38" label="Reviews" />
-          <Stat value="24" label="Da luu" />
+          <Stat value="24" label="Đã lưu" />
         </View>
 
         <View style={styles.menu}>
           <MenuItem
             icon="user"
-            label="Chinh sua ho so"
+            label="Chỉnh sửa hồ sơ"
             onPress={() => setEditing(true)}
           />
           <Divider />
-          <MenuItem icon="bookmark" label="Dia diem da luu" />
+          <MenuItem icon="bookmark" label="Địa điểm đã lưu" />
           <Divider />
-          <MenuItem icon="edit-3" label="Dong gop cua toi" />
+          <MenuItem icon="edit-3" label="Đóng góp của tôi" />
           <Divider />
-          <MenuItem icon="star" label="Reviews da viet" />
+          <MenuItem icon="star" label="Reviews đã viết" />
           <Divider />
-          <MenuItem icon="mail" label="Thong bao" />
+          <MenuItem icon="mail" label="Thông báo" />
         </View>
 
         <Button
@@ -273,7 +273,7 @@ export default function Profile() {
           style={styles.logout}
           onPress={handleLogout}
         >
-          Dang xuat
+          Đăng xuất
         </Button>
       </ScrollView>
 
@@ -289,19 +289,19 @@ export default function Profile() {
           onPress={() => setAvatarOptionsVisible(false)}
         >
           <View style={styles.avatarSheet}>
-            <Text style={styles.sheetTitle}>Doi anh dai dien</Text>
+            <Text style={styles.sheetTitle}>Đổi ảnh đại diện</Text>
             <TouchableOpacity style={styles.sheetAction} onPress={takeAvatarPhoto}>
               <Feather name="camera" size={20} color="#24211d" />
-              <Text style={styles.sheetActionText}>Chup anh</Text>
+              <Text style={styles.sheetActionText}>Chụp ảnh</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.sheetAction}
               onPress={pickAvatarFromLibrary}
             >
               <Feather name="image" size={20} color="#24211d" />
-              <Text style={styles.sheetActionText}>Chon tu thu vien</Text>
+              <Text style={styles.sheetActionText}>Chọn từ thư viện</Text>
             </TouchableOpacity>
-            <Button onPress={() => setAvatarOptionsVisible(false)}>Huy</Button>
+            <Button onPress={() => setAvatarOptionsVisible(false)}>Hủy</Button>
           </View>
         </TouchableOpacity>
       </Modal>
