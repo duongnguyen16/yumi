@@ -11,10 +11,10 @@ import LocationContextProvider from "@/contexts/locationContext";
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 12 }}>
-      <Text>Co loi xay ra</Text>
+      <Text>Có lỗi xảy ra</Text>
       <Text>{error.message}</Text>
       <Button mode="contained" onPress={retry}>
-        Thu lai
+        Thử lại
       </Button>
     </View>
   );
