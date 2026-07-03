@@ -33,7 +33,6 @@ import {
   SubCategoryDocument,
 } from 'src/common/schemas/sub-category.schema';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
-import { AiTagService } from './ai-tag.service';
 import { AnalyzeLocationDraftDto } from './dto/analyze-location-draft.dto';
 import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
@@ -70,7 +69,6 @@ export class LocationService {
     private notificationModel: Model<NotificationDocument>,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
-    private readonly aiTagService: AiTagService,
   ) {}
 
   async getAllLocations() {
@@ -153,28 +151,10 @@ export class LocationService {
   }
 
   async analyzeDraft(dto: AnalyzeLocationDraftDto) {
-    const availableTags = dto.categoryId
-      ? await this.subCategoryModel
-          .find({
-            categoryId: new Types.ObjectId(dto.categoryId),
-            isActive: true,
-          })
-          .lean()
-          .exec()
-      : [];
-
-    const suggestedTags = this.aiTagService
-      .suggestTags(dto.name, availableTags)
-      .map((tag) => ({
-        id: String(tag._id),
-        name: tag.name,
-      }));
-
     const similarLocations = await this.findPossibleDuplicates(dto.name);
 
     return {
       success: true,
-      aiSuggestedTags: suggestedTags,
       duplicateWarning: similarLocations.length > 0,
       similarLocations,
     };
