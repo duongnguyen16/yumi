@@ -1,10 +1,15 @@
-import React from "react";
+import { userContext } from "@/contexts/userContext";
+import { useRouter } from "expo-router";
+import React, { useContext, useState } from "react";
 import { View } from "react-native";
-import { Card, Icon, Text } from "react-native-paper";
+import { Button, Card, Icon, Text } from "react-native-paper";
+import EditLocationModal from "../modals/EditLocationModal";
 
 type GeneralTabProps = {
   data?: {
     location?: {
+      _id?: string;
+      ownerId?: string;
       address?: string;
       openingHours?: string;
       description?: string;
@@ -14,6 +19,9 @@ type GeneralTabProps = {
 };
 
 export default function GeneralTab({ data }: GeneralTabProps) {
+  const { user } = useContext(userContext);
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
@@ -29,7 +37,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="map-marker" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.address || "Địa chỉ không có sẵn"}
+              {data?.location?.address || "Địa chỉ không có sẵn"}
             </Text>
           </View>
           <View
@@ -42,7 +50,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="clock" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.openingHours || "Giờ mở cửa không có sẵn"}
+              {data?.location?.openingHours || "Giờ mở cửa không có sẵn"}
             </Text>
           </View>
           <View
@@ -55,7 +63,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="information" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.description || "Mô tả không có sẵn"}
+              {data?.location?.description || "Mô tả không có sẵn"}
             </Text>
           </View>
           <View
@@ -72,6 +80,17 @@ export default function GeneralTab({ data }: GeneralTabProps) {
             </Text>
           </View>
         </Card.Content>
+        {user?._id === data?.location?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              onPress={() => {
+                setVisible(true);
+              }}
+            >
+              Chỉnh sửa thông tin
+            </Button>
+          </Card.Actions>
+        ) : null}
       </Card>
       <Card style={{ padding: 16, marginTop: 16 }}>
         <Card.Title title="Sản phẩm" />
@@ -79,6 +98,11 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           <Text>Product</Text>
         </Card.Content>
       </Card>
+      <EditLocationModal
+        setVisible={setVisible}
+        visible={visible}
+        data={data?.location}
+      />
     </View>
   );
 }
