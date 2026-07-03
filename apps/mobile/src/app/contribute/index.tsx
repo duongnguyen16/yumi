@@ -49,18 +49,18 @@ type Coordinates = {
 };
 
 const stepLabels = [
-  "1. Thong tin + AI tag",
-  "2. Vi tri",
-  "3. Hinh anh",
-  "4. Xac nhan",
+  "1. Thông tin + AI tag",
+  "2. Vị trí",
+  "3. Hình ảnh",
+  "4. Xác nhận",
 ];
 
 const fallbackTags = [
-  { id: "fallback-good-price", name: "Gia tot" },
-  { id: "fallback-clean", name: "Sach se" },
-  { id: "fallback-easy-find", name: "De tim" },
-  { id: "fallback-group", name: "Phu hop nhom" },
-  { id: "fallback-worth-trying", name: "Dang thu" },
+  { id: "fallback-good-price", name: "Giá tốt" },
+  { id: "fallback-clean", name: "Sạch sẽ" },
+  { id: "fallback-easy-find", name: "Dễ tìm" },
+  { id: "fallback-group", name: "Phù hợp nhóm" },
+  { id: "fallback-worth-trying", name: "Đáng thử" },
 ];
 
 export default function ContributePlaceScreen() {
@@ -121,7 +121,7 @@ export default function ContributePlaceScreen() {
         setMapStyle(styleJson);
       } catch (error) {
         console.log("Error bootstrapping contribute place:", error);
-        Alert.alert("Loi", "Khong tai duoc du lieu dong gop dia diem.");
+        Alert.alert("Lỗi", "Không tải được dữ liệu đóng góp địa điểm.");
       } finally {
         setLoading(false);
       }
@@ -139,7 +139,7 @@ export default function ContributePlaceScreen() {
       try {
         const permission = await ExpoLocation.requestForegroundPermissionsAsync();
         if (permission.status !== "granted") {
-          Alert.alert("Can quyen vi tri", "Hay cap quyen vi tri de dong gop dia diem.");
+          Alert.alert("Cần quyền vị trí", "Hãy cấp quyền vị trí để đóng góp địa điểm.");
           return;
         }
 
@@ -170,7 +170,7 @@ export default function ContributePlaceScreen() {
         }
       } catch (error) {
         console.log("Error loading device location:", error);
-        Alert.alert("Loi", "Khong lay duoc vi tri hien tai.");
+        Alert.alert("Lỗi", "Không lấy được vị trí hiện tại.");
       }
     };
 
@@ -210,7 +210,7 @@ export default function ContributePlaceScreen() {
 
   const handlePickImages = async () => {
     if (images.length >= 5) {
-      Alert.alert("Da du 5 anh", "Ban chi duoc chon toi da 5 anh.");
+      Alert.alert("Đã đủ 5 ảnh", "Bạn chỉ được chọn tối đa 5 ảnh.");
       return;
     }
 
@@ -238,7 +238,7 @@ export default function ContributePlaceScreen() {
 
   const handleUploadImages = async () => {
     if (images.length < 1) {
-      Alert.alert("Thieu anh", "Hay chon it nhat 1 anh.");
+      Alert.alert("Thiếu ảnh", "Hãy chọn ít nhất 1 ảnh.");
       return false;
     }
 
@@ -270,8 +270,8 @@ export default function ContributePlaceScreen() {
     } catch (error: any) {
       console.log("Error uploading contribution images:", error);
       Alert.alert(
-        "Upload that bai",
-        error?.message || "Khong the upload anh len Supabase. Thu lai giup minh.",
+        "Upload thất bại",
+        error?.message || "Không thể upload ảnh lên Supabase. Thử lại giúp mình.",
       );
       return false;
     } finally {
@@ -282,7 +282,7 @@ export default function ContributePlaceScreen() {
   const handleContinue = async () => {
     if (step === 0) {
       if (!name.trim() || !description.trim() || !selectedCategoryId) {
-        Alert.alert("Thieu thong tin", "Hay nhap ten, mo ta va chon danh muc.");
+        Alert.alert("Thiếu thông tin", "Hãy nhập tên, mô tả và chọn danh mục.");
         return;
       }
       setStep(1);
@@ -291,7 +291,7 @@ export default function ContributePlaceScreen() {
 
     if (step === 1) {
       if (!pinCoords || !deviceCoords) {
-        Alert.alert("Thieu vi tri", "Khong lay duoc vi tri de kiem tra 50m.");
+        Alert.alert("Thiếu vị trí", "Không lấy được vị trí để kiểm tra 50m.");
         return;
       }
 
@@ -308,9 +308,9 @@ export default function ContributePlaceScreen() {
         setStep(2);
       } catch (error: any) {
         Alert.alert(
-          "Ngoai pham vi",
+          "Ngoài phạm vi",
           error?.response?.data?.message ||
-            "Ban phai dung trong pham vi 50m moi duoc tao dia diem.",
+            "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
         );
       } finally {
         setSaving(false);
@@ -328,7 +328,7 @@ export default function ContributePlaceScreen() {
 
     if (step === 3) {
       if (!pinCoords || !deviceCoords) {
-        Alert.alert("Loi", "Khong du du lieu vi tri de gui duyet.");
+        Alert.alert("Lỗi", "Không đủ dữ liệu vị trí để gửi duyệt.");
         return;
       }
 
@@ -354,8 +354,8 @@ export default function ContributePlaceScreen() {
         });
 
         Alert.alert(
-          "Da gui de duyet",
-          "Dia diem cua ban dang cho phe duyet.",
+          "Đã gửi để duyệt",
+          "Địa điểm của bạn đang chờ phê duyệt.",
           [
             {
               text: "OK",
@@ -365,8 +365,8 @@ export default function ContributePlaceScreen() {
         );
       } catch (error: any) {
         Alert.alert(
-          "Gui that bai",
-          error?.response?.data?.message || "Khong the gui dia diem de duyet.",
+          "Gửi thất bại",
+          error?.response?.data?.message || "Không thể gửi địa điểm để duyệt.",
         );
       } finally {
         setSaving(false);
@@ -416,7 +416,7 @@ export default function ContributePlaceScreen() {
     if (step === 0) {
       return (
         <View style={styles.section}>
-          <Text style={styles.label}>Ten dia diem</Text>
+          <Text style={styles.label}>Tên địa điểm</Text>
           <TextInput
             value={name}
             onChangeText={setName}
@@ -424,18 +424,18 @@ export default function ContributePlaceScreen() {
             style={styles.input}
           />
 
-          <Text style={styles.label}>Mo ta ngan</Text>
+          <Text style={styles.label}>Mô tả ngắn</Text>
           <TextInput
             value={description}
             onChangeText={setDescription}
-            placeholder="Mo ta ngan ve dia diem..."
+            placeholder="Mô tả ngắn về địa điểm..."
             multiline
             style={[styles.input, styles.multilineInput]}
           />
 
           <View style={styles.fieldHeader}>
-            <Text style={styles.label}>Danh muc</Text>
-            <Text style={styles.fieldHint}>Chon 1 danh muc phu hop</Text>
+            <Text style={styles.label}>Danh mục</Text>
+            <Text style={styles.fieldHint}>Chọn 1 danh mục phù hợp</Text>
           </View>
           {categories.length > 0 ? (
             <View style={styles.categoryGrid}>
@@ -493,14 +493,14 @@ export default function ContributePlaceScreen() {
           ) : (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="shape-outline" size={22} color="#9ca3af" />
-              <Text style={styles.emptyStateText}>Chua co danh muc de chon.</Text>
+              <Text style={styles.emptyStateText}>Chưa có danh mục để chọn.</Text>
             </View>
           )}
 
-          <Text style={styles.label}>Tag mo ta</Text>
+          <Text style={styles.label}>Tag mô tả</Text>
           {suggestedTagIds.length > 0 && selectedCategory && (
             <View style={styles.suggestionBox}>
-              <Text style={styles.suggestionTitle}>AI goi y dua tren ten</Text>
+              <Text style={styles.suggestionTitle}>AI gợi ý dựa trên tên</Text>
               {renderChips(
                 selectedCategory.tags.filter((item) => suggestedTagIds.includes(item.id)),
                 selectedTagIds,
@@ -512,13 +512,13 @@ export default function ContributePlaceScreen() {
             <>
               {selectedCategory.tags.length === 0 ? (
                 <Text style={styles.helperText}>
-                  Chua co tag rieng cho danh muc nay, ban co the chon tag goi y ben duoi.
+                  Chưa có tag riêng cho danh mục này, bạn có thể chọn tag gợi ý bên dưới.
                 </Text>
               ) : null}
               {renderChips(visibleTags, selectedTagIds)}
             </>
           ) : (
-            <Text style={styles.helperText}>Chon danh muc de hien tag phu hop.</Text>
+            <Text style={styles.helperText}>Chọn danh mục để hiện tag phù hợp.</Text>
           )}
         </View>
       );
@@ -527,7 +527,7 @@ export default function ContributePlaceScreen() {
     if (step === 1) {
       return (
         <View style={styles.section}>
-          <Text style={styles.mapHint}>Keo ban do de chon vi tri</Text>
+          <Text style={styles.mapHint}>Kéo bản đồ để chọn vị trí</Text>
           <View style={styles.mapCard}>
             {mapStyle && pinCoords ? (
               <View style={styles.mapContainer}>
@@ -560,15 +560,15 @@ export default function ContributePlaceScreen() {
             )}
           </View>
 
-          <Text style={styles.label}>Dia chi tu dong</Text>
+          <Text style={styles.label}>Địa chỉ tự động</Text>
           <View style={styles.addressCard}>
             <MaterialCommunityIcons name="map-marker-outline" size={20} color="#ff5a1f" />
             <Text style={styles.addressText}>
-              {resolvedAddress || "Dang lay dia chi..."}
+              {resolvedAddress || "Đang lấy địa chỉ..."}
             </Text>
           </View>
 
-          <Text style={styles.label}>Chinh sua dia chi (tuy chon)</Text>
+          <Text style={styles.label}>Chỉnh sửa địa chỉ (tùy chọn)</Text>
           <TextInput
             value={manualAddress}
             onChangeText={setManualAddress}
@@ -583,7 +583,7 @@ export default function ContributePlaceScreen() {
       return (
         <View style={styles.section}>
           <Text style={styles.helperText}>
-            Them 1-5 hinh de nguoi khac hinh dung duoc cho nay.
+            Thêm 1-5 hình để người khác hình dung được chỗ này.
           </Text>
           <View style={styles.imageGrid}>
             {Array.from({ length: 5 }).map((_, index) => {
@@ -594,7 +594,7 @@ export default function ContributePlaceScreen() {
                     <Image source={image.uri} style={styles.imagePreview} contentFit="cover" />
                     {index === 0 && (
                       <View style={styles.coverBadge}>
-                        <Text style={styles.coverBadgeText}>Anh chinh</Text>
+                        <Text style={styles.coverBadgeText}>Ảnh chính</Text>
                       </View>
                     )}
                     <Pressable
@@ -616,7 +616,7 @@ export default function ContributePlaceScreen() {
                   onPress={handlePickImages}
                 >
                   <MaterialCommunityIcons name="image-plus" size={28} color="#9ca3af" />
-                  <Text style={styles.emptyImageText}>Them anh</Text>
+                  <Text style={styles.emptyImageText}>Thêm ảnh</Text>
                 </Pressable>
               );
             })}
@@ -636,10 +636,10 @@ export default function ContributePlaceScreen() {
             </View>
             <View style={styles.warningContent}>
               <Text style={styles.warningTitle}>
-                Co ve trung voi {similarLocations[0]?.name}
+                Có vẻ trùng với {similarLocations[0]?.name}
               </Text>
               <Text style={styles.warningText}>
-                Mot cho tuong tu da ton tai gan day. Ban co muon tiep tuc dang rieng khong?
+                Một chỗ tương tự đã tồn tại gần đây. Bạn có muốn tiếp tục đăng riêng không?
               </Text>
               <View style={styles.warningActions}>
                 <Pressable
@@ -650,10 +650,10 @@ export default function ContributePlaceScreen() {
                     }
                   }}
                 >
-                  <Text style={styles.warningButtonLightText}>Xem cho cu</Text>
+                  <Text style={styles.warningButtonLightText}>Xem chỗ cũ</Text>
                 </Pressable>
                 <View style={styles.warningButton}>
-                  <Text style={styles.warningButtonText}>Tiep tuc dang</Text>
+                  <Text style={styles.warningButtonText}>Tiếp tục đăng</Text>
                 </View>
               </View>
             </View>
@@ -666,7 +666,7 @@ export default function ContributePlaceScreen() {
           ) : null}
           <View style={styles.summaryBody}>
             <Text style={styles.summaryCategory}>
-              {selectedCategory?.name || "Danh muc"}
+              {selectedCategory?.name || "Danh mục"}
             </Text>
             <Text style={styles.summaryName}>{name.trim()}</Text>
             <Text style={styles.summaryDescription}>{description.trim()}</Text>
@@ -686,7 +686,7 @@ export default function ContributePlaceScreen() {
           </View>
         </View>
         <Text style={styles.noteText}>
-          Dia diem se duoc duyet trong khoang 24h truoc khi hien thi tren ban do.
+          Địa điểm sẽ được duyệt trong khoảng 24h trước khi hiển thị trên bản đồ.
         </Text>
       </View>
     );
@@ -707,8 +707,8 @@ export default function ContributePlaceScreen() {
           <MaterialCommunityIcons name="arrow-left" size={22} color="#111827" />
         </Pressable>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.title}>Dong gop dia diem</Text>
-          <Text style={styles.subtitle}>Buoc {step + 1}/4 - {stepLabels[step]}</Text>
+          <Text style={styles.title}>Đóng góp địa điểm</Text>
+          <Text style={styles.subtitle}>Bước {step + 1}/4 - {stepLabels[step]}</Text>
         </View>
       </View>
 
@@ -745,7 +745,7 @@ export default function ContributePlaceScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.primaryButtonText}>
-              {step === 3 ? "Gui de duyet" : "Tiep tuc"}
+              {step === 3 ? "Gửi để duyệt" : "Tiếp tục"}
             </Text>
           )}
         </Pressable>

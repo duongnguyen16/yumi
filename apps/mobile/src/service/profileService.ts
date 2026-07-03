@@ -19,7 +19,7 @@ const getProfile = async () => {
     console.log("Error fetching profile:", error);
     return {
       success: false,
-      message: error?.response?.data?.message || "Khong the lay ho so.",
+      message: error?.response?.data?.message || "Không thể lấy hồ sơ.",
     };
   }
 };
@@ -67,7 +67,7 @@ const updateProfile = async ({ name, avatar }: ProfileUpdate) => {
     console.log("Update profile error response:", error?.response?.data);
     return {
       success: false,
-      message: error?.response?.data?.message || "Khong the cap nhat ho so.",
+      message: error?.response?.data?.message || "Không thể cập nhật hồ sơ.",
     };
   }
 };
