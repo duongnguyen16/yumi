@@ -13,7 +13,7 @@ export type ContributionCategory = {
 
 export type DraftAnalysisResult = {
   success: boolean;
-  aiSuggestedTags: Array<{
+  aiSuggestedTags?: Array<{
     id: string;
     name: string;
   }>;
