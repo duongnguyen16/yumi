@@ -1,8 +1,9 @@
 import { userContext } from "@/contexts/userContext";
 import { useRouter } from "expo-router";
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { View } from "react-native";
 import { Button, Card, Icon, Text } from "react-native-paper";
+import EditLocationModal from "../modals/EditLocationModal";
 
 type GeneralTabProps = {
   data?: {
@@ -20,6 +21,7 @@ type GeneralTabProps = {
 export default function GeneralTab({ data }: GeneralTabProps) {
   const { user } = useContext(userContext);
   const router = useRouter();
+  const [visible, setVisible] = useState(false);
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
@@ -35,7 +37,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="map-marker" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.address || "Địa chỉ không có sẵn"}
+              {data?.location?.address || "Địa chỉ không có sẵn"}
             </Text>
           </View>
           <View
@@ -48,7 +50,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="clock" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.openingHours || "Giờ mở cửa không có sẵn"}
+              {data?.location?.openingHours || "Giờ mở cửa không có sẵn"}
             </Text>
           </View>
           <View
@@ -61,7 +63,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="information" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.description || "Mô tả không có sẵn"}
+              {data?.location?.description || "Mô tả không có sẵn"}
             </Text>
           </View>
           <View
@@ -82,10 +84,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
-                router.push({
-                  pathname: "/location/edit/[id]",
-                  params: { id: data?.location?._id },
-                });
+                setVisible(true);
               }}
             >
               Chỉnh sửa thông tin
@@ -99,6 +98,11 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           <Text>Product</Text>
         </Card.Content>
       </Card>
+      <EditLocationModal
+        setVisible={setVisible}
+        visible={visible}
+        data={data?.location}
+      />
     </View>
   );
 }

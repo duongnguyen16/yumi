@@ -440,7 +440,11 @@ export class LocationService {
   async getLocationById(locationId: string, userId: string) {
     void userId;
     try {
-      const location = await this.locationModel.findById(locationId).exec();
+      const location = await this.locationModel
+        .findById(locationId)
+        .populate('subCategoryIds')
+        .populate('categoryId')
+        .exec();
       if (!location) {
         return {
           success: false,
