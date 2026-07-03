@@ -1,10 +1,14 @@
-import React from "react";
+import { userContext } from "@/contexts/userContext";
+import { useRouter } from "expo-router";
+import React, { useContext } from "react";
 import { View } from "react-native";
-import { Card, Icon, Text } from "react-native-paper";
+import { Button, Card, Icon, Text } from "react-native-paper";
 
 type GeneralTabProps = {
   data?: {
     location?: {
+      _id?: string;
+      ownerId?: string;
       address?: string;
       openingHours?: string;
       description?: string;
@@ -14,6 +18,8 @@ type GeneralTabProps = {
 };
 
 export default function GeneralTab({ data }: GeneralTabProps) {
+  const { user } = useContext(userContext);
+  const router = useRouter();
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
@@ -72,6 +78,20 @@ export default function GeneralTab({ data }: GeneralTabProps) {
             </Text>
           </View>
         </Card.Content>
+        {user?._id === data?.location?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              onPress={() => {
+                router.push({
+                  pathname: "/location/edit/[id]",
+                  params: { id: data?.location?._id },
+                });
+              }}
+            >
+              Chỉnh sửa thông tin
+            </Button>
+          </Card.Actions>
+        ) : null}
       </Card>
       <Card style={{ padding: 16, marginTop: 16 }}>
         <Card.Title title="Sản phẩm" />
