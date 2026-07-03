@@ -55,6 +55,14 @@ const stepLabels = [
   "4. Xac nhan",
 ];
 
+const fallbackTags = [
+  { id: "fallback-good-price", name: "Gia tot" },
+  { id: "fallback-clean", name: "Sach se" },
+  { id: "fallback-easy-find", name: "De tim" },
+  { id: "fallback-group", name: "Phu hop nhom" },
+  { id: "fallback-worth-trying", name: "Dang thu" },
+];
+
 export default function ContributePlaceScreen() {
   const router = useRouter();
   const mapRef = useRef<MapRef>(null);
@@ -89,6 +97,13 @@ export default function ContributePlaceScreen() {
     () => categories.find((item) => item.id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
   );
+  const visibleTags = useMemo(() => {
+    if (!selectedCategory) {
+      return [];
+    }
+
+    return selectedCategory.tags.length > 0 ? selectedCategory.tags : fallbackTags;
+  }, [selectedCategory]);
 
   const duplicateWarning = similarLocations.length > 0;
   const resolvedAddress = manualAddress.trim() || autoAddress.trim();
@@ -175,7 +190,7 @@ export default function ContributePlaceScreen() {
           name.trim(),
           selectedCategoryId || undefined,
         );
-        setSuggestedTagIds(analysis.aiSuggestedTags.map((item) => item.id));
+        setSuggestedTagIds((analysis.aiSuggestedTags ?? []).map((item) => item.id));
         setSimilarLocations(analysis.similarLocations ?? []);
       } catch (error) {
         console.log("Error analyzing draft:", error);
@@ -319,12 +334,15 @@ export default function ContributePlaceScreen() {
 
       try {
         setSaving(true);
+        const realTagIds = selectedCategory?.tags
+          .filter((tag) => selectedTagIds.includes(tag.id))
+          .map((tag) => tag.id) ?? [];
         const uploadedUrls = images.map((item) => item.uploadedUrl).filter(Boolean);
         await submitContribution({
           name: name.trim(),
           description: description.trim(),
           categoryId: selectedCategoryId,
-          tagIds: selectedTagIds,
+          tagIds: realTagIds,
           address: resolvedAddress,
           latitude: pinCoords.latitude,
           longitude: pinCoords.longitude,
@@ -415,6 +433,70 @@ export default function ContributePlaceScreen() {
             style={[styles.input, styles.multilineInput]}
           />
 
+          <View style={styles.fieldHeader}>
+            <Text style={styles.label}>Danh muc</Text>
+            <Text style={styles.fieldHint}>Chon 1 danh muc phu hop</Text>
+          </View>
+          {categories.length > 0 ? (
+            <View style={styles.categoryGrid}>
+              {categories.map((category) => {
+                const active = category.id === selectedCategoryId;
+                return (
+                  <Pressable
+                    key={category.id}
+                    style={[
+                      styles.categoryOption,
+                      active && styles.categoryOptionActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedCategoryId(category.id);
+                      setSelectedTagIds([]);
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.categoryIcon,
+                        active && styles.categoryIconActive,
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={active ? "check" : "shape-outline"}
+                        size={18}
+                        color={active ? "#ffffff" : "#a34a22"}
+                      />
+                    </View>
+                    <View style={styles.categoryTextWrap}>
+                      <Text
+                        style={[
+                          styles.categoryName,
+                          active && styles.categoryNameActive,
+                        ]}
+                      >
+                        {category.name}
+                      </Text>
+                      {category.description ? (
+                        <Text
+                          numberOfLines={2}
+                          style={[
+                            styles.categoryDescription,
+                            active && styles.categoryDescriptionActive,
+                          ]}
+                        >
+                          {category.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="shape-outline" size={22} color="#9ca3af" />
+              <Text style={styles.emptyStateText}>Chua co danh muc de chon.</Text>
+            </View>
+          )}
+
           <Text style={styles.label}>Tag mo ta</Text>
           {suggestedTagIds.length > 0 && selectedCategory && (
             <View style={styles.suggestionBox}>
@@ -427,39 +509,17 @@ export default function ContributePlaceScreen() {
             </View>
           )}
           {selectedCategory ? (
-            renderChips(selectedCategory.tags, selectedTagIds)
+            <>
+              {selectedCategory.tags.length === 0 ? (
+                <Text style={styles.helperText}>
+                  Chua co tag rieng cho danh muc nay, ban co the chon tag goi y ben duoi.
+                </Text>
+              ) : null}
+              {renderChips(visibleTags, selectedTagIds)}
+            </>
           ) : (
             <Text style={styles.helperText}>Chon danh muc de hien tag phu hop.</Text>
           )}
-
-          <Text style={styles.label}>Danh muc</Text>
-          <View style={styles.chipWrap}>
-            {categories.map((category) => {
-              const active = category.id === selectedCategoryId;
-              return (
-                <Pressable
-                  key={category.id}
-                  style={[
-                    styles.categoryChip,
-                    active && styles.categoryChipActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedCategoryId(category.id);
-                    setSelectedTagIds([]);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      active && styles.categoryChipTextActive,
-                    ]}
-                  >
-                    {category.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
         </View>
       );
     }
@@ -611,7 +671,7 @@ export default function ContributePlaceScreen() {
             <Text style={styles.summaryName}>{name.trim()}</Text>
             <Text style={styles.summaryDescription}>{description.trim()}</Text>
             <View style={styles.chipWrap}>
-              {selectedCategory?.tags
+              {visibleTags
                 .filter((tag) => selectedTagIds.includes(tag.id))
                 .map((tag) => (
                   <View key={tag.id} style={styles.summaryTag}>
@@ -795,6 +855,13 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     lineHeight: 20,
   },
+  fieldHeader: {
+    gap: 4,
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
   chipWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -816,25 +883,68 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: "#ffffff",
   },
-  categoryChip: {
-    borderRadius: 999,
+  categoryGrid: {
+    gap: 10,
+  },
+  categoryOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#f0d6c9",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#fff7f3",
+    padding: 12,
+    backgroundColor: "#ffffff",
   },
-  categoryChipActive: {
-    backgroundColor: "#ff5a1f",
+  categoryOptionActive: {
+    backgroundColor: "#fff1eb",
     borderColor: "#ff5a1f",
   },
-  categoryChipText: {
-    fontSize: 13,
+  categoryIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#fff7f3",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryIconActive: {
+    backgroundColor: "#ff5a1f",
+  },
+  categoryTextWrap: {
+    flex: 1,
+    gap: 3,
+  },
+  categoryName: {
+    fontSize: 15,
     fontWeight: "700",
     color: "#a34a22",
   },
-  categoryChipTextActive: {
-    color: "#ffffff",
+  categoryNameActive: {
+    color: "#111827",
+  },
+  categoryDescription: {
+    fontSize: 12,
+    color: "#6b7280",
+    lineHeight: 17,
+  },
+  categoryDescriptionActive: {
+    color: "#6b4b3a",
+  },
+  emptyState: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#ffffff",
+    padding: 14,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "600",
   },
   mapHint: {
     alignSelf: "center",
