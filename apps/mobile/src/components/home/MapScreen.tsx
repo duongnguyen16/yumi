@@ -11,12 +11,12 @@ import {
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
 import { getAllLocations, getCurrentLocation } from "@/service/locationService";
-import { IconButton, Text, TextInput } from "react-native-paper";
+import { ActivityIndicator, IconButton, Text, TextInput } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_APƯ ||
+  process.env.EXPO_PUBLIC_MAP_API ||
   "https://demotiles.maplibre.org/style.json";
 
 const emptyGeoJson = {
@@ -40,6 +40,7 @@ export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [geoJson, setGeoJson] = useState(emptyGeoJson);
   const cameraRef = useRef<CameraRef>(null);
   const router = useRouter();
@@ -68,8 +69,11 @@ export default function MapScreen() {
           throw new Error(`Map style request failed: ${response.status}`);
         }
         const styleJson = (await response.json()) as MutableMapStyle;
-        // styleJson.glyphs =
-        //   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        if (!Array.isArray(styleJson.layers)) {
+          throw new Error("Map style response is missing layers");
+        }
+        styleJson.glyphs =
+          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
@@ -96,10 +100,14 @@ export default function MapScreen() {
             },
           };
         });
-        setMapStyle(styleJson);
+        setMapStyle(styleJson as StyleSpecification);
+        setMapError(null);
         setLoading(false);
       } catch (error) {
         console.error("Error loading map style:", error);
+        setMapError(
+          error instanceof Error ? error.message : "Khong tai duoc ban do.",
+        );
         setLoading(false);
       }
     };
@@ -161,8 +169,24 @@ export default function MapScreen() {
     }
   };
 
-  if (loading || !mapStyle || !location) {
-    return <View style={styles.container} />;
+  if (loading) {
+    return (
+      <View style={styles.centerState}>
+        <ActivityIndicator size="large" />
+        <Text>Dang tai ban do...</Text>
+      </View>
+    );
+  }
+
+  if (!mapStyle || !location) {
+    return (
+      <View style={styles.centerState}>
+        <Text variant="titleMedium">Khong hien duoc ban do</Text>
+        <Text style={styles.stateText}>
+          {mapError || "Khong co du lieu vi tri hien tai."}
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -342,6 +366,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: "relative",
+  },
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
+    backgroundColor: "#fff",
+  },
+  stateText: {
+    textAlign: "center",
   },
   map: {
     flex: 1,
