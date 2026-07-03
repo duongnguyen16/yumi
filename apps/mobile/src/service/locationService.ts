@@ -51,6 +51,7 @@ const getAllLocations = async () => {
 const getLocationById = async (id: string) => {
   try {
     const response = await api.get(`/location/${id}`);
+    console.log("Fetched location by ID:", response.data);
     return response.data;
   } catch (error) {
     console.log("Error while getLocationById: ", error);
