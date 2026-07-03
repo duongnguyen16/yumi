@@ -29,7 +29,7 @@ export class AdminGuard implements CanActivate {
       throw new UnauthorizedException('Không tìm thấy người dùng');
     }
 
-    if (user.role !== UserRole.ADMIN) {
+    if (user.role !== UserRole.VENDOR) {
       throw new ForbiddenException(
         'Bạn không có quyền truy cập trang quản trị',
       );
