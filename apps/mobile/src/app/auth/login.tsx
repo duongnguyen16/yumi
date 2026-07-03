@@ -2,12 +2,22 @@ import LoginForm from "@/components/auth/LoginForm";
 import { userContext } from "@/contexts/userContext";
 import { Redirect, Stack } from "expo-router";
 import { useContext } from "react";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
+import { ActivityIndicator } from "react-native-paper";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
-  const { user } = useContext(userContext);
+  const { user, loading } = useContext(userContext);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   if (user) {
     return <Redirect href="/home" />;
   }
