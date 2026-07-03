@@ -8,10 +8,6 @@ export class UpdateLocationDto {
 
   @Optional()
   @IsNumber()
-  phone?: number;
-
-  @Optional()
-  @IsNumber()
   description?: number;
 
   @Optional()

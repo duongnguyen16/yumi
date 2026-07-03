@@ -16,7 +16,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_API ||
+  process.env.EXPO_PUBLIC_MAP_APƯ ||
   "https://demotiles.maplibre.org/style.json";
 
 const emptyGeoJson = {
@@ -68,8 +68,8 @@ export default function MapScreen() {
           throw new Error(`Map style request failed: ${response.status}`);
         }
         const styleJson = (await response.json()) as MutableMapStyle;
-        styleJson.glyphs =
-          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        // styleJson.glyphs =
+        //   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
@@ -225,7 +225,7 @@ export default function MapScreen() {
               onPress={(e) => {
                 e.stopPropagation();
                 const feature = e.nativeEvent.features?.[0];
-                console.log("Feature pressed:", feature);
+
                 if (!feature) return;
                 if (!feature.properties.id) return;
 
@@ -242,7 +242,7 @@ export default function MapScreen() {
                 filter={["has", "point_count"]}
                 paint={{
                   "circle-radius": 18,
-                  "circle-color": "#ff5a5f",
+                  "circle-color": "#070707",
                   "circle-stroke-width": 2,
                   "circle-stroke-color": "#ffffff",
                 }}
@@ -254,7 +254,8 @@ export default function MapScreen() {
                 source="geojson"
                 filter={["has", "point_count"]}
                 layout={{
-                  "text-field": ["get", "point_count"],
+                  "text-field": ["get", "point_count_abbreviated"],
+                  // "text-font": ["Roboto Regular"],
                   "text-size": 14,
                   "text-anchor": "center",
                 }}
@@ -262,6 +263,19 @@ export default function MapScreen() {
                   "text-color": "#ffffff",
                 }}
               />
+
+              {/* <Layer
+                id="locations-marker"
+                type="symbol"
+                source="geojson"
+                filter={["!", ["has", "point_count"]]}
+                layout={{
+                  "icon-image": "border-dot-13",
+                  "icon-size": 2,
+                  "icon-anchor": "bottom",
+                  "icon-allow-overlap": true,
+                }}
+              /> */}
 
               <Layer
                 id="locations-circle"
@@ -280,8 +294,10 @@ export default function MapScreen() {
                 id="locations-label"
                 type="symbol"
                 source="geojson"
+                filter={["!", ["has", "point_count"]]}
                 layout={{
                   "text-field": ["get", "name"],
+                  // "text-font": ["Roboto Regular"],
                   "text-size": 12,
                   "text-offset": [0, 1.5],
                   "text-anchor": "top",

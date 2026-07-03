@@ -37,6 +37,7 @@ import { AiTagService } from './ai-tag.service';
 import { AnalyzeLocationDraftDto } from './dto/analyze-location-draft.dto';
 import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 type LocationRating = {
   _id: unknown;
@@ -254,7 +255,7 @@ export class LocationService {
       source: LocationSource.CUSTOMER,
       categoryId: category._id,
       subCategoryIds: (dto.tagIds ?? []).map((id) => new Types.ObjectId(id)),
-      images: dto.imageUrls.map((url, index) => ({
+      imagesUrls: dto.imageUrls.map((url, index) => ({
         url,
         isCover: index === 0,
         uploadedAt: new Date(),
@@ -438,13 +439,12 @@ export class LocationService {
 
   async getLocationById(locationId: string, userId: string) {
     void userId;
-
     try {
       const location = await this.locationModel.findById(locationId).exec();
       if (!location) {
         return {
           success: false,
-          message: 'Khong tim thay dia diem',
+          message: 'Không tìm thấy địa điểm',
           statusCode: 404,
         };
       }
@@ -471,7 +471,7 @@ export class LocationService {
       console.log('Error retrieving location by ID:', error);
       return {
         success: false,
-        message: 'Xay ra loi khi lay thong tin dia diem',
+        message: 'Xảy ra lỗi khi lấy thông tin địa điểm',
         statusCode: 500,
       };
     }
@@ -612,6 +612,33 @@ export class LocationService {
             )
           : null,
     }));
+  }
+
+  async updateLocation(id: string, updateData: UpdateLocationDto) {
+    try {
+      const location = await this.locationModel.findById(id).exec();
+      if (!location) {
+        return {
+          success: false,
+          message: 'Không tìm thấy địa điểm',
+          statusCode: 404,
+        };
+      }
+      location.set(updateData);
+      await location.save();
+      return {
+        success: true,
+        message: 'Cập nhật địa điểm thành công',
+        location,
+      };
+    } catch (error) {
+      console.error('Error occurred at updateLocation:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi cập nhật địa điểm',
+        statusCode: 500,
+      };
+    }
   }
 }
 
