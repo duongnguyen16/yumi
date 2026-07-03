@@ -11,12 +11,17 @@ import {
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
 import { getAllLocations, getCurrentLocation } from "@/service/locationService";
-import { ActivityIndicator, IconButton, Text, TextInput } from "react-native-paper";
+import {
+  ActivityIndicator,
+  IconButton,
+  Text,
+  TextInput,
+} from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_API ||
+  process.env.EXPO_PUBLIC_MAP_APu ||
   "https://demotiles.maplibre.org/style.json";
 
 const emptyGeoJson = {
@@ -106,7 +111,7 @@ export default function MapScreen() {
       } catch (error) {
         console.error("Error loading map style:", error);
         setMapError(
-          error instanceof Error ? error.message : "Khong tai duoc ban do.",
+          error instanceof Error ? error.message : "Không tải được bản đồ.",
         );
         setLoading(false);
       }
@@ -173,7 +178,7 @@ export default function MapScreen() {
     return (
       <View style={styles.centerState}>
         <ActivityIndicator size="large" />
-        <Text>Dang tai ban do...</Text>
+        <Text>Đang tải bản đồ...</Text>
       </View>
     );
   }
@@ -181,9 +186,9 @@ export default function MapScreen() {
   if (!mapStyle || !location) {
     return (
       <View style={styles.centerState}>
-        <Text variant="titleMedium">Khong hien duoc ban do</Text>
+        <Text variant="titleMedium">Không hiện được bản đồ</Text>
         <Text style={styles.stateText}>
-          {mapError || "Khong co du lieu vi tri hien tai."}
+          {mapError || "Không có dữ liệu vị trí hiện tại."}
         </Text>
       </View>
     );
