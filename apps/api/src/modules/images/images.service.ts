@@ -24,23 +24,23 @@ export class ImagesService {
 
     if (!ALLOWED_MIME_TYPES.includes(dto.mimeType)) {
       throw new BadRequestException(
-        'Chi ho tro anh JPG, JPEG hoac PNG cho dia diem',
+        'Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG cho địa điểm',
       );
     }
 
     if (!['.jpg', '.jpeg', '.png'].includes(normalizedExtension)) {
       throw new BadRequestException(
-        'Dinh dang tep khong hop le. Chi ho tro .jpg, .jpeg, .png',
+        'Định dạng tệp không hợp lệ. Chỉ hỗ trợ .jpg, .jpeg, .png',
       );
     }
 
     if (dto.fileSize > MAX_IMAGE_SIZE) {
-      throw new BadRequestException('Moi anh phai nho hon hoac bang 10MB');
+      throw new BadRequestException('Mọi ảnh phải nhỏ hơn hoặc bằng 10MB');
     }
 
     return {
       success: true,
-      message: 'Anh hop le',
+      message: 'Ảnh hợp lệ',
       constraints: {
         mimeTypes: ALLOWED_MIME_TYPES,
         maxFileSize: MAX_IMAGE_SIZE,

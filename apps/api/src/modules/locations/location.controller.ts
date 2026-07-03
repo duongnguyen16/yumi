@@ -38,9 +38,9 @@ export class LocationController {
     const result = await this.locationService.getAllLocations();
     if (!result.success) {
       if (result.statusCode === 404) {
-        throw new NotFoundException('Khong tim thay dia diem nao');
+        throw new NotFoundException('Không tìm thấy địa điểm nào');
       }
-      throw new InternalServerErrorException('Xay ra loi khi lay dia diem');
+      throw new InternalServerErrorException('Xảy ra lỗi khi lấy địa điểm');
     }
     return result;
   }
@@ -119,7 +119,7 @@ export class LocationController {
     @Request() req: AuthenticatedRequest,
   ) {
     if (!dto.rejectReason?.trim()) {
-      throw new BadRequestException('Can ly do tu choi dia diem');
+      throw new BadRequestException('Cần lý do từ chối địa điểm');
     }
 
     return this.locationService.rejectRequest(
@@ -136,7 +136,7 @@ export class LocationController {
     @Request() req: AuthenticatedRequest,
   ) {
     if (!locationId) {
-      throw new NotFoundException('Khong tim thay dia diem voi ID nay');
+      throw new NotFoundException('Không tìm thấy địa điểm với ID này');
     }
     const userId = req.user.userId;
     const result = await this.locationService.getLocationById(
@@ -144,7 +144,7 @@ export class LocationController {
       userId,
     );
     if (!result.success) {
-      throw new NotFoundException('Khong tim thay dia diem');
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
     return result;
   }

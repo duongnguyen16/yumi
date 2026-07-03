@@ -13,7 +13,6 @@ import { SchemaModule } from 'src/common/schemas/schema.module';
     AtStrategy,
     RtStrategy,
     AdminGuard,
-    AiTagService,
     LocationService,
   ],
 })
