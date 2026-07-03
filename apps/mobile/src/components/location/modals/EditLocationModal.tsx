@@ -1,4 +1,5 @@
 import { userContext } from "@/contexts/userContext";
+import { useRouter } from "expo-router";
 import React, { useContext, useState } from "react";
 import { View } from "react-native";
 import {
@@ -13,6 +14,7 @@ import {
 export default function EditLocationModal({ visible, setVisible, data }) {
   console.log(data);
   const { user } = useContext(userContext);
+  const router = useRouter();
   return (
     <Portal>
       <Modal visible={visible} onDismiss={() => setVisible(false)}>
@@ -39,9 +41,17 @@ export default function EditLocationModal({ visible, setVisible, data }) {
             <IconButton icon={"close"} onPress={() => setVisible(false)} />
           </View>
           <View>
+            {/* Tên */}
             <TouchableRipple
               onPress={() => {
-                console.log("Navigate to Edit Location Screen");
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "name",
+                  },
+                });
+                setVisible(false);
               }}
               style={{
                 padding: 10,
@@ -73,9 +83,17 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                 <Icon source={"chevron-right"} size={30} />
               </View>
             </TouchableRipple>
+            {/* Địa chỉ */}
             <TouchableRipple
               onPress={() => {
-                console.log("Navigate to Edit Location Screen");
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "address",
+                  },
+                });
+                setVisible(false);
               }}
               style={{
                 padding: 10,
@@ -107,9 +125,17 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                 <Icon source={"chevron-right"} size={30} />
               </View>
             </TouchableRipple>
+            {/* Mô tả */}
             <TouchableRipple
               onPress={() => {
-                console.log("Navigate to Edit Location Screen");
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "openingHours",
+                  },
+                });
+                setVisible(false);
               }}
               style={{
                 padding: 10,
@@ -141,9 +167,17 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                 <Icon source={"chevron-right"} size={30} />
               </View>
             </TouchableRipple>
+            {/* Giờ mở cửa */}
             <TouchableRipple
               onPress={() => {
-                console.log("Navigate to Edit Location Screen");
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "description",
+                  },
+                });
+                setVisible(false);
               }}
               style={{
                 padding: 10,
@@ -175,9 +209,17 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                 <Icon source={"chevron-right"} size={30} />
               </View>
             </TouchableRipple>
+            {/* Số điện thoại */}
             <TouchableRipple
               onPress={() => {
-                console.log("Navigate to Edit Location Screen");
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "phone",
+                  },
+                });
+                setVisible(false);
               }}
               style={{
                 padding: 10,
