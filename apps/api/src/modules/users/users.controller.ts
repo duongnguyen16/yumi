@@ -76,7 +76,7 @@ export class UsersController {
   private extractUserId(req: any) {
     const userId = (req as { user?: { userId?: string } }).user?.userId;
     if (!userId) {
-      throw new UnauthorizedException('Khong tim thay nguoi dung');
+      throw new UnauthorizedException('Không tìm thấy người dùng');
     }
 
     return userId;
