@@ -42,7 +42,7 @@ const getAllLocations = async () => {
     return {
       success: false,
       locations: emptyLocations,
-      message: error?.response?.data?.message || "Loi khi lay du lieu vi tri.",
+      message: error?.response?.data?.message || "Lỗi khi lấy dữ liệu vị trí.",
     };
   }
 };
@@ -55,7 +55,7 @@ const getLocationById = async (id: string) => {
     console.log("Error while getLocationById: ", error);
     return {
       success: false,
-      message: error?.response?.data?.message || "Loi khi lay du lieu",
+      message: error?.response?.data?.message || "Lỗi khi lấy dữ liệu",
     };
   }
 };
