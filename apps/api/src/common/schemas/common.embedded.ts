@@ -6,7 +6,7 @@ export class GeoPoint {
   @Prop({ type: String, enum: ['Point'], default: 'Point' })
   type!: 'Point';
 
-  // GeoJSON order: [longitude, latitude]
+  // [longitude, latitude]
   @Prop({ type: [Number], required: true })
   coordinates!: [number, number];
 }

@@ -1,8 +1,16 @@
 import { Optional } from '@nestjs/common';
-import { IsString } from 'class-validator';
+import { IsNumber, IsString } from 'class-validator';
 
 export class AdvanceUpdateLocationDto {
   @Optional()
   @IsString({ message: 'Tên vị trí không hợp lệ' })
   name?: string;
+
+  @Optional()
+  @IsString()
+  address?: string;
+
+  @Optional()
+  @IsNumber()
+  phone?: number;
 }
