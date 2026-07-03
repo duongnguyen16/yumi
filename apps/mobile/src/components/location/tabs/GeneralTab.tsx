@@ -4,24 +4,13 @@ import React, { useContext, useState } from "react";
 import { View } from "react-native";
 import { Button, Card, Icon, Text } from "react-native-paper";
 import EditLocationModal from "../modals/EditLocationModal";
+import ProductCard from "../ui/ProductCard";
 
-type GeneralTabProps = {
-  data?: {
-    location?: {
-      _id?: string;
-      ownerId?: string;
-      address?: string;
-      openingHours?: string;
-      description?: string;
-      viewCount?: number;
-    };
-  } | null;
-};
-
-export default function GeneralTab({ data }: GeneralTabProps) {
+export default function GeneralTab({ data, productData }) {
   const { user } = useContext(userContext);
   const router = useRouter();
   const [visible, setVisible] = useState(false);
+  console.log("GeneralTab", productData);
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
@@ -92,12 +81,30 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           </Card.Actions>
         ) : null}
       </Card>
-      <Card style={{ padding: 16, marginTop: 16 }}>
-        <Card.Title title="Sản phẩm" />
-        <Card.Content>
-          <Text>Product</Text>
-        </Card.Content>
-      </Card>
+      <View
+        style={{
+          marginTop: 16,
+          flexDirection: "column",
+          gap: 16,
+          borderRadius: 8,
+          padding: 10,
+        }}
+      >
+        <Text variant="headlineSmall">Sản phẩm</Text>
+        {(productData || []).map((product) => (
+          <ProductCard key={product._id} data={product} />
+        ))}
+        {user?._id === data?.location?.ownerId ? (
+          <Button
+            mode="outlined"
+            onPress={() => {
+              // Handle button press
+            }}
+          >
+            Chỉnh sửa sản phẩm
+          </Button>
+        ) : null}
+      </View>
       <EditLocationModal
         setVisible={setVisible}
         visible={visible}
