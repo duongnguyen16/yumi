@@ -13,13 +13,12 @@ export default function LocationDetail() {
   const [loading, setLoading] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [productData, setProductData] = useState(null);
-  console.log("locationDetail", id);
   useEffect(() => {
     const fetchLocationData = async () => {
       try {
         const response = await getLocationById(id as string);
         if (response.success) {
-          setLocationData(response);
+          setLocationData(response.data);
         } else {
           console.log("Error fetching location data:", response.message);
           setDialogVisible(true);
@@ -57,10 +56,10 @@ export default function LocationDetail() {
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <Stack.Screen
         options={{
-          headerTitle: locationData?.location?.name || "Chi tiết vị trí",
+          headerTitle: locationData?.name || "Chi tiết vị trí",
           headerShown: true,
           headerRight: () => (
-            <Badge status={locationData?.location?.status || "CLOSED"} />
+            <Badge status={locationData?.status || "CLOSED"} />
           ),
         }}
       />
