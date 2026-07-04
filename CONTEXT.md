@@ -15,7 +15,7 @@
 
 1. **Tạo dữ liệu ≠ Sở hữu dữ liệu.** Ai cũng _đóng góp_ được địa điểm (kể cả từ xa) — đó chỉ là dữ liệu cộng đồng chưa xác minh, **không trao quyền**. Quyền _sở hữu/quản lý_ chỉ đến từ bằng chứng kiểm soát vật lý tại chỗ.
 2. **Xác minh = kiểm soát vật lý, không phải pháp nhân.** On-site proof geotagged là chuẩn phổ quát; giấy phép kinh doanh chỉ là bằng chứng bổ trợ tùy chọn.
-3. **GPS là một kênh, không phải duy nhất.** Luôn kết hợp fused location + chỉnh tay + reverse geocoding + kiểm duyệt người.
+3. **GPS là một kênh, không phải duy nhất.** Luôn kết hợp fused location + chỉnh tay + reverse geocoding + kiểm duyệt người. Riêng **tạo mới review** không dùng pin chỉnh tay: phải có GPS/fused location hợp lệ tại địa điểm hoặc ảnh tại chỗ hợp lệ.
 4. **Mọi thứ đảo ngược được + có vết.** Soft delete, audit log, report, revoke, dispute, **kháng cáo** — không hành động phá hoại nào là vĩnh viễn hoặc ẩn danh.
 
 - **Actors:** Customer · Vendor · Admin.
@@ -35,7 +35,7 @@
 
 ## 3. Catalog toàn bộ tính năng
 
-**Customer:** C1 Auth/hồ sơ · C2 Tìm kiếm & duyệt (map+list, filter category/sub/tag/khu vực) · C3 Xem chi tiết · C4 Đóng góp địa điểm mới · C5 Đề xuất sửa (suggest-edit) · C6 Review (rating+text+ảnh) · C7 Bookmark · C8 Share · C9 Report kèm evidence (gồm "chủ sai") · C10 Top trending · C11 Tích lũy uy tín (trust).
+**Customer:** C1 Auth/hồ sơ · C2 Tìm kiếm & duyệt (map+list, filter category/sub/tag/khu vực) · C3 Xem chi tiết · C4 Đóng góp địa điểm mới · C5 Đề xuất sửa (suggest-edit) · C6 Review (rating+text+ảnh; tạo mới tại chỗ/proof) · C7 Bookmark · C8 Share · C9 Report kèm evidence (gồm "chủ sai") · C10 Top trending · C11 Tích lũy uy tín (trust).
 
 **Vendor:** V1 Đăng ký (verify SĐT) · V2 Claim địa điểm · V3 Đăng ký địa điểm mới (on-site proof → auto-own) · V4 Request-access · V5 Quản lý nhiều địa điểm · V6 Quản lý info (đổi tên/địa chỉ → duyệt lại) · V7 Quản lý sản phẩm (info-only) · V8 Reply review · V9 Duyệt suggest-edit cho địa điểm sở hữu · V10 Thống kê cơ bản · V11 Release ownership.
 
@@ -60,7 +60,7 @@
 | **User**                     | email, mật khẩu (mã hóa), vai trò, tên, avatar, SĐT, cờ SĐT-verified, trust_score, trust_level, trạng thái                                    | ACTIVE/WARNED/BANNED                         |
 | **Location**                 | tên, mô tả, tọa độ + accuracy, địa chỉ, ảnh (1–5), nguồn (Customer/Vendor), chủ (có/không), cờ nghi-trùng, cờ confirmed-duplicate, view_count | xem 6.1; ownership 6.2                       |
 | **Category/SubCategory/Tag** | tên, mô tả, cờ visibility                                                                                                                     | —                                            |
-| **Review**                   | rating (1–5), nội dung, ảnh (0–3), người viết, địa điểm                                                                                       | PUBLISHED/DELETED/REMOVED_BY_ADMIN; ≤1 Reply |
+| **Review**                   | rating (1–5), nội dung, ảnh (0–3), người viết, địa điểm, **proof tạo mới tại chỗ** (GPS hoặc ảnh tại chỗ)                                      | PUBLISHED/DELETED/REMOVED_BY_ADMIN; ≤1 Reply |
 | **Reply**                    | nội dung, Vendor, thuộc 1 Review                                                                                                              | 1/review                                     |
 | **Product**                  | tên, ảnh, mô tả, giá (optional)+disclaimer                                                                                                    | —                                            |
 | **Claim**                    | Vendor, địa điểm, trạng thái OTP, on-site proof, giấy phép (optional)                                                                         | xem 6.4                                      |
@@ -372,7 +372,7 @@ owned --Vendor release / Admin revoke--> no-owner
 - **Tìm kiếm & xem (C2/C3):** map (viewport + clustering — BR-41) + list + filter; chỉ PUBLISHED (BR-11). Xem chi tiết → +view (BR-12); badge xác minh nếu claimed. Không lấy được vị trí → mặc định trung tâm Hòa Lạc; lỗi Goong → list-only.
 - **Bookmark (C7):** lưu/bỏ; 1 cặp/người (BR-23); Guest → login (BR-21).
 - **Share (C8):** deeplink + copy; chỉ PUBLISHED.
-- **Review (C6):** rating(1–5) + nội dung ≥20 ký tự + ảnh ≤3; hiển thị ngay; 1/user/địa điểm (BR-17); Vendor không review địa điểm mình (BR-18); địa điểm claimed → báo Vendor (mở reply V8); review giữ → +2 trust (BR-19). Customer toàn quyền sửa/xóa review mình; Vendor không xóa được (BR-48).
+- **Review (C6):** rating(1–5) + nội dung ≥20 ký tự + ảnh ≤3; **tạo mới review chỉ khi user đang ở tại địa điểm hoặc cung cấp ảnh tại chỗ hợp lệ** (BR-68); hiển thị ngay; 1/user/địa điểm (BR-17); Vendor không review địa điểm mình (BR-18); địa điểm claimed → báo Vendor (mở reply V8); review giữ → +2 trust (BR-19). Customer toàn quyền **sửa/xóa review cũ từ xa**; edit không được tạo review mới hoặc đổi địa điểm gốc (BR-69). Vendor không xóa được (BR-48).
 - **Report (C9):** chọn loại (sai info/spam/đóng cửa/**chủ sai**/khác) + mô tả/evidence; 1 PENDING/đối tượng/loại (BR-24); "chủ sai" → vào Report queue để Admin xử, không tự mở Dispute; nếu Admin thông qua report, vendor bị ảnh hưởng có quyền kháng cáo theo HF-6; vu cáo → −10 trust (BR-27).
 - **Top trending (C10):** sort view + review + recency; chỉ PUBLISHED.
 - **Vendor — info (V6):** sửa giờ/SĐT/mô tả/ảnh; đổi tên/địa chỉ → PENDING_RE_APPROVAL, public giữ info cũ (BR-30); không hard delete, chỉ ẩn (BR-35).
@@ -387,7 +387,7 @@ owned --Vendor release / Admin revoke--> no-owner
 
 # PHẦN V — CATALOG CHUẨN
 
-## 7. Business Rules (BR-01 → BR-67)
+## 7. Business Rules (BR-01 → BR-69)
 
 **Auth & tài khoản:** BR-01 email duy nhất/hợp lệ · BR-02 Vendor bắt buộc verify SĐT, Customer optional · BR-03 OTP 5', tối đa 5 lần sai · BR-04 mật khẩu mã hóa · BR-05 sai mật khẩu 5 lần → khóa 15' · BR-06 BANNED không cấp phiên · BR-07 reset → vô hiệu phiên cũ · BR-08 link reset 15', 1 lần · BR-09 đổi SĐT Vendor → verify lại · BR-10 không đổi email.
 
@@ -395,7 +395,7 @@ owned --Vendor release / Admin revoke--> no-owner
 
 **Đóng góp & trust:** BR-22 ≤3 địa điểm/Customer/ngày · BR-25 TRUSTED → fast-track/auto-publish · BR-26 RESTRICTED → submit chặn/siết · BR-44 approve → +điểm, reject vi phạm → −điểm.
 
-**Review:** BR-17 1 review/user/địa điểm · BR-18 Vendor không review địa điểm mình · BR-19 review giữ → +2 trust · BR-48 chỉ Admin gỡ review.
+**Review:** BR-17 1 review/user/địa điểm · BR-18 Vendor không review địa điểm mình · BR-19 review giữ → +2 trust · BR-48 chỉ Admin gỡ review · BR-68 tạo mới review bắt buộc xác thực hiện diện tại địa điểm: GPS/fused location của thiết bị phải cách Location ≤50m và accuracy ≤50m; thao tác tạo review **không cho kéo pin tay**. Nếu GPS không có/accuracy kém/ngoài bán kính thì bắt buộc ảnh tại chỗ hợp lệ (geotag/timestamp hoặc bối cảnh nhận diện địa điểm đủ để kiểm chứng); thiếu cả hai → chặn tạo review · BR-69 người viết được sửa/xóa review cũ từ xa, nhưng edit chỉ cập nhật nội dung/rating/ảnh của review hiện hữu, không được đổi locationId hoặc dùng để tạo review mới từ xa.
 
 **Report & tranh chấp:** BR-24 1 report PENDING/đối tượng/loại và phải lưu evidence · BR-27 vu cáo → −trust · BR-53 tranh chấp ownership chỉ mở từ RequestAccess bị reject/refuse + Vendor B appeal; khi xét tranh chấp, kiểm soát vật lý > giấy phép · BR-54 sau REVOKE → community-owned, mở claim.
 
@@ -432,6 +432,7 @@ Khởi tạo 0. +15 submit duyệt · +5 report đúng · +2 review giữ · −
 | Review.rating            | bắt buộc 1–5                                    |
 | Review.nội dung          | ≥ 20 ký tự                                      |
 | Review.ảnh               | 0–3                                             |
+| Review.tạo mới           | bắt buộc proof tại chỗ: GPS/fused location cách Location ≤50m và accuracy ≤50m, không cho kéo pin tay; nếu GPS không đạt thì dùng ảnh tại chỗ hợp lệ; edit review cũ không yêu cầu proof mới |
 | Product.giá              | optional; ≥ 0; luôn kèm disclaimer              |
 | Claim/Request.bằng chứng | ≥ 1 ảnh/video geotagged + OTP verified          |
 | Report.evidence          | optional với report thường; bắt buộc nếu report "chủ sai" |
@@ -439,7 +440,7 @@ Khởi tạo 0. +15 submit duyệt · +5 report đúng · +2 review giữ · −
 
 ## 10. Rate Limits & Quotas
 
-Submit địa điểm 3/Customer/ngày · Review 1/user/địa điểm · Reply 1/review · Ảnh địa điểm 1–5 · Ảnh review ≤3 · Sản phẩm ≤50/địa điểm · OTP 5'/tối đa 5 sai · Đăng nhập sai 5 lần→khóa 15' · Link reset 15'/1 lần · Reject liên tiếp 3 lần→cờ tài khoản · Claim/Request-access 1 PENDING/địa điểm · Kháng cáo 1/quyết định, hạn 14 ngày · Admin tối thiểu 2 · Request-access timeout 3 ngày · Ownership hold 7 ngày.
+Submit địa điểm 3/Customer/ngày · Review 1/user/địa điểm, **tạo mới phải có proof tại chỗ** · Reply 1/review · Ảnh địa điểm 1–5 · Ảnh review ≤3 · Sản phẩm ≤50/địa điểm · OTP 5'/tối đa 5 sai · Đăng nhập sai 5 lần→khóa 15' · Link reset 15'/1 lần · Reject liên tiếp 3 lần→cờ tài khoản · Claim/Request-access 1 PENDING/địa điểm · Kháng cáo 1/quyết định, hạn 14 ngày · Admin tối thiểu 2 · Request-access timeout 3 ngày · Ownership hold 7 ngày.
 
 ## 11. Permission Matrix
 
@@ -447,7 +448,7 @@ Submit địa điểm 3/Customer/ngày · Review 1/user/địa điểm · Reply 
 | -------------------------------------------------- | ----- | -------- | ----------------------------- | ------------- |
 | Xem/search                                         | ✅    | ✅       | ✅                            | ✅            |
 | Bookmark                                           | ❌    | ✅       | ✅                            | ✅            |
-| Review                                             | ❌    | ✅       | ✅ (không phải địa điểm mình) | ✅            |
+| Review                                             | ❌    | ✅ (tạo mới tại chỗ/proof; edit cũ từ xa) | ✅ (không phải địa điểm mình; tạo mới tại chỗ/proof) | ✅            |
 | Reply review                                       | ❌    | ❌       | ✅ (sở hữu)                   | ✅            |
 | Submit địa điểm                                    | ❌    | ✅       | ✅                            | ✅            |
 | Suggest-edit                                       | ❌    | ✅       | ✅                            | ✅            |
@@ -478,13 +479,13 @@ Submit địa điểm 3/Customer/ngày · Review 1/user/địa điểm · Reply 
 - **Audit (BR-43):** mọi action Admin ghi log (actor/hành động/đối tượng/thời điểm/lý do); không xóa.
 - **Soft delete (BR-47):** không xóa cứng dữ liệu nghiệp vụ; đánh dấu DELETED/REMOVED.
 - **Guest (BR-21):** đọc tự do; action ghi → login.
-- **GPS (M4):** fused location (GPS+WiFi+cell) + accuracy; >50m → kéo pin tay; Goong reverse geocoding kênh phụ; GPS không phải kênh duy nhất.
+- **GPS (M4):** fused location (GPS+WiFi+cell) + accuracy; >50m → kéo pin tay; Goong reverse geocoding kênh phụ; GPS không phải kênh duy nhất. Riêng **tạo mới review** phải chứng minh hiện diện tại địa điểm bằng GPS/fused location cách Location ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ; không dùng pin chỉnh tay để tạo review; edit review cũ không yêu cầu lại.
 - **Dedup (M1):** string similarity + Haversine; ngưỡng BR-13; rule-based, không AI; cảnh báo, không tự chặn.
 - **Phạm vi địa lý (M5/BR-40):** chỉ nhận/hiển thị địa điểm trong bán kính Hòa Lạc.
 
 ## 14. Glossary
 
-**Location** (danh từ chuẩn, không dùng "Place") · **Community-owned** (no-owner, tầng B) · **On-site proof** (ảnh/video geotagged chứng minh kiểm soát vật lý) · **Claim** (yêu cầu sở hữu) · **Request-Access** (yêu cầu quyền truy cập địa điểm đã có chủ) · **OwnershipHold** (cửa sổ hạn chế chủ mới sau transfer không qua Admin vetting) · **Dispute** (tranh chấp owner giữa A và B, chỉ từ request-access bị reject/refuse + B appeal) · **Appeal** (kháng cáo quyết định bất lợi) · **Suggest-edit** (đề xuất sửa field-level) · **Confirmed-duplicate** (Admin xác nhận trùng → ẩn) · **Fast-track** (đóng góp TRUSTED ưu tiên/auto-publish) · **Lazy-check** (kiểm timeout lúc query, không cron) · **M1/M2/M3/M4/M5** (dedup / trust / notification / location handling / geo-scope).
+**Location** (danh từ chuẩn, không dùng "Place") · **Community-owned** (no-owner, tầng B) · **On-site proof** (ảnh/video geotagged chứng minh kiểm soát vật lý) · **Review on-site proof** (bằng chứng chỉ dùng khi tạo mới review: GPS/fused location cách Location ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ) · **Claim** (yêu cầu sở hữu) · **Request-Access** (yêu cầu quyền truy cập địa điểm đã có chủ) · **OwnershipHold** (cửa sổ hạn chế chủ mới sau transfer không qua Admin vetting) · **Dispute** (tranh chấp owner giữa A và B, chỉ từ request-access bị reject/refuse + B appeal) · **Appeal** (kháng cáo quyết định bất lợi) · **Suggest-edit** (đề xuất sửa field-level) · **Confirmed-duplicate** (Admin xác nhận trùng → ẩn) · **Fast-track** (đóng góp TRUSTED ưu tiên/auto-publish) · **Lazy-check** (kiểm timeout lúc query, không cron) · **M1/M2/M3/M4/M5** (dedup / trust / notification / location handling / geo-scope).
 
 ## 15. MVP vs Defer
 
