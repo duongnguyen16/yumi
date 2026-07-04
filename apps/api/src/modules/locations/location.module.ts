@@ -5,6 +5,8 @@ import { AtStrategy } from 'src/common/guard/at.strategy';
 import { RtStrategy } from 'src/common/guard/rt.strategy';
 import { LocationService } from './location.service';
 import { SchemaModule } from 'src/common/schemas/schema.module';
+import { VendorGuard } from 'src/common/guard/vendor.guard';
+import { ImagesService } from '../images/images.service';
 
 @Module({
   controllers: [LocationController],
@@ -14,6 +16,8 @@ import { SchemaModule } from 'src/common/schemas/schema.module';
     RtStrategy,
     AdminGuard,
     LocationService,
+    VendorGuard,
+    ImagesService,
   ],
 })
 export class LocationModule {}

@@ -20,6 +20,7 @@ import { getAllCategories, getSubCategory } from "@/service/categoryService";
 import { TimePickerModal } from "react-native-paper-dates";
 import CustomMap from "./ui/CustomMap";
 import GetNewLocation from "./modals/GetNewLocation";
+import { updateLocation } from "@/service/locationService";
 
 export default function EditLocationScreen({
   selectedChip,
@@ -36,13 +37,16 @@ export default function EditLocationScreen({
   const [category, setCategory] = useState([]);
   const [subCategory, setSubCategory] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState();
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string[]>([]);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<
+    Record<string, string[]>
+  >({});
   const [assets, setAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [coordinates, setCoordinates] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [clockVisible, setClockVisible] = useState(false);
   const [pickerMode, setPickerMode] = useState("start");
   const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const uploadMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -66,24 +70,29 @@ export default function EditLocationScreen({
     setAssets(result.assets);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setLoading(true);
     if (selectedChip.includes("name")) {
       if (!assets || assets.length === 0) {
         Alert.alert("Vui lòng thêm bằng chứng");
+        setLoading(false);
         return;
       }
     }
     if (selectedChip.includes("address")) {
       if (!coordinates) {
         Alert.alert("Vui lòng xác thực lại vị trí");
+        setLoading(false);
         return;
       }
       if (!assets) {
         Alert.alert("Vui lòng thêm bằng chứng");
+        setLoading(false);
         return;
       }
     }
-    const data = {
+    if (!selectedCategory) return;
+    const submitData = {
       name: selectedChip.includes("name") ? name : undefined,
       address: selectedChip.includes("address") ? address : undefined,
       openingHours: selectedChip.includes("openingHours")
@@ -96,13 +105,15 @@ export default function EditLocationScreen({
       categoryId: selectedChip.includes("category")
         ? selectedCategory
         : undefined,
-      subCategoryIds: selectedChip.includes("subCategory")
-        ? selectedSubCategory
+      subCategoryIds: selectedChip.includes("category")
+        ? selectedSubCategory[selectedCategory] || []
         : undefined,
-      coordinates,
+      coordinates: selectedChip.includes("coordinates")
+        ? coordinates
+        : undefined,
     };
     const formData = new FormData();
-    formData.append("data", JSON.stringify(data));
+    formData.append("data", JSON.stringify(submitData));
     assets.forEach((asset) => {
       formData.append("media", {
         uri: asset.uri,
@@ -114,17 +125,39 @@ export default function EditLocationScreen({
           `media-${Date.now()}.${asset.type === "video" ? "mp4" : "jpg"}`,
       } as any);
     });
-    console.log("FormData to submit:", formData);
+    try {
+      const response = await updateLocation(formData, data._id);
+      if (response.success) {
+        Alert.alert("Cập nhật địa điểm thành công");
+      }
+    } catch (error) {
+      console.error("Error updating location:", error);
+    } finally {
+      setLoading(false);
+      setAssets([]);
+    }
   };
 
   const handleSelectSubCategory = (subCategoryId: string) => {
-    if (selectedSubCategory.includes(subCategoryId)) {
-      setSelectedSubCategory(
-        selectedSubCategory.filter((id) => id !== subCategoryId),
-      );
-    } else {
-      setSelectedSubCategory([...selectedSubCategory, subCategoryId]);
-    }
+    if (!selectedCategory) return;
+    setSelectedSubCategory((prev) => {
+      if (prev[selectedCategory]?.includes(subCategoryId)) {
+        return {
+          ...prev,
+          [selectedCategory]: prev[selectedCategory].filter(
+            (id) => id !== subCategoryId,
+          ),
+        };
+      } else {
+        return {
+          ...prev,
+          [selectedCategory]: [
+            ...(prev[selectedCategory] || []),
+            subCategoryId,
+          ],
+        };
+      }
+    });
   };
 
   const handleClockConfirm = ({ hours, minutes }) => {
@@ -153,6 +186,12 @@ export default function EditLocationScreen({
       if (selectedCategory) {
         const response = await getSubCategory(selectedCategory);
         setSubCategory(response.data || []);
+        setSelectedSubCategory((prev) => {
+          return {
+            ...prev,
+            [selectedCategory]: prev[selectedCategory] || [],
+          };
+        });
       }
     };
     fetchSubcategoryData();
@@ -160,7 +199,6 @@ export default function EditLocationScreen({
 
   useEffect(() => {
     if (!data) return;
-    console.log("Data in EditLocationScreen:", data.geo?.coordinates);
     const fetchCategoryData = async () => {
       const response = await getAllCategories();
       setName(data.name || "");
@@ -171,6 +209,10 @@ export default function EditLocationScreen({
       setCategory(response.data || "");
       setSelectedCategory(data.categoryId._id || "");
       setCoordinates(data.geo?.coordinates || null);
+      setSelectedSubCategory({
+        [data.categoryId._id]:
+          data.subCategoryIds?.map((subCategory) => subCategory._id) || [],
+      });
     };
     fetchCategoryData();
   }, [data]);
@@ -386,7 +428,9 @@ export default function EditLocationScreen({
                     {subCategory.map((item, index) => (
                       <Chip
                         key={index}
-                        selected={selectedSubCategory.includes(item._id)}
+                        selected={selectedSubCategory[
+                          selectedCategory
+                        ]?.includes(item._id)}
                         onPress={() => handleSelectSubCategory(item._id)}
                         style={{ alignSelf: "flex-start" }}
                       >
@@ -421,6 +465,7 @@ export default function EditLocationScreen({
           mode="contained"
           icon="file-document-edit-outline"
           onPress={() => handleSubmit()}
+          disabled={loading}
         >
           Lưu
         </Button>
