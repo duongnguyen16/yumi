@@ -15,7 +15,7 @@ const login = async (email: string, password: string) => {
       await saveAccessTokens(response.data.accessToken);
       return {
         accessToken: response.data.accessToken,
-        user: response.data.user,
+        user: response.data.userData,
         success: true,
         message: response.data.message,
       };
