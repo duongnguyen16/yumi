@@ -12,7 +12,7 @@ import { UserRole } from 'src/common/schemas/common.enums';
 import { UserDocument } from 'src/common/schemas/user.schema';
 
 @Injectable()
-export class AdminGuard implements CanActivate {
+export class VendorGuard implements CanActivate {
   constructor(@InjectModel('User') private userModel: Model<UserDocument>) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

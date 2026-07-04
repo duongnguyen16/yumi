@@ -11,6 +11,9 @@ import {
   Request,
   UseGuards,
   BadRequestException,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SearchDto } from './dto/search.dto';
@@ -22,6 +25,11 @@ import { AnalyzeLocationDraftDto } from './dto/analyze-location-draft.dto';
 import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
 import { ReviewLocationRequestDto } from './dto/review-location-request.dto';
+import { VendorGuard } from 'src/common/guard/vendor.guard';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -160,5 +168,40 @@ export class LocationController {
     }
     const userId = req.user.userId;
     await this.locationService.viewCount(userId, locationId);
+  }
+
+  @Post('update/:locationId')
+  @UseGuards(AuthGuard('jwt-at'), VendorGuard)
+  @UseInterceptors(FilesInterceptor('media', 10))
+  async updateLocation(
+    @Param('locationId') locationId: string,
+    @Body('data') data: string,
+    @UploadedFiles() file: Express.Multer.File[],
+    @Request() req: any,
+  ) {
+    try {
+      const dataParsed: any = JSON.parse(data);
+      const dto = plainToInstance(UpdateLocationDto, dataParsed);
+      const errors = await validate(dto, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      });
+      console.log('file:', file);
+      if (errors.length > 0) {
+        throw new BadRequestException(errors);
+      }
+      const result = await this.locationService.updateLocation(
+        locationId,
+        dto,
+        req?.user?.userId as string,
+        file,
+      );
+      return result;
+    } catch (error) {
+      console.error('Error in updateLocation controller:', error);
+      throw new InternalServerErrorException(
+        'Xảy ra lỗi khi cập nhật địa điểm',
+      );
+    }
   }
 }

@@ -16,6 +16,7 @@ export enum LocationRequestStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   CANCELLED = 'CANCELLED',
+  PENDING_RE_APPROVAL = 'PENDING_RE_APPROVAL',
 }
 
 @Schema({ timestamps: true, collection: 'location_requests' })
@@ -140,8 +141,7 @@ export class LocationRequest {
 
   @Prop({ type: Object })
   verificationProof?: {
-    proofImages?: string[];
-    proofVideo?: string;
+    proofUrls?: string[];
     systemCode?: string;
     capturedLat?: number;
     capturedLng?: number;
