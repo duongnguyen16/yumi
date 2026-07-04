@@ -12,9 +12,9 @@ import {
 } from "react-native-paper";
 
 export default function EditLocationModal({ visible, setVisible, data }) {
-  console.log(data);
   const { user } = useContext(userContext);
   const router = useRouter();
+
   return (
     <Portal>
       <Modal visible={visible} onDismiss={() => setVisible(false)}>
@@ -83,14 +83,14 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                 <Icon source={"chevron-right"} size={30} />
               </View>
             </TouchableRipple>
-            {/* Địa chỉ */}
+            {/* Giờ mở*/}
             <TouchableRipple
               onPress={() => {
                 router.push({
                   pathname: `/location/edit/[id]`,
                   params: {
                     id: data._id,
-                    type: "address",
+                    type: "openingHours",
                   },
                 });
                 setVisible(false);
@@ -167,14 +167,14 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                 <Icon source={"chevron-right"} size={30} />
               </View>
             </TouchableRipple>
-            {/* Giờ mở cửa */}
+            {/* Địa chỉ */}
             <TouchableRipple
               onPress={() => {
                 router.push({
                   pathname: `/location/edit/[id]`,
                   params: {
                     id: data._id,
-                    type: "description",
+                    type: "address",
                   },
                 });
                 setVisible(false);
