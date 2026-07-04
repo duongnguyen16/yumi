@@ -68,7 +68,6 @@ export default function MapScreen() {
   useEffect(() => {
     const loadStyle = async () => {
       try {
-        console.log("Loading map style from API:", MAP_API);
         const response = await fetch(MAP_API);
         if (!response.ok) {
           throw new Error(`Map style request failed: ${response.status}`);
@@ -145,8 +144,6 @@ export default function MapScreen() {
   const setCurrentLocation = async () => {
     try {
       const currentLocation = await getCurrentLocation();
-
-      console.log("Current location fetched:", currentLocation);
 
       if (!currentLocation) {
         console.error("Current location is null or undefined");
