@@ -50,7 +50,9 @@ const getAllLocations = async () => {
 const getLocationById = async (id: string) => {
   try {
     const response = await api.get(`/location/${id}`);
-    return response.data;
+    if (response.data?.success) {
+      return { success: true, data: response.data.location };
+    }
   } catch (error) {
     console.log("Error while getLocationById: ", error);
     return {
