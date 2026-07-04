@@ -10,7 +10,6 @@ export default function GeneralTab({ data, productData }) {
   const { user } = useContext(userContext);
   const router = useRouter();
   const [visible, setVisible] = useState(false);
-  console.log("GeneralTab", productData);
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
@@ -26,7 +25,7 @@ export default function GeneralTab({ data, productData }) {
           >
             <Icon source="map-marker" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location?.address || "Địa chỉ không có sẵn"}
+              {data?.address || "Địa chỉ không có sẵn"}
             </Text>
           </View>
           <View
@@ -39,7 +38,7 @@ export default function GeneralTab({ data, productData }) {
           >
             <Icon source="clock" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location?.openingHours || "Giờ mở cửa không có sẵn"}
+              {data?.openingHours || "Giờ mở cửa không có sẵn"}
             </Text>
           </View>
           <View
@@ -52,7 +51,7 @@ export default function GeneralTab({ data, productData }) {
           >
             <Icon source="information" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location?.description || "Mô tả không có sẵn"}
+              {data?.description || "Mô tả không có sẵn"}
             </Text>
           </View>
           <View
@@ -65,11 +64,11 @@ export default function GeneralTab({ data, productData }) {
           >
             <Icon source="eye" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location?.viewCount || "0"} lượt xem
+              {data?.viewCount || "0"} lượt xem
             </Text>
           </View>
         </Card.Content>
-        {user?._id === data?.location?.ownerId ? (
+        {user?._id === data?.ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
@@ -94,7 +93,7 @@ export default function GeneralTab({ data, productData }) {
         {(productData || []).map((product) => (
           <ProductCard key={product._id} data={product} />
         ))}
-        {user?._id === data?.location?.ownerId ? (
+        {user?._id === data?.ownerId ? (
           <Button
             mode="outlined"
             onPress={() => {
@@ -108,7 +107,7 @@ export default function GeneralTab({ data, productData }) {
       <EditLocationModal
         setVisible={setVisible}
         visible={visible}
-        data={data?.location}
+        data={data}
       />
     </View>
   );
