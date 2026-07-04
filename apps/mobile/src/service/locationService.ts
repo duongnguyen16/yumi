@@ -101,6 +101,28 @@ const searchLocation = async (
   }
 };
 
+const updateLocation = async (formData: FormData, locationId: string) => {
+  try {
+    console.log("Submitting formData for updateLocation:", formData);
+    const response = await api.post(
+      `/location/update/${locationId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating location:", error);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Đã có lỗi xảy ra",
+    };
+  }
+};
+
 export {
   getCurrentLocation,
   checkPermission,
@@ -108,4 +130,5 @@ export {
   getLocationById,
   viewCount,
   searchLocation,
+  updateLocation,
 };
