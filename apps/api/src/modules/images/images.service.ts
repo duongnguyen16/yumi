@@ -10,7 +10,14 @@ import { randomUUID } from 'crypto';
 import { ValidateImageDto } from './dto/validate-image.dto';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'video/mp4',
+  'video/quicktime',
+  'video/mpeg',
+];
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 @Injectable()
@@ -112,7 +119,49 @@ export class ImagesService {
     return this.supabaseClient;
   }
 
+  async updateMedia(locationId: string, file: Express.Multer.File) {
+    const supabase = this.getSupabaseClient();
+    const bucket = this.getBucket();
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException('File không hợp lệ');
+    }
+    const fileType = file.mimetype.startsWith('image/') ? 'image' : 'video';
+    const maxSize =
+      fileType === 'image' ? 10 * 1024 * 1024 : 1000 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        `File ${fileType} phải nhỏ hơn hoặc bằng ${maxSize / (1024 * 1024)}MB`,
+      );
+    }
+    const filePath = `updateLocation/${locationId}/${randomUUID()}/${fileType}/${file.filename}`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+    if (error) {
+      throw new BadRequestException(`Không thể tải lên tệp: ${error.message}`);
+    }
+    const { data: publicData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return {
+      url: publicData.publicUrl,
+      path: data.path,
+    };
+  }
+
+  async uploadMultiMedia(locationId: string, files: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Không có tệp nào được tải lên');
+    }
+    return Promise.all(files.map((file) => this.updateMedia(locationId, file)));
+  }
   private getBucket() {
-    return this.configService.get<string>('SUPABASE_STORAGE_BUCKET') ?? 'images';
+    return (
+      this.configService.get<string>('SUPABASE_STORAGE_BUCKET') ?? 'images'
+    );
   }
 }
