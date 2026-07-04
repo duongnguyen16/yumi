@@ -140,8 +140,7 @@ export class LocationRequest {
 
   @Prop({ type: Object })
   verificationProof?: {
-    proofImages?: string[];
-    proofVideo?: string;
+    proofUrls?: string[];
     systemCode?: string;
     capturedLat?: number;
     capturedLng?: number;

@@ -36,7 +36,8 @@ import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { AnalyzeLocationDraftDto } from './dto/analyze-location-draft.dto';
 import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
-import { UpdateLocationDto } from './dto/update-location.dto';
+import { UpdateLocationDto } from './dto/vendor-update-location.dto';
+import { ImagesService } from '../images/images.service';
 
 type LocationRating = {
   _id: unknown;
@@ -69,6 +70,7 @@ export class LocationService {
     private notificationModel: Model<NotificationDocument>,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    private readonly imagesService: ImagesService,
   ) {}
 
   async getAllLocations() {
@@ -598,7 +600,12 @@ export class LocationService {
     }));
   }
 
-  async updateLocation(id: string, updateData: UpdateLocationDto) {
+  async updateLocation(
+    id: string,
+    updateData: UpdateLocationDto,
+    userId: string,
+    files?: Express.Multer.File[],
+  ) {
     try {
       const location = await this.locationModel.findById(id).exec();
       if (!location) {
@@ -608,7 +615,60 @@ export class LocationService {
           statusCode: 404,
         };
       }
-      location.set(updateData);
+      let reviewRequiredData = {};
+      let nonReviewData = {};
+      if (updateData?.name || updateData?.address) {
+        reviewRequiredData = {
+          name: updateData.name ?? null,
+          address: updateData.address ?? null,
+          geo: updateData.coordinates ?? null,
+        };
+        const cleanData = Object.fromEntries(
+          Object.entries(updateData).filter(
+            ([_, value]) => value !== null && value !== undefined,
+          ),
+        );
+        const oldData: Record<string, unknown> = {};
+        if ('name' in cleanData) {
+          oldData.name = location.name;
+        }
+
+        if ('address' in cleanData) {
+          oldData.address = location.address;
+        }
+
+        if ('coordinates' in cleanData) {
+          oldData.coordinates = location.geo.coordinates;
+        }
+        const now = new Date();
+        const urls = await this.imagesService.uploadMultiMedia(id, files ?? []);
+        const locationRequest = await this.locationRequestModel.create({
+          type: LocationRequestType.UPDATE,
+          submittedBy: userId,
+          locationId: id,
+          status: LocationRequestStatus.PENDING,
+          oldData,
+          newData: cleanData,
+          changedFields: Object.keys(cleanData),
+          verificationProof: {
+            proofUrls: urls.map((url) => url.url),
+            capturedAt: now,
+          },
+        });
+      }
+      nonReviewData = {
+        openingHours: updateData.openingHours ?? null,
+        description: updateData.description ?? null,
+        categoryId: updateData.categoryId ?? null,
+        subCategoryIds: updateData.subCategoryIds ?? null,
+      };
+      console.log('nonReviewData:', nonReviewData);
+      const cleanNonReviewData = Object.fromEntries(
+        Object.entries(nonReviewData).filter(
+          ([_, value]) => value !== null && value !== undefined,
+        ),
+      );
+      location.set(cleanNonReviewData);
       await location.save();
       return {
         success: true,
