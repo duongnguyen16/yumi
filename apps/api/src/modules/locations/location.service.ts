@@ -646,7 +646,7 @@ export class LocationService {
           type: LocationRequestType.UPDATE,
           submittedBy: userId,
           locationId: id,
-          status: LocationRequestStatus.PENDING,
+          status: LocationRequestStatus.PENDING_RE_APPROVAL,
           oldData,
           newData: cleanData,
           changedFields: Object.keys(cleanData),
