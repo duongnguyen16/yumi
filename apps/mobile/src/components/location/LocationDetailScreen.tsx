@@ -9,7 +9,7 @@ import { viewCount } from "@/service/locationService";
 
 export default function LocationDetailScreen({ data, productData }) {
   const [tab, setTab] = useState("general");
-  const locationId = data?.location?._id;
+  const locationId = data?._id;
 
   const handleShare = async () => {
     if (!locationId) {
@@ -53,7 +53,7 @@ export default function LocationDetailScreen({ data, productData }) {
 
         <View style={{ padding: 16 }}>
           <Text variant="headlineMedium">
-            {data?.location?.name || "Có lỗi khi hiển thị tên vị trí"}
+            {data?.name || "Có lỗi khi hiển thị tên vị trí"}
           </Text>
           <View
             style={{
@@ -69,7 +69,7 @@ export default function LocationDetailScreen({ data, productData }) {
                 alignItems: "center",
               }}
             >
-              <Text>{data?.location?.rating?.avgRating || 0}</Text>
+              <Text>{data?.rating?.avgRating || 0}</Text>
               <Icon source="star" size={20} color="#FFD700" />
             </View>
             <IconButton icon={"share"} onPress={handleShare} mode="outlined" />
