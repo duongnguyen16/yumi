@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ExpoLocation from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
@@ -22,17 +22,26 @@ import {
   NativeUserLocation,
 } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
+import { TimePickerModal } from "react-native-paper-dates";
 import {
   analyzeLocationDraft,
-  submitContribution,
+  submitCustomerContribution,
+  submitVendorRegistration,
   uploadContributionImage,
   validateContributionPosition,
+  type CustomerContributionPayload,
+  type PendingVendorEvidenceFile,
 } from "@/service/contributePlaceService";
 import { getAllCategories, getSubCategory } from "@/service/categoryService";
+import { getSystemCode } from "@/service/locationService";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
   "https://demotiles.maplibre.org/style.json";
+
+const MAX_IMAGES = 5;
+const MAX_VIDEOS = 2;
+const MAX_LICENSES = 3;
 
 type SelectedImage = {
   id: string;
@@ -43,10 +52,21 @@ type SelectedImage = {
   uploadedUrl?: string;
 };
 
+type SelectedEvidenceFile = PendingVendorEvidenceFile & {
+  id: string;
+};
+
 type Coordinates = {
   latitude: number;
   longitude: number;
 };
+
+type TimeValue = {
+  hours: number;
+  minutes: number;
+};
+
+type TimePickerMode = "start" | "end";
 
 type CategoryOption = {
   _id: string;
@@ -78,10 +98,31 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const formatFileSize = (fileSize: number) => {
+  if (fileSize >= 1024 * 1024) {
+    return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, Math.round(fileSize / 1024))} KB`;
+};
+
+const getFirstParamValue = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] : value;
+
+const formatTimeValue = ({ hours, minutes }: TimeValue) =>
+  `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+
 const stepLabels = [
   "1. Thông tin + danh mục",
   "2. Vị trí",
   "3. Hình ảnh",
+  "4. Xác nhận",
+];
+
+const registerStepLabels = [
+  "1. Thông tin + danh mục",
+  "2. Vị trí",
+  "3. Bằng chứng xác thực",
   "4. Xác nhận",
 ];
 
@@ -99,6 +140,11 @@ export default function ContributePlaceScreen() {
   const [subCategoryError, setSubCategoryError] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [openingHours, setOpeningHours] = useState("");
+  const [openHours, setOpenHours] = useState<TimeValue | null>(null);
+  const [closeHours, setCloseHours] = useState<TimeValue | null>(null);
+  const [clockVisible, setClockVisible] = useState(false);
+  const [pickerMode, setPickerMode] = useState<TimePickerMode>("start");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<
     string[]
@@ -118,7 +164,16 @@ export default function ContributePlaceScreen() {
   const [autoAddress, setAutoAddress] = useState("");
   const [manualAddress, setManualAddress] = useState("");
   const [images, setImages] = useState<SelectedImage[]>([]);
-
+  const [videos, setVideos] = useState<SelectedEvidenceFile[]>([]);
+  const [licenseFiles, setLicenseFiles] = useState<SelectedEvidenceFile[]>([]);
+  const [systemCode, setSystemCode] = useState<string | null>(null);
+  const { type } = useLocalSearchParams();
+  const contributionType = getFirstParamValue(type);
+  const isVendorRegistration = contributionType === "register";
+  const activeStepLabels = isVendorRegistration
+    ? registerStepLabels
+    : stepLabels;
+  const displaySystemCode = systemCode ?? "Đang tạo mã";
   const selectedCategory = useMemo(
     () => categories.find((item) => item._id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
@@ -139,12 +194,23 @@ export default function ContributePlaceScreen() {
           getAllCategories(),
           fetch(MAP_STYLE_URL),
         ]);
-        console.log("optionsResponse:", optionsResponse);
         const styleJson = await styleResponse.json();
+
         if (!optionsResponse.success) {
           throw new Error(
             optionsResponse.message || "Không tải được danh mục.",
           );
+        }
+        if (isVendorRegistration) {
+          const response = await getSystemCode();
+          if (response.success) {
+            setSystemCode(response.code);
+          } else {
+            Alert.alert(
+              "Không tạo được mã",
+              response.message || "Không lấy được mã xác thực đăng ký.",
+            );
+          }
         }
         setCategories(
           (optionsResponse.data ?? []).filter(
@@ -161,7 +227,7 @@ export default function ContributePlaceScreen() {
     };
 
     bootstrap();
-  }, []);
+  }, [isVendorRegistration]);
 
   useEffect(() => {
     if (!selectedCategoryId) {
@@ -294,8 +360,29 @@ export default function ContributePlaceScreen() {
     );
   };
 
+  const handleClockDismiss = () => {
+    setClockVisible(false);
+    setPickerMode("start");
+  };
+
+  const handleClockConfirm = ({ hours, minutes }: TimeValue) => {
+    if (pickerMode === "start") {
+      setOpenHours({ hours, minutes });
+      setPickerMode("end");
+      return;
+    }
+
+    const start = openHours ?? { hours: 7, minutes: 0 };
+    const end = { hours, minutes };
+
+    setCloseHours(end);
+    setPickerMode("start");
+    setClockVisible(false);
+    setOpeningHours(`${formatTimeValue(start)}-${formatTimeValue(end)}`);
+  };
+
   const handlePickImages = async () => {
-    if (images.length >= 5) {
+    if (images.length >= MAX_IMAGES) {
       Alert.alert("Đã đủ 5 ảnh", "Bạn chỉ được chọn tối đa 5 ảnh.");
       return;
     }
@@ -303,8 +390,9 @@ export default function ContributePlaceScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: true,
-      selectionLimit: 5 - images.length,
+      selectionLimit: MAX_IMAGES - images.length,
       quality: 0.8,
+      exif: true,
     });
 
     if (result.canceled) {
@@ -317,9 +405,81 @@ export default function ContributePlaceScreen() {
       fileName: asset.fileName ?? `place-${Date.now()}-${index}.jpg`,
       mimeType: asset.mimeType ?? "image/jpeg",
       fileSize: asset.fileSize ?? 1024,
+      capturedAt:
+        asset.exif?.DateTimeOriginal ||
+        asset.exif?.DateTimeDigitized ||
+        asset.exif?.DateTime ||
+        null,
     }));
 
-    setImages((current) => [...current, ...newImages].slice(0, 5));
+    setImages((current) => [...current, ...newImages].slice(0, MAX_IMAGES));
+  };
+
+  const handlePickVideos = async () => {
+    if (videos.length >= MAX_VIDEOS) {
+      Alert.alert("Đã đủ video", "Bạn chỉ được chọn tối đa 2 video.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["videos"],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_VIDEOS - videos.length,
+      quality: 0.8,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const newVideos = result.assets.map((asset, index) => ({
+      id: `video-${Date.now()}-${index}`,
+      uri: asset.uri,
+      fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
+      mimeType: asset.mimeType ?? "video/mp4",
+      fileSize: asset.fileSize ?? 1024,
+    }));
+
+    setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
+  };
+
+  const handlePickLicenseFiles = async () => {
+    if (licenseFiles.length >= MAX_LICENSES) {
+      Alert.alert(
+        "Đã đủ giấy phép",
+        "Bạn chỉ được chọn tối đa 3 ảnh giấy phép.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_LICENSES - licenseFiles.length,
+      quality: 0.8,
+      exif: true,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const newLicenseFiles = result.assets.map((asset, index) => ({
+      id: `license-${Date.now()}-${index}`,
+      uri: asset.uri,
+      fileName: asset.fileName ?? `license-${Date.now()}-${index}.jpg`,
+      mimeType: asset.mimeType ?? "image/jpeg",
+      fileSize: asset.fileSize ?? 1024,
+      capturedAt:
+        asset.exif?.DateTimeOriginal ||
+        asset.exif?.DateTimeDigitized ||
+        asset.exif?.DateTime ||
+        null,
+    }));
+
+    setLicenseFiles((current) =>
+      [...current, ...newLicenseFiles].slice(0, MAX_LICENSES),
+    );
   };
 
   const handleUploadImages = async () => {
@@ -368,6 +528,73 @@ export default function ContributePlaceScreen() {
     }
   };
 
+  const buildCustomerContributionPayload = (): CustomerContributionPayload => {
+    if (!pinCoords || !deviceCoords) {
+      throw new Error("Không đủ dữ liệu vị trí để gửi duyệt.");
+    }
+
+    const uploadedUrls = images
+      .map((item) => item.uploadedUrl)
+      .filter(Boolean) as string[];
+
+    return {
+      name: name.trim(),
+      description: description.trim(),
+      openingHours: openingHours.trim() || undefined,
+      categoryId: selectedCategoryId,
+      tagIds: selectedSubCategoryIds,
+      address: resolvedAddress,
+      latitude: pinCoords.latitude,
+      longitude: pinCoords.longitude,
+      deviceLatitude: deviceCoords.latitude,
+      deviceLongitude: deviceCoords.longitude,
+      accuracyMeters,
+      imageUrls: uploadedUrls,
+      suspectedDuplicateLocationIds: similarLocations.map((item) => item.id),
+    };
+  };
+
+  const toPendingEvidenceFiles = (
+    files: SelectedEvidenceFile[],
+  ): PendingVendorEvidenceFile[] =>
+    files.map(({ uri, fileName, mimeType, fileSize, capturedAt }) => ({
+      uri,
+      fileName,
+      mimeType,
+      fileSize,
+      capturedAt,
+    }));
+
+  const submitCustomerDataToBackend = async () => {
+    await submitCustomerContribution(buildCustomerContributionPayload());
+  };
+
+  const submitVendorRegistrationDataToBackend = async () => {
+    if (!systemCode) {
+      throw new Error("Chưa có mã xác thực đăng ký vendor.");
+    }
+
+    const response = await submitVendorRegistration({
+      ...buildCustomerContributionPayload(),
+      systemCode,
+      videoFiles: toPendingEvidenceFiles(videos),
+      licenseFiles: toPendingEvidenceFiles(licenseFiles),
+      imageFiles: toPendingEvidenceFiles(images),
+    });
+    if (response.success) {
+      Alert.alert(
+        "Đăng ký vendor thành công",
+        "Hồ sơ của bạn đang chờ phê duyệt.",
+      );
+    }
+    if (response.success === false) {
+      Alert.alert(
+        "Đăng ký vendor thất bại",
+        response.message || "Không thể gửi đăng ký vendor.",
+      );
+    }
+  };
+
   const handleContinue = async () => {
     if (step === 0) {
       if (!name.trim() || !description.trim() || !selectedCategoryId) {
@@ -410,7 +637,26 @@ export default function ContributePlaceScreen() {
     }
 
     if (step === 2) {
-      const ok = await handleUploadImages();
+      if (isVendorRegistration && !systemCode) {
+        Alert.alert(
+          "Thiếu mã xác thực",
+          "Không thể gửi đăng ký vendor khi chưa có mã xác thực.",
+        );
+        return;
+      }
+
+      if (isVendorRegistration && videos.length < 1) {
+        Alert.alert(
+          "Thiếu video",
+          "Hãy thêm ít nhất 1 video có chứa mã xác thực.",
+        );
+        return;
+      }
+      let ok: boolean = true;
+      if (!isVendorRegistration) {
+        ok = await handleUploadImages();
+      }
+
       if (ok) {
         setStep(3);
       }
@@ -418,43 +664,35 @@ export default function ContributePlaceScreen() {
     }
 
     if (step === 3) {
-      if (!pinCoords || !deviceCoords) {
-        Alert.alert("Lỗi", "Không đủ dữ liệu vị trí để gửi duyệt.");
-        return;
-      }
-
       try {
         setSaving(true);
-        const uploadedUrls = images
-          .map((item) => item.uploadedUrl)
-          .filter(Boolean);
-        await submitContribution({
-          name: name.trim(),
-          description: description.trim(),
-          categoryId: selectedCategoryId,
-          tagIds: selectedSubCategoryIds,
-          address: resolvedAddress,
-          latitude: pinCoords.latitude,
-          longitude: pinCoords.longitude,
-          deviceLatitude: deviceCoords.latitude,
-          deviceLongitude: deviceCoords.longitude,
-          accuracyMeters,
-          imageUrls: uploadedUrls as string[],
-          suspectedDuplicateLocationIds: similarLocations.map(
-            (item) => item.id,
-          ),
-        });
+        if (isVendorRegistration) {
+          await submitVendorRegistrationDataToBackend();
+        } else {
+          await submitCustomerDataToBackend();
+        }
 
-        Alert.alert("Đã gửi để duyệt", "Địa điểm của bạn đang chờ phê duyệt.", [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/home"),
-          },
-        ]);
+        Alert.alert(
+          isVendorRegistration ? "Đã gửi đăng ký" : "Đã gửi để duyệt",
+          isVendorRegistration
+            ? "Hồ sơ vendor của bạn đang chờ phê duyệt."
+            : "Địa điểm của bạn đang chờ phê duyệt.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(tabs)/home"),
+            },
+          ],
+        );
       } catch (error: unknown) {
         Alert.alert(
-          "Gửi thất bại",
-          getErrorMessage(error, "Không thể gửi địa điểm để duyệt."),
+          isVendorRegistration ? "Gửi đăng ký thất bại" : "Gửi thất bại",
+          getErrorMessage(
+            error,
+            isVendorRegistration
+              ? "Không thể gửi đăng ký vendor."
+              : "Không thể gửi địa điểm để duyệt.",
+          ),
         );
       } finally {
         setSaving(false);
@@ -503,6 +741,53 @@ export default function ContributePlaceScreen() {
     </View>
   );
 
+  const renderEvidenceFileList = (
+    files: SelectedEvidenceFile[],
+    options: {
+      addLabel: string;
+      emptyLabel: string;
+      iconName: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+      maxCount: number;
+      onAdd: () => void;
+      onRemove: (id: string) => void;
+    },
+  ) => (
+    <View style={styles.fileList}>
+      {files.map((file) => (
+        <View key={file.id} style={styles.fileRow}>
+          <View style={styles.fileIcon}>
+            <MaterialCommunityIcons
+              name={options.iconName}
+              size={20}
+              color="#ff5a1f"
+            />
+          </View>
+          <View style={styles.fileTextWrap}>
+            <Text numberOfLines={1} style={styles.fileName}>
+              {file.fileName}
+            </Text>
+            <Text style={styles.fileMeta}>{formatFileSize(file.fileSize)}</Text>
+          </View>
+          <Pressable
+            style={styles.removeFileButton}
+            onPress={() => options.onRemove(file.id)}
+          >
+            <MaterialCommunityIcons name="close" size={16} color="#6b7280" />
+          </Pressable>
+        </View>
+      ))}
+
+      {files.length < options.maxCount ? (
+        <Pressable style={styles.addFileButton} onPress={options.onAdd}>
+          <MaterialCommunityIcons name="plus" size={18} color="#ff5a1f" />
+          <Text style={styles.addFileText}>
+            {files.length > 0 ? options.addLabel : options.emptyLabel}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+
   const renderStepContent = () => {
     if (step === 0) {
       return (
@@ -522,6 +807,48 @@ export default function ContributePlaceScreen() {
             placeholder="Mô tả ngắn về địa điểm..."
             multiline
             style={[styles.input, styles.multilineInput]}
+          />
+
+          <Text style={styles.label}>Giờ mở cửa</Text>
+          <Pressable
+            style={[styles.input, styles.timeInput]}
+            onPress={() => setClockVisible(true)}
+          >
+            <Text
+              style={[
+                styles.timeInputText,
+                !openingHours && styles.timePlaceholderText,
+              ]}
+            >
+              {openingHours || "Chọn giờ mở cửa"}
+            </Text>
+            <MaterialCommunityIcons
+              name="clock-outline"
+              size={20}
+              color="#a34a22"
+            />
+          </Pressable>
+          <TimePickerModal
+            visible={clockVisible}
+            onDismiss={handleClockDismiss}
+            onConfirm={handleClockConfirm}
+            hours={
+              pickerMode === "start"
+                ? (openHours?.hours ?? 7)
+                : (closeHours?.hours ?? 8)
+            }
+            minutes={
+              pickerMode === "start"
+                ? (openHours?.minutes ?? 0)
+                : (closeHours?.minutes ?? 0)
+            }
+            locale="en"
+            use24HourClock
+            label={
+              pickerMode === "start" ? "Chọn giờ mở cửa" : "Chọn giờ đóng cửa"
+            }
+            cancelLabel="Hủy"
+            confirmLabel={pickerMode === "start" ? "Tiếp theo" : "Xác nhận"}
           />
 
           <View style={styles.fieldHeader}>
@@ -687,11 +1014,37 @@ export default function ContributePlaceScreen() {
     if (step === 2) {
       return (
         <View style={styles.section}>
-          <Text style={styles.helperText}>
-            Thêm 1-5 hình để người khác hình dung được chỗ này.
-          </Text>
+          {isVendorRegistration ? (
+            <View style={styles.codeNotice}>
+              <MaterialCommunityIcons
+                name="shield-check-outline"
+                size={20}
+                color="#a34a22"
+              />
+              <Text style={styles.codeNoticeText}>
+                Đảm bảo trong hình ảnh hoặc video có chứa mã sau:{" "}
+                <Text style={styles.codeNoticeValue}>{displaySystemCode}</Text>
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.helperText}>
+              Thêm 1-5 hình để người khác hình dung được chỗ này.
+            </Text>
+          )}
+
+          <View style={styles.evidenceHeader}>
+            <View>
+              <Text style={styles.evidenceTitle}>Hình ảnh</Text>
+              <Text style={styles.evidenceHint}>
+                Bắt buộc, tối đa {MAX_IMAGES} ảnh
+              </Text>
+            </View>
+            <Text style={styles.evidenceCount}>
+              {images.length}/{MAX_IMAGES}
+            </Text>
+          </View>
           <View style={styles.imageGrid}>
-            {Array.from({ length: 5 }).map((_, index) => {
+            {Array.from({ length: MAX_IMAGES }).map((_, index) => {
               const image = images[index];
               if (image) {
                 return (
@@ -741,6 +1094,56 @@ export default function ContributePlaceScreen() {
               );
             })}
           </View>
+
+          {isVendorRegistration ? (
+            <>
+              <View style={styles.evidenceHeader}>
+                <View>
+                  <Text style={styles.evidenceTitle}>Video xác thực</Text>
+                  <Text style={styles.evidenceHint}>
+                    Bắt buộc cho vendor, tối đa {MAX_VIDEOS} video
+                  </Text>
+                </View>
+                <Text style={styles.evidenceCount}>
+                  {videos.length}/{MAX_VIDEOS}
+                </Text>
+              </View>
+              {renderEvidenceFileList(videos, {
+                addLabel: "Thêm video khác",
+                emptyLabel: "Thêm video",
+                iconName: "play-circle-outline",
+                maxCount: MAX_VIDEOS,
+                onAdd: handlePickVideos,
+                onRemove: (id) =>
+                  setVideos((current) =>
+                    current.filter((item) => item.id !== id),
+                  ),
+              })}
+
+              <View style={styles.evidenceHeader}>
+                <View>
+                  <Text style={styles.evidenceTitle}>Giấy phép</Text>
+                  <Text style={styles.evidenceHint}>
+                    Tùy chọn, tối đa {MAX_LICENSES} ảnh
+                  </Text>
+                </View>
+                <Text style={styles.evidenceCount}>
+                  {licenseFiles.length}/{MAX_LICENSES}
+                </Text>
+              </View>
+              {renderEvidenceFileList(licenseFiles, {
+                addLabel: "Thêm giấy phép khác",
+                emptyLabel: "Thêm giấy phép",
+                iconName: "file-document-outline",
+                maxCount: MAX_LICENSES,
+                onAdd: handlePickLicenseFiles,
+                onRemove: (id) =>
+                  setLicenseFiles((current) =>
+                    current.filter((item) => item.id !== id),
+                  ),
+              })}
+            </>
+          ) : null}
         </View>
       );
     }
@@ -796,6 +1199,16 @@ export default function ContributePlaceScreen() {
             </Text>
             <Text style={styles.summaryName}>{name.trim()}</Text>
             <Text style={styles.summaryDescription}>{description.trim()}</Text>
+            {openingHours ? (
+              <View style={styles.addressRow}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={16}
+                  color="#6b7280"
+                />
+                <Text style={styles.summaryAddress}>{openingHours}</Text>
+              </View>
+            ) : null}
             <View style={styles.chipWrap}>
               {selectedSubCategories.map((subCategory) => (
                 <View key={subCategory._id} style={styles.summaryTag}>
@@ -811,11 +1224,34 @@ export default function ContributePlaceScreen() {
               />
               <Text style={styles.summaryAddress}>{resolvedAddress}</Text>
             </View>
+            {isVendorRegistration ? (
+              <View style={styles.vendorSummaryBox}>
+                <View style={styles.vendorSummaryItem}>
+                  <Text style={styles.vendorSummaryLabel}>Mã xác thực</Text>
+                  <Text style={styles.vendorSummaryValue}>{systemCode}</Text>
+                </View>
+                <View style={styles.vendorSummaryItem}>
+                  <Text style={styles.vendorSummaryLabel}>Video</Text>
+                  <Text style={styles.vendorSummaryValue}>
+                    {videos.length} tệp
+                  </Text>
+                </View>
+                <View style={styles.vendorSummaryItem}>
+                  <Text style={styles.vendorSummaryLabel}>Giấy phép</Text>
+                  <Text style={styles.vendorSummaryValue}>
+                    {licenseFiles.length > 0
+                      ? `${licenseFiles.length} tệp`
+                      : "Không có"}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </View>
         </View>
         <Text style={styles.noteText}>
-          Địa điểm sẽ được duyệt trong khoảng 24h trước khi hiển thị trên bản
-          đồ.
+          {isVendorRegistration
+            ? "Hồ sơ đăng ký vendor sẽ được kiểm tra trước khi kích hoạt quyền quản lý địa điểm."
+            : "Địa điểm sẽ được duyệt trong khoảng 24h trước khi hiển thị trên bản đồ."}
         </Text>
       </View>
     );
@@ -836,15 +1272,24 @@ export default function ContributePlaceScreen() {
           <MaterialCommunityIcons name="arrow-left" size={22} color="#111827" />
         </Pressable>
         <View style={styles.headerTextWrap}>
-          <Text style={styles.title}>Đóng góp địa điểm</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>
+              {isVendorRegistration ? "Đăng ký địa điểm" : "Đóng góp địa điểm"}
+            </Text>
+            {isVendorRegistration ? (
+              <Text selectable style={styles.headerSystemCode}>
+                Mã: {displaySystemCode}
+              </Text>
+            ) : null}
+          </View>
           <Text style={styles.subtitle}>
-            Bước {step + 1}/4 - {stepLabels[step]}
+            Bước {step + 1}/4 - {activeStepLabels[step]}
           </Text>
         </View>
       </View>
 
       <View style={styles.progressRow}>
-        {stepLabels.map((_, index) => (
+        {activeStepLabels.map((_, index) => (
           <View
             key={index}
             style={[
@@ -876,7 +1321,11 @@ export default function ContributePlaceScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.primaryButtonText}>
-              {step === 3 ? "Gửi để duyệt" : "Tiếp tục"}
+              {step === 3
+                ? isVendorRegistration
+                  ? "Gửi đăng ký"
+                  : "Gửi để duyệt"
+                : "Tiếp tục"}
             </Text>
           )}
         </Pressable>
@@ -914,10 +1363,27 @@ const styles = StyleSheet.create({
   headerTextWrap: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    gap: 4,
+  },
   title: {
     fontSize: 24,
     fontWeight: "700",
     color: "#111827",
+    flexShrink: 1,
+  },
+  headerSystemCode: {
+    color: "#8a8178",
+    fontSize: 12,
+    fontWeight: "700",
+    backgroundColor: "#f7f1ea",
+    borderRadius: 999,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   subtitle: {
     fontSize: 13,
@@ -964,6 +1430,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     color: "#111827",
   },
+  timeInput: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  timeInputText: {
+    flex: 1,
+    color: "#111827",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  timePlaceholderText: {
+    color: "#9ca3af",
+    fontWeight: "500",
+  },
   multilineInput: {
     minHeight: 96,
     textAlignVertical: "top",
@@ -972,6 +1455,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     lineHeight: 20,
+  },
+  codeNotice: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#f0d6c9",
+    backgroundColor: "#fff7f3",
+    padding: 12,
+  },
+  codeNoticeText: {
+    flex: 1,
+    color: "#6b4b3a",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 19,
+  },
+  codeNoticeValue: {
+    color: "#a34a22",
+    fontWeight: "800",
   },
   fieldHeader: {
     gap: 4,
@@ -1115,6 +1619,28 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontWeight: "600",
   },
+  evidenceHeader: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  evidenceTitle: {
+    color: "#111827",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  evidenceHint: {
+    color: "#6b7280",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  evidenceCount: {
+    color: "#8a8178",
+    fontSize: 12,
+    fontWeight: "800",
+  },
   imageGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1148,6 +1674,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7280",
     fontWeight: "600",
+  },
+  fileList: {
+    gap: 10,
+  },
+  fileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#ffffff",
+    padding: 12,
+  },
+  fileIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff1eb",
+  },
+  fileTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  fileName: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  fileMeta: {
+    color: "#6b7280",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  removeFileButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f3f4f6",
+  },
+  addFileButton: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#e7d9cd",
+    backgroundColor: "#fffdf9",
+    paddingHorizontal: 12,
+  },
+  addFileText: {
+    color: "#a34a22",
+    fontSize: 14,
+    fontWeight: "800",
   },
   coverBadge: {
     position: "absolute",
@@ -1287,6 +1875,30 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: "#4b5563",
+  },
+  vendorSummaryBox: {
+    gap: 8,
+    borderRadius: 16,
+    backgroundColor: "#f9fafb",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    padding: 12,
+  },
+  vendorSummaryItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  vendorSummaryLabel: {
+    color: "#6b7280",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  vendorSummaryValue: {
+    color: "#111827",
+    fontSize: 12,
+    fontWeight: "800",
   },
   noteText: {
     fontSize: 13,
