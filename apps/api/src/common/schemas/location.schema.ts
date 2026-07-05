@@ -91,9 +91,6 @@ export class Location {
 
   @Prop({ type: Date })
   holdExpiresAt?: Date;
-
-  @Prop({ type: String, trim: true })
-  rejectionReason?: string;
 }
 
 export const LocationSchema = SchemaFactory.createForClass(Location);

@@ -38,6 +38,9 @@ import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { ImagesService } from '../images/images.service';
+import { generateSystemCode } from 'src/common/func/generate-code';
+import { CreateLocationDto } from './dto/vendor-register-location.dto';
+import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
 
 type LocationRating = {
   _id: unknown;
@@ -354,8 +357,7 @@ export class LocationService {
     request.reviewNote = null;
 
     location.status = LocationStatus.PUBLISHED;
-    location.rejectionReason = undefined;
-
+    request.reviewNote = undefined;
     await Promise.all([
       request.save(),
       location.save(),
@@ -398,7 +400,6 @@ export class LocationService {
     request.reviewNote = rejectReason;
 
     location.status = LocationStatus.REJECTED;
-    location.rejectionReason = rejectReason;
 
     await Promise.all([
       request.save(),
@@ -680,6 +681,118 @@ export class LocationService {
       return {
         success: false,
         message: 'Xảy ra lỗi khi cập nhật địa điểm',
+        statusCode: 500,
+      };
+    }
+  }
+  generateSystemCode() {
+    return generateSystemCode();
+  }
+
+  async registerLocation(
+    userId: string,
+    requestDataParsed: CreateLocationRequestDataDto,
+    locationDataParsed: CreateLocationDto,
+    files?: {
+      videoFiles?: Express.Multer.File[];
+      licenseFiles?: Express.Multer.File[];
+      imageFiles?: Express.Multer.File[];
+    },
+  ) {
+    try {
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        throw new NotFoundException('Không tìm thấy người dùng');
+      }
+      const uploadedImages = await this.imagesService.uploadMultiMedia(
+        'vendor-verification',
+        files?.imageFiles ?? [],
+      );
+      const uploadedLicenseFiles = await this.imagesService.uploadMultiMedia(
+        'vendor-verification',
+        files?.licenseFiles ?? [],
+      );
+      const uploadedVideoFiles = await this.imagesService.uploadMultiMedia(
+        'vendor-verification',
+        files?.videoFiles ?? [],
+      );
+      const location = await this.locationModel.create({
+        submittedBy: new Types.ObjectId(userId),
+        name: locationDataParsed.name,
+        description: locationDataParsed.description,
+        address: locationDataParsed.address,
+        geo: {
+          type: 'Point',
+          coordinates: [
+            locationDataParsed.longitude,
+            locationDataParsed.latitude,
+          ],
+        },
+        accuracyMeters: locationDataParsed.accuracyMeters,
+        openingHours: locationDataParsed.openingHours,
+        status: LocationStatus.SUBMITTED,
+        source:
+          user.role === UserRole.VENDOR
+            ? LocationSource.VENDOR
+            : LocationSource.CUSTOMER,
+        categoryId: new Types.ObjectId(locationDataParsed.categoryId),
+        subCategoryIds: locationDataParsed.tagIds
+          ? locationDataParsed.tagIds.map((id) => new Types.ObjectId(id))
+          : [],
+        submittedAt: new Date(),
+      });
+      const locationRequest = await this.locationRequestModel.create({
+        type: LocationRequestType.CREATE,
+        status: LocationRequestStatus.PENDING,
+        submittedBy: new Types.ObjectId(userId),
+        locationId: location._id,
+        newData: requestDataParsed.newData,
+        isPotentialDuplicate: requestDataParsed.isPotentialDuplicate,
+        suspectedDuplicateLocationIds:
+          requestDataParsed?.suspectedDuplicateLocationIds
+            ? requestDataParsed.suspectedDuplicateLocationIds.map(
+                (id) => new Types.ObjectId(id),
+              )
+            : [],
+        pinLocation: {
+          type: 'Point',
+          coordinates: [
+            requestDataParsed.pinLongitude,
+            requestDataParsed.pinLatitude,
+          ],
+        },
+        deviceLocation: {
+          type: 'Point',
+          coordinates: [
+            requestDataParsed.deviceLongitude,
+            requestDataParsed.deviceLatitude,
+          ],
+        },
+        deviceDistanceMeters: getDistanceMeters(
+          requestDataParsed.deviceLatitude,
+          requestDataParsed.deviceLongitude,
+          requestDataParsed.pinLatitude,
+          requestDataParsed.pinLongitude,
+        ),
+        verificationProof: {
+          proofUrls: [
+            ...uploadedImages.map((url) => url.url),
+            ...uploadedVideoFiles.map((url) => url.url),
+          ],
+          licenseUrls: (uploadedLicenseFiles || []).map((url) => url.url),
+          systemCode: requestDataParsed.systemCode,
+          capturedAt: requestDataParsed.captureAt,
+        },
+      });
+      return {
+        success: true,
+        message: 'Gửi địa điểm để duyệt thành công',
+      };
+    } catch (error) {
+      console.error('Error in registerLocation service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi đăng ký địa điểm',
         statusCode: 500,
       };
     }
