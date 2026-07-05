@@ -49,6 +49,16 @@ import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { generateSystemCode } from 'src/common/func/generate-code';
 import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
+import bcrypt from 'bcryptjs';
+import {
+  Otp,
+  OtpChannel,
+  OtpDocument,
+  OtpPurpose,
+  OtpStatus,
+} from 'src/common/schemas/otp.schema';
+import { SmsService } from '../auth/services/sms.service';
+import { GeoPoint } from 'src/common/schemas/common.embedded';
 
 const DUPLICATE_DISTANCE_METERS = 50;
 const DUPLICATE_SIMILARITY_THRESHOLD = 0.8;
@@ -67,6 +77,14 @@ type DuplicateLocationPreview = {
   distanceMeters?: number | null;
   similarity?: number;
   status: LocationStatus;
+};
+
+type ReviewRequiredData = {
+  name?: string | null;
+  address?: string | null;
+  pinLocation?: GeoPoint | null;
+  deviceLocation?: GeoPoint | null;
+  deviceDistanceMeters?: number | null;
 };
 
 @Injectable()
@@ -89,6 +107,8 @@ export class LocationService {
     @InjectModel(AuditLog.name)
     private auditLogModel: Model<AuditLogDocument>,
     private readonly imagesService: ImagesService,
+    @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
+    private readonly smsService: SmsService,
     private readonly trustEngineService: TrustEngineService,
   ) {}
 
@@ -723,14 +743,43 @@ export class LocationService {
           statusCode: 404,
         };
       }
-      let reviewRequiredData = {};
-      let nonReviewData = {};
+      let reviewRequiredData: ReviewRequiredData = {};
+      let nonReviewData: Record<string, unknown> = {};
       if (updateData?.name || updateData?.address) {
         reviewRequiredData = {
           name: updateData.name ?? null,
           address: updateData.address ?? null,
-          geo: updateData.coordinates ?? null,
+          pinLocation:
+            updateData.pinLatitude && updateData.pinLongitude
+              ? {
+                  type: 'Point',
+                  coordinates: [
+                    updateData.pinLongitude,
+                    updateData.pinLatitude,
+                  ],
+                }
+              : null,
+          deviceLocation:
+            updateData.deviceLatitude && updateData.deviceLongitude
+              ? {
+                  type: 'Point',
+                  coordinates: [
+                    updateData.deviceLongitude,
+                    updateData.deviceLatitude,
+                  ],
+                }
+              : null,
         };
+        if (updateData?.address) {
+          const deviceDistanceMeter = getDistanceMeters(
+            updateData.deviceLatitude ?? 0,
+            updateData.deviceLongitude ?? 0,
+            updateData.pinLatitude ?? 0,
+            updateData.pinLongitude ?? 0,
+          );
+          console.log('deviceDistanceMeter:', deviceDistanceMeter);
+          reviewRequiredData.deviceDistanceMeters = deviceDistanceMeter;
+        }
         const cleanData = Object.fromEntries(
           Object.entries(updateData).filter(
             ([_, value]) => value !== null && value !== undefined,
@@ -745,7 +794,7 @@ export class LocationService {
           oldData.address = location.address;
         }
 
-        if ('coordinates' in cleanData) {
+        if ('address' in cleanData) {
           oldData.coordinates = location.geo.coordinates;
         }
         const now = new Date();
@@ -758,6 +807,9 @@ export class LocationService {
           oldData,
           newData: cleanData,
           changedFields: Object.keys(cleanData),
+          deviceLocation: reviewRequiredData.deviceLocation ?? null,
+          pinLocation: reviewRequiredData.pinLocation ?? null,
+          deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
           verificationProof: {
             proofUrls: urls.map((url) => url.url),
             capturedAt: now,
@@ -769,6 +821,7 @@ export class LocationService {
         description: updateData.description ?? null,
         categoryId: updateData.categoryId ?? null,
         subCategoryIds: updateData.subCategoryIds ?? null,
+        phone: updateData.phone ?? null,
       };
       console.log('nonReviewData:', nonReviewData);
       const cleanNonReviewData = Object.fromEntries(
@@ -904,6 +957,129 @@ export class LocationService {
       };
     }
   }
+
+  async sendOtpUpdatePhone(
+    userId: string,
+    locationId: string,
+    newPhone: string,
+  ) {
+    try {
+      console.log('phone:', newPhone);
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 404,
+        };
+      }
+      const location = await this.locationModel.findById(locationId);
+      if (!location) {
+        return {
+          success: false,
+          message: 'Không tìm thấy địa điểm',
+          statusCode: 404,
+        };
+      }
+      const twoMinuteAgo = new Date(Date.now() - 2 * 60 * 1000);
+      const checkLimit = await this.otpModel.find({
+        userId: userId,
+        createdAt: { $gte: twoMinuteAgo, $lte: new Date() },
+      });
+      console.log('checkLimit:', checkLimit);
+      if (checkLimit.length > 0) {
+        return {
+          success: false,
+          message: 'Vui lòng thử lại sau 2 phút',
+          statusCode: 429,
+        };
+      }
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpire = new Date(Date.now() + 5 * 60 * 1000);
+      const otpHash = await bcrypt.hash(otp, 10);
+      const otpSave = await this.otpModel.create({
+        userId: new Types.ObjectId(userId),
+        purpose: OtpPurpose.CHANGE_PHONE,
+        channel: OtpChannel.SMS,
+        recipient: newPhone,
+        otpHash,
+        expiresAt: otpExpire,
+      });
+      await this.smsService.sendOtp(newPhone, otp);
+      return {
+        success: true,
+        message: 'OTP đã được gửi thành công',
+      };
+    } catch (error) {
+      console.error('Error in sendOtpUpdatePhone service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi gửi OTP',
+        statusCode: 500,
+      };
+    }
+  }
+
+  async verifyOtpUpdatePhone(userId: string, locationId: string, otp: string) {
+    try {
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 404,
+        };
+      }
+      const otpRecord = await this.otpModel
+        .findOne({
+          userId: userId,
+          purpose: OtpPurpose.CHANGE_PHONE,
+          status: OtpStatus.PENDING,
+        })
+        .sort({ createdAt: -1 });
+      if (!otpRecord) {
+        return {
+          success: false,
+          message: 'Không tìm thấy OTP',
+          statusCode: 404,
+        };
+      }
+      if (otpRecord.expiresAt < new Date()) {
+        return {
+          success: false,
+          message: 'OTP đã hết hạn',
+          statusCode: 400,
+        };
+      }
+      const isMatch = await bcrypt.compare(otp, otpRecord.otpHash);
+      if (!isMatch) {
+        return {
+          success: false,
+          message: 'OTP không hợp lệ',
+          statusCode: 400,
+        };
+      }
+      // const updateResult = await this.locationModel.updateOne(
+      //   { _id: locationId },
+      //   { phone: otpRecord.recipient },
+      // );
+      const deleteOtp = await this.otpModel.updateOne(
+        { _id: otpRecord._id },
+        { verifiedAt: new Date(), status: OtpStatus.VERIFIED },
+      );
+      return {
+        success: true,
+        message: 'OTP đã được xác thực thành công',
+      };
+    } catch (error) {
+      console.error('Error in verifyOtpUpdatePhone service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi xác thực OTP',
+        statusCode: 500,
+      };
+    }
+  }
 }
 
 function isDuplicateKeyError(error: unknown): error is { code: number } {
@@ -982,7 +1158,10 @@ function getNameSimilarity(left: string, right: string) {
 }
 
 function getLevenshteinDistance(left: string, right: string) {
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
   const current = Array.from({ length: right.length + 1 }, () => 0);
 
   for (let i = 1; i <= left.length; i += 1) {

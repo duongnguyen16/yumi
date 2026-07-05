@@ -175,6 +175,78 @@ export class LocationController {
     await this.locationService.viewCount(userId, locationId);
   }
 
+  @Post('update/send-otp')
+  @UseGuards(AuthGuard('jwt-at'))
+  async sendOtpUpdatePhone(
+    @Request() req: AuthenticatedRequest,
+    @Body('locationId') locationId: string,
+    @Body('newPhone') newPhone: string,
+  ) {
+    try {
+      if (!locationId || !newPhone) {
+        throw new BadRequestException('Dữ liệu không hợp lệ');
+      }
+      const result = await this.locationService.sendOtpUpdatePhone(
+        req.user.userId,
+        locationId,
+        newPhone,
+      );
+      if (!result.success) {
+        if (result.statusCode === 400) {
+          throw new BadRequestException(result.message);
+        }
+        if (result.statusCode === 404) {
+          throw new NotFoundException(result.message);
+        }
+        if (result.statusCode === 500) {
+          throw new InternalServerErrorException(result.message);
+        }
+        if (result.statusCode === 429) {
+          throw new BadRequestException(result.message);
+        }
+      }
+      return result;
+    } catch (error) {
+      console.error('Error in sendOtpUpdatePhone controller:', error);
+      throw new InternalServerErrorException(
+        'Xảy ra lỗi khi gửi OTP cập nhật số điện thoại',
+      );
+    }
+  }
+
+  @Post('update/verify-otp')
+  @UseGuards(AuthGuard('jwt-at'))
+  async verifyOtpUpdatePhone(
+    @Request() req: AuthenticatedRequest,
+    @Body('locationId') locationId: string,
+    @Body('otp') otp: string,
+  ) {
+    try {
+      const result = await this.locationService.verifyOtpUpdatePhone(
+        req.user.userId,
+        locationId,
+        otp,
+      );
+      if (!result.success) {
+        if (result.statusCode === 400) {
+          throw new BadRequestException(result.message);
+        }
+        if (result.statusCode === 404) {
+          throw new NotFoundException(result.message);
+        }
+        if (result.statusCode === 500) {
+          throw new InternalServerErrorException(result.message);
+        }
+      }
+      return result;
+    } catch (error) {
+      console.error('Error in verifyOtpUpdatePhone controller:', error);
+      throw new InternalServerErrorException(
+        'Xảy ra lỗi khi xác thực OTP cập nhật số điện thoại',
+      );
+    }
+  }
+
   @Post('update/:locationId')
   @UseGuards(AuthGuard('jwt-at'), VendorGuard)
   @UseInterceptors(FilesInterceptor('media', 10))
@@ -186,12 +258,12 @@ export class LocationController {
   ) {
     try {
       const dataParsed: any = JSON.parse(data);
+      console.log('Parsed data:', dataParsed);
       const dto = plainToInstance(UpdateLocationDto, dataParsed);
       const errors = await validate(dto, {
         whitelist: true,
         forbidNonWhitelisted: true,
       });
-      console.log('file:', file);
       if (errors.length > 0) {
         throw new BadRequestException(errors);
       }

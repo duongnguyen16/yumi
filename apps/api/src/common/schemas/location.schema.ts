@@ -48,6 +48,9 @@ export class Location {
   @Prop({ type: String, trim: true })
   openingHours?: string;
 
+  @Prop({ type: String, trim: true })
+  phone?: string;
+
   @Prop({
     type: String,
     enum: LocationStatus,

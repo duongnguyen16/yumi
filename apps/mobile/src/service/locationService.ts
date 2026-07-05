@@ -136,6 +136,40 @@ const getSystemCode = async () => {
   }
 };
 
+const sentUpdatePhoneOtp = async (locationId: string, newPhone: string) => {
+  try {
+    const response = await api.post(`/location/update/send-otp`, {
+      newPhone: newPhone,
+      locationId: locationId,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Error sending update phone OTP:", error.response?.data);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Đã có lỗi xảy ra",
+    };
+  }
+};
+
+const verifyUpdatePhoneOtp = async (locationId: string, otp: string) => {
+  try {
+    const response = await api.post(`/location/update/verify-otp`, {
+      locationId: locationId,
+      otp: otp,
+    });
+    console.log("verifyUpdatePhoneOtp response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error verifying update phone OTP:", error);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Đã có lỗi xảy ra",
+    };
+  }
+};
+
 export {
   getCurrentLocation,
   checkPermission,
@@ -144,5 +178,7 @@ export {
   viewCount,
   searchLocation,
   updateLocation,
+  sentUpdatePhoneOtp,
+  verifyUpdatePhoneOtp,
   getSystemCode,
 };
