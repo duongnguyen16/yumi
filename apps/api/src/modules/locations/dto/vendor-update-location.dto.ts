@@ -1,4 +1,10 @@
-import { IsArray, IsMongoId, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsMongoId,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class UpdateLocationDto {
   @IsOptional()
@@ -10,6 +16,7 @@ export class UpdateLocationDto {
   address?: string;
 
   @IsOptional()
+  @IsString()
   openingHours?: string;
 
   @IsOptional()
@@ -30,8 +37,18 @@ export class UpdateLocationDto {
   subCategoryIds?: string[];
 
   @IsOptional()
-  coordinates?: {
-    type: 'Point';
-    coordinates: [number, number]; // [lng, lat]
-  };
+  @IsNumber()
+  pinLatitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  pinLongitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  deviceLatitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  deviceLongitude?: number;
 }

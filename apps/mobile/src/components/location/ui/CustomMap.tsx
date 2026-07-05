@@ -1,25 +1,28 @@
-import { useLocationContext } from "@/contexts/locationContext";
 import { getCurrentLocation } from "@/service/locationService";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   Camera,
   CameraRef,
   Map,
+  MapRef,
   StyleSpecification,
-  ViewAnnotation,
 } from "@maplibre/maplibre-react-native";
-import { useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  ForwardedRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ActivityIndicator, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APu ||
   "https://demotiles.maplibre.org/style.json";
-
-const emptyGeoJson = {
-  type: "FeatureCollection" as const,
-  features: [],
-};
 
 type MapStyleLayer = {
   id: string | number;
@@ -33,16 +36,50 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
   layers: MapStyleLayer[];
 };
 
-export default function CustomMap({
-  coordinates,
-  setCoordinates,
-  previewMode,
-}) {
+export type PinLocation = {
+  longitude: number;
+  latitude: number;
+};
+
+export type CustomMapHandle = {
+  syncPinToCenter: () => Promise<PinLocation | null>;
+};
+
+type Coordinates = [number, number];
+
+type CustomMapProps = {
+  coordinates: Coordinates | null;
+  setCoordinates?: (coordinates: Coordinates | null) => void;
+  previewMode: boolean;
+  pinLocation: PinLocation | null;
+  setPinLocation: (pinLocation: PinLocation) => void;
+};
+
+function CustomMap(
+  { coordinates, previewMode, pinLocation, setPinLocation }: CustomMapProps,
+  ref: ForwardedRef<CustomMapHandle>,
+) {
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const cameraRef = useRef<CameraRef>(null);
-  const mapRef = useRef(null);
+  const mapRef = useRef<MapRef>(null);
+
+  const syncPinToCenter = useCallback(async () => {
+    if (previewMode) return pinLocation ?? null;
+
+    const center = await mapRef.current?.getCenter();
+    if (!center) return null;
+
+    const nextPinLocation = {
+      longitude: center[0],
+      latitude: center[1],
+    };
+    setPinLocation(nextPinLocation);
+    return nextPinLocation;
+  }, [pinLocation, previewMode, setPinLocation]);
+
+  useImperativeHandle(ref, () => ({ syncPinToCenter }), [syncPinToCenter]);
 
   useEffect(() => {
     const loadStyle = async () => {
@@ -106,22 +143,34 @@ export default function CustomMap({
         duration: 1000,
         easing: "ease",
       });
-      setCoordinates([response.coords.longitude, response.coords.latitude]);
+      setPinLocation({
+        longitude: response.coords.longitude,
+        latitude: response.coords.latitude,
+      });
     } catch (error) {
       console.error("Error fetching current location:", error);
     }
   };
 
-  useEffect(() => {
-    if (!coordinates || !previewMode) return;
+  // const previewCenter = useMemo<Coordinates | null>(
+  //   () =>
+  //     pinLocation ? [pinLocation.longitude, pinLocation.latitude] : coordinates,
+  //   [coordinates, pinLocation],
+  // );
 
+  useEffect(() => {
+    if (!pinLocation || !previewMode) return;
+    const previewCenter: Coordinates = [
+      pinLocation.longitude,
+      pinLocation.latitude,
+    ];
     cameraRef.current?.setStop({
-      center: [coordinates[0], coordinates[1]],
+      center: previewCenter,
       zoom: 15,
       duration: 1000,
       easing: "ease",
     });
-  }, [coordinates]);
+  }, [pinLocation, previewMode]);
   if (loading) {
     return (
       <View
@@ -179,17 +228,13 @@ export default function CustomMap({
         touchPitch={previewMode ? false : true}
         androidView="texture"
         onRegionDidChange={async () => {
-          if (previewMode) return;
-          const center = await mapRef.current?.getCenter();
-          if (center) {
-            setCoordinates([center[0], center[1]]);
-          }
+          await syncPinToCenter();
         }}
       >
         <Camera
           ref={cameraRef}
           initialViewState={{
-            center: coordinates,
+            center: previewCenter || [0, 0],
             zoom: 16,
           }}
         />
@@ -247,3 +292,5 @@ export default function CustomMap({
     </View>
   );
 }
+
+export default forwardRef<CustomMapHandle, CustomMapProps>(CustomMap);
