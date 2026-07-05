@@ -22,6 +22,16 @@ import CustomMap from "./ui/CustomMap";
 import GetNewLocation from "./modals/GetNewLocation";
 import { updateLocation } from "@/service/locationService";
 
+type TimeValue = {
+  hours: number;
+  minutes: number;
+};
+
+type TimePickerMode = "start" | "end";
+
+const formatTimeValue = ({ hours, minutes }: TimeValue) =>
+  `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+
 export default function EditLocationScreen({
   selectedChip,
   setSelectedChip,
@@ -29,9 +39,9 @@ export default function EditLocationScreen({
 }) {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
-  const [openHours, setOpenHours] = useState({});
-  const [closeHours, setCloseHours] = useState({});
-  const [openingHours, setOpeningHours] = useState(null);
+  const [openHours, setOpenHours] = useState<TimeValue | null>(null);
+  const [closeHours, setCloseHours] = useState<TimeValue | null>(null);
+  const [openingHours, setOpeningHours] = useState("");
   const [description, setDescription] = useState("");
   const [phone, setPhone] = useState("");
   const [category, setCategory] = useState([]);
@@ -44,7 +54,7 @@ export default function EditLocationScreen({
   const [coordinates, setCoordinates] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [clockVisible, setClockVisible] = useState(false);
-  const [pickerMode, setPickerMode] = useState("start");
+  const [pickerMode, setPickerMode] = useState<TimePickerMode>("start");
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -115,7 +125,7 @@ export default function EditLocationScreen({
     const formData = new FormData();
     formData.append("data", JSON.stringify(submitData));
     assets.forEach((asset) => {
-      formData.append("media", {
+      const mediaFile = {
         uri: asset.uri,
         type:
           asset.mimeType ||
@@ -123,7 +133,9 @@ export default function EditLocationScreen({
         name:
           asset.fileName ||
           `media-${Date.now()}.${asset.type === "video" ? "mp4" : "jpg"}`,
-      } as any);
+      } as unknown as Blob;
+
+      formData.append("media", mediaFile);
     });
     try {
       const response = await updateLocation(formData, data._id);
@@ -160,18 +172,19 @@ export default function EditLocationScreen({
     });
   };
 
-  const handleClockConfirm = ({ hours, minutes }) => {
+  const handleClockConfirm = ({ hours, minutes }: TimeValue) => {
     if (pickerMode === "start") {
       setOpenHours({ hours, minutes });
       setPickerMode("end");
     }
     if (pickerMode === "end") {
+      const start = openHours ?? { hours: 7, minutes: 0 };
+      const end = { hours, minutes };
+
       setCloseHours({ hours, minutes });
       setPickerMode("start");
       setClockVisible(false);
-      setOpeningHours(
-        `${openHours.hours}:${openHours.minutes}-${hours}:${minutes}`,
-      );
+      setOpeningHours(`${formatTimeValue(start)}-${formatTimeValue(end)}`);
     }
   };
 
@@ -465,7 +478,7 @@ export default function EditLocationScreen({
           mode="contained"
           icon="file-document-edit-outline"
           onPress={() => handleSubmit()}
-          disabled={loading}
+          disabled={loading || selectedChip.length === 0}
         >
           Lưu
         </Button>

@@ -19,6 +19,7 @@ import {
 } from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
+import Option from "../ui/Option";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APu ||
@@ -52,6 +53,8 @@ export default function MapScreen() {
   const searchInputRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScreen, setSearchScreen] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [option, setOption] = useState(null);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -168,6 +171,16 @@ export default function MapScreen() {
       });
     } catch (error) {
       console.error("Error getting current location:", error);
+    }
+  };
+
+  const handleOptionSelect = (selectedOption) => {
+    console.log("Selected option:", selectedOption);
+    if (selectedOption === "add-location") {
+      router.push({ pathname: "/contribute", params: { type: "add" } });
+    }
+    if (selectedOption === "register-location") {
+      router.push({ pathname: "/contribute", params: { type: "register" } });
     }
   };
 
@@ -354,10 +367,31 @@ export default function MapScreen() {
               size={35}
               icon="plus"
               onPress={() => {
-                router.push("/contribute" as never);
+                // router.push("/contribute" as never);
+                setVisible(true);
               }}
             />
           </View>
+          <Option
+            visible={visible}
+            setVisible={setVisible}
+            title="Bạn muốn làm gì?"
+            options={[
+              {
+                label: "Thêm địa điểm",
+                value: "add-location",
+                icon: "plus",
+              },
+              {
+                label: "Đăng ký địa điểm",
+                value: "register-location",
+                icon: "file-document-edit-outline",
+              },
+            ]}
+            option={option}
+            setOption={setOption}
+            onDismiss={(selectedOption) => handleOptionSelect(selectedOption)}
+          />
         </View>
       )}
     </View>
