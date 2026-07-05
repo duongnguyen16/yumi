@@ -104,10 +104,14 @@ export const getContributionOptions = async () => {
 export const analyzeLocationDraft = async (
   name: string,
   categoryId?: string,
+  latitude?: number,
+  longitude?: number,
 ) => {
   const response = await api.post("/location/contribution/analyze", {
     name,
     categoryId,
+    latitude,
+    longitude,
   });
 
   return response.data as DraftAnalysisResult;
