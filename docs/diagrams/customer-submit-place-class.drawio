@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" modified="2026-07-05T00:00:00.000Z" agent="Codex" version="29.6.6">
+  <diagram id="customer-submit-place-class" name="Customer Submit Place">
+    <mxGraphModel dx="1900" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1060" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Customer submit place - UML class diagram" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="560" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Based on HF-1 / WDP-17 and current mobile + NestJS implementation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#4b5563;" vertex="1" parent="1">
+          <mxGeometry x="42" y="54" width="620" height="24" as="geometry" />
+        </mxCell>
+
+        <mxCell id="pkg_mobile" value="Mobile app (Expo / React Native)" style="swimlane;startSize=30;fontStyle=1;html=1;fillColor=#f0f9ff;strokeColor=#38bdf8;rounded=0;container=0;pointerEvents=0;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="600" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="pkg_api" value="API endpoints (NestJS controllers)" style="swimlane;startSize=30;fontStyle=1;html=1;fillColor=#fff7ed;strokeColor=#fb923c;rounded=0;container=0;pointerEvents=0;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="690" y="90" width="580" height="370" as="geometry" />
+        </mxCell>
+        <mxCell id="pkg_services" value="Application services" style="swimlane;startSize=30;fontStyle=1;html=1;fillColor=#f0fdf4;strokeColor=#22c55e;rounded=0;container=0;pointerEvents=0;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="90" width="470" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="pkg_domain" value="Domain / persistence (Mongoose schemas)" style="swimlane;startSize=30;fontStyle=1;html=1;fillColor=#faf5ff;strokeColor=#a855f7;rounded=0;container=0;pointerEvents=0;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="470" width="1230" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="pkg_external" value="External + invariants" style="swimlane;startSize=30;fontStyle=1;html=1;fillColor=#f8fafc;strokeColor=#64748b;rounded=0;container=0;pointerEvents=0;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="470" width="470" height="420" as="geometry" />
+        </mxCell>
+
+        <mxCell id="screen" value="ContributePlaceScreen" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="70" y="140" width="260" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="screen_attr" value="- step: 0..3&#xa;- categories: ContributionCategory[]&#xa;- name, description, selectedCategoryId&#xa;- selectedTagIds, suggestedTagIds&#xa;- deviceCoords, pinCoords, accuracyMeters&#xa;- images: SelectedImage[]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="screen">
+          <mxGeometry x="0" y="30" width="260" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="screen_sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#6c8ebf;" vertex="1" parent="screen">
+          <mxGeometry x="0" y="136" width="260" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="screen_methods" value="+ bootstrap()&#xa;+ loadLocation()&#xa;+ handleContinue()&#xa;+ handleUploadImages()&#xa;+ handleMapRegionChange()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="screen">
+          <mxGeometry x="0" y="146" width="260" height="84" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mobile_service" value="ContributionPlaceService" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="360" y="140" width="250" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile_service_attr" value="- supabaseClient: SupabaseClient | null" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="mobile_service">
+          <mxGeometry x="0" y="30" width="250" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile_service_sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#6c8ebf;" vertex="1" parent="mobile_service">
+          <mxGeometry x="0" y="64" width="250" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="mobile_service_methods" value="+ getContributionOptions()&#xa;+ analyzeLocationDraft(name, categoryId?)&#xa;+ validateContributionPosition(payload)&#xa;+ uploadContributionImage(image)&#xa;+ submitContribution(payload)&#xa;- getSupabaseClient()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="mobile_service">
+          <mxGeometry x="0" y="74" width="250" height="156" as="geometry" />
+        </mxCell>
+
+        <mxCell id="api_client" value="Axios api client&#xa;+ Authorization: Bearer token&#xa;+ refresh on 401" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2fe;strokeColor=#0284c7;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="390" y="382" width="190" height="36" as="geometry" />
+        </mxCell>
+
+        <mxCell id="images_controller" value="ImagesController" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="720" y="140" width="240" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="images_controller_attr" value="[AuthGuard jwt-at]" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="images_controller">
+          <mxGeometry x="0" y="30" width="240" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="images_controller_sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#d79b00;" vertex="1" parent="images_controller">
+          <mxGeometry x="0" y="58" width="240" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="images_controller_methods" value="+ validateImage(dto)&#xa;+ createUploadUrl(req, dto)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="images_controller">
+          <mxGeometry x="0" y="70" width="240" height="66" as="geometry" />
+        </mxCell>
+
+        <mxCell id="location_controller" value="LocationController" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="140" width="240" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="location_controller_attr" value="[AuthGuard jwt-at]&#xa;- locationService: LocationService" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="location_controller">
+          <mxGeometry x="0" y="30" width="240" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="location_controller_sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#d79b00;" vertex="1" parent="location_controller">
+          <mxGeometry x="0" y="78" width="240" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="location_controller_methods" value="+ getContributionOptions()&#xa;+ analyzeDraft(dto)&#xa;+ validatePosition(dto)&#xa;+ submitContribution(dto, req)&#xa;+ approveRequest(id, req)&#xa;+ rejectRequest(id, dto, req)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="location_controller">
+          <mxGeometry x="0" y="90" width="240" height="108" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dtos" value="Contribution DTOs" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="720" y="345" width="520" height="105" as="geometry" />
+        </mxCell>
+        <mxCell id="dtos_attr" value="AnalyzeLocationDraftDto(name, categoryId?)&#xa;ValidateLocationPositionDto(pin/device lat-lng, accuracyMeters?, address?)&#xa;SubmitLocationRequestDto&#xa;- name, description, categoryId, tagIds?, address&#xa;- lat/lng, device lat/lng, imageUrls[1..5], suspectedDuplicateLocationIds?" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="dtos">
+          <mxGeometry x="0" y="30" width="520" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="images_service" value="ImagesService" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="140" width="190" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="images_service_attr" value="- supabaseClient?: SupabaseClient&#xa;- MAX_IMAGE_SIZE = 10MB" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="images_service">
+          <mxGeometry x="0" y="30" width="190" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="images_service_sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="images_service">
+          <mxGeometry x="0" y="80" width="190" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="images_service_methods" value="+ validateImage(dto)&#xa;+ createUploadUrl(userId, dto)&#xa;- getSupabaseClient()&#xa;- getBucket()" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="images_service">
+          <mxGeometry x="0" y="92" width="190" height="88" as="geometry" />
+        </mxCell>
+
+        <mxCell id="location_service" value="LocationService" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="140" width="210" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="location_service_attr" value="- locationModel: Model(Location)&#xa;- requestModel: Model&#xa;  (LocationRequest)&#xa;- categoryModel, subCategoryModel&#xa;- notificationModel, userModel" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="location_service">
+          <mxGeometry x="0" y="30" width="210" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="location_service_sep" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#82b366;" vertex="1" parent="location_service">
+          <mxGeometry x="0" y="110" width="210" height="8" as="geometry" />
+        </mxCell>
+        <mxCell id="location_service_methods" value="+ getContributionOptions()&#xa;+ analyzeDraft(dto)&#xa;+ validateContributionPosition(dto)&#xa;+ submitContribution(userId, dto)&#xa;- findPossibleDuplicates(name, lat?, lng?)&#xa;- getDistanceMeters(...)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="location_service">
+          <mxGeometry x="0" y="122" width="210" height="128" as="geometry" />
+        </mxCell>
+
+        <mxCell id="user" value="User" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="70" y="530" width="220" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="user_attr" value="+ email: string&#xa;+ role: UserRole = CUSTOMER&#xa;+ fullName: string&#xa;+ status: UserStatus&#xa;+ trustScore: number&#xa;+ trustLevel: TrustLevel" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="user">
+          <mxGeometry x="0" y="30" width="220" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="category" value="Category / SubCategory" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="320" y="530" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="category_attr" value="Category&#xa;+ name, description?, isActive&#xa;&#xa;SubCategory&#xa;+ categoryId: ObjectId(Category)&#xa;+ name, isActive" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="category">
+          <mxGeometry x="0" y="30" width="250" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="location" value="Location" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="610" y="510" width="300" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="location_attr" value="+ submittedBy: ObjectId(User)&#xa;+ ownerId?: ObjectId(User) // null for submit&#xa;+ name, description, address&#xa;+ geo: GeoPoint&#xa;+ accuracyMeters?: number&#xa;+ status: LocationStatus = SUBMITTED&#xa;+ isDuplicate: boolean&#xa;+ isSuspectedDuplicate: boolean&#xa;+ source: LocationSource = CUSTOMER&#xa;+ categoryId, subCategoryIds&#xa;+ imagesUrls: ImageAsset[]&#xa;+ submittedAt?: Date" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="location">
+          <mxGeometry x="0" y="30" width="300" height="210" as="geometry" />
+        </mxCell>
+
+        <mxCell id="location_request" value="LocationRequest" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="950" y="510" width="300" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="location_request_attr" value="+ type: LocationRequestType = CREATE&#xa;+ status: LocationRequestStatus = PENDING&#xa;+ submittedBy: ObjectId(User)&#xa;+ locationId?: ObjectId(Location)&#xa;+ oldData?: null&#xa;+ newData: Record(string, unknown)&#xa;+ changedFields: string[]&#xa;+ imageUrls: string[]&#xa;+ pinLocation, deviceLocation&#xa;+ deviceDistanceMeters?: number&#xa;+ isPotentialDuplicate: boolean&#xa;+ suspectedDuplicateLocationIds: ObjectId(Location)[]&#xa;+ reviewerId?: ObjectId(User)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="location_request">
+          <mxGeometry x="0" y="30" width="300" height="220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="notification" value="Notification" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="70" y="720" width="220" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="notification_attr" value="+ userId: ObjectId(User)&#xa;+ type: LOCATION_REQUEST_PENDING&#xa;+ refCollection: location_requests&#xa;+ refId: ObjectId&#xa;+ title, body&#xa;+ isRead: boolean" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="notification">
+          <mxGeometry x="0" y="30" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="value_objects" value="Value objects" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="320" y="720" width="250" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="value_objects_attr" value="GeoPoint&#xa;+ type: Point&#xa;+ coordinates: [lng, lat]&#xa;&#xa;ImageAsset&#xa;+ url, isCover, uploadedAt" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="value_objects">
+          <mxGeometry x="0" y="30" width="250" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="enums" value="Status / source enums" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="610" y="790" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="enums_attr" value="LocationStatus: SUBMITTED, PUBLISHED, REJECTED...&#xa;LocationRequestStatus: PENDING, APPROVED, REJECTED...&#xa;LocationSource: CUSTOMER, VENDOR, ADMIN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="enums">
+          <mxGeometry x="0" y="30" width="300" height="44" as="geometry" />
+        </mxCell>
+
+        <mxCell id="supabase" value="Supabase Storage" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="530" width="220" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="supabase_attr" value="[external]&#xa;+ createSignedUploadUrl(path)&#xa;+ uploadToSignedUrl(path, token, file)&#xa;+ getPublicUrl(path)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=6;spacingRight=6;fontSize=11;overflow=fill;" vertex="1" parent="supabase">
+          <mxGeometry x="0" y="30" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="invariants" value="Submit invariants from docs/code&#xa;- Customer must be authenticated&#xa;- Images: 1..5, JPG/JPEG/PNG, max 10MB each&#xa;- Pin must be within 50m of device location&#xa;- Location is created as SUBMITTED + source=CUSTOMER&#xa;- ownerId stays null: creating data is not ownership&#xa;- LocationRequest is CREATE + PENDING for Admin review&#xa;- Potential duplicate is flagged, not auto-hidden" style="shape=note;whiteSpace=wrap;html=1;size=18;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;align=left;verticalAlign=top;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="710" width="400" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_screen_service" value="uses form actions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#2563eb;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.45;entryDx=0;entryDy=0;" edge="1" parent="1" source="screen" target="mobile_service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_service_api_client" value="HTTP calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#2563eb;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="mobile_service" target="api_client">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_api_images" value="/images/validate&#xa;/images/upload-url" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#2563eb;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.85;entryDx=0;entryDy=0;" edge="1" parent="1" source="api_client" target="images_controller">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="400" />
+              <mxPoint x="650" y="268" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_api_location" value="/location/contribution/*" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#2563eb;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.65;exitDx=0;exitDy=0;entryX=0;entryY=0.72;entryDx=0;entryDy=0;" edge="1" parent="1" source="api_client" target="location_controller">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="410" />
+              <mxPoint x="650" y="292" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_service_storage" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#64748b;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.8;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="mobile_service" target="supabase">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="332" />
+              <mxPoint x="650" y="450" />
+              <mxPoint x="1300" y="450" />
+              <mxPoint x="1300" y="595" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_images_controller_service" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#15803d;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="images_controller" target="images_service">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_location_controller_service" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#15803d;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.45;exitDx=0;exitDy=0;entryX=0;entryY=0.38;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_controller" target="location_service">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1285" y="235" />
+              <mxPoint x="1285" y="120" />
+              <mxPoint x="1550" y="120" />
+              <mxPoint x="1550" y="239" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_dtos_controller" value="request bodies" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;dashed=1;strokeColor=#a16207;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.45;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="dtos" target="location_controller">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_images_service_storage" value="creates signed upload URL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#64748b;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="images_service" target="supabase">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1445" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_location_service_category" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;strokeColor=#15803d;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_service" target="category">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1580" y="450" />
+              <mxPoint x="595" y="450" />
+              <mxPoint x="595" y="568" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_location_service_location" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;strokeColor=#15803d;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.35;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_service" target="location">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1630" y="455" />
+              <mxPoint x="760" y="455" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_location_service_request" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;strokeColor=#15803d;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.6;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_service" target="location_request">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1685" y="470" />
+              <mxPoint x="1100" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_location_service_notification" value="creates pending notification" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=blockThin;endFill=1;strokeColor=#15803d;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_service" target="notification">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1810" y="400" />
+              <mxPoint x="1810" y="920" />
+              <mxPoint x="310" y="920" />
+              <mxPoint x="310" y="765" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_location_user" value="submittedBy" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.4;entryDx=0;entryDy=0;" edge="1" parent="1" source="location" target="user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_location_category" value="categoryId / subCategoryIds" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0;exitY=0.55;exitDx=0;exitDy=0;entryX=1;entryY=0.55;entryDx=0;entryDy=0;" edge="1" parent="1" source="location" target="category">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_location_values" value="contains geo + images" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=diamondThin;endFill=1;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="location" target="value_objects">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_request_location" value="locationId + duplicate ids" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0;exitY=0.35;exitDx=0;exitDy=0;entryX=1;entryY=0.35;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_request" target="location">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_request_user" value="submittedBy / reviewerId" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_request" target="user">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1025" y="920" />
+              <mxPoint x="20" y="920" />
+              <mxPoint x="20" y="605" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_request_enums" value="uses status/type enums" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;dashed=1;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.45;entryDx=0;entryDy=0;" edge="1" parent="1" source="location_request" target="enums">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_location_enums" value="uses status/source enums" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;dashed=1;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.65;exitY=1;exitDx=0;exitDy=0;entryX=0.45;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="location" target="enums">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_notification_user" value="userId" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#7e22ce;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.3;exitY=0;exitDx=0;exitDy=0;entryX=0.3;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="notification" target="user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
