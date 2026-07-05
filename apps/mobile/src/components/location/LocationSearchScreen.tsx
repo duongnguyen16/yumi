@@ -113,7 +113,19 @@ export default function LocationSearchScreen({
             </Button>
           )}
         </View>
-
+        {searchResults.length === 0 && searchQuery && selectedCategory && (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Button mode="contained" icon="plus">
+              Thêm địa điểm này
+            </Button>
+          </View>
+        )}
         <Category
           setSelectedCategory={setSelectedCategory}
           visible={visible}

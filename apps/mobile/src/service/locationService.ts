@@ -123,6 +123,19 @@ const updateLocation = async (formData: FormData, locationId: string) => {
   }
 };
 
+const getSystemCode = async () => {
+  try {
+    const response = await api.get("/location/register/code");
+    return { code: response.data.code, success: true };
+  } catch (error) {
+    console.error("Error getting system code:", error);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Đã có lỗi xảy ra",
+    };
+  }
+};
+
 export {
   getCurrentLocation,
   checkPermission,
@@ -131,4 +144,5 @@ export {
   viewCount,
   searchLocation,
   updateLocation,
+  getSystemCode,
 };
