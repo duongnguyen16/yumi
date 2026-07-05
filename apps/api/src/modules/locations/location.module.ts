@@ -8,6 +8,7 @@ import { SchemaModule } from 'src/common/schemas/schema.module';
 import { VendorGuard } from 'src/common/guard/vendor.guard';
 import { ImagesService } from '../images/images.service';
 import { SmsService } from '../auth/services/sms.service';
+import { TrustEngineService } from '../trust-engine/trust-engine.service';
 
 @Module({
   controllers: [LocationController],
@@ -20,6 +21,7 @@ import { SmsService } from '../auth/services/sms.service';
     VendorGuard,
     ImagesService,
     SmsService,
+    TrustEngineService,
   ],
 })
 export class LocationModule {}
