@@ -24,15 +24,15 @@ import {
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import {
   analyzeLocationDraft,
-  ContributionCategory,
-  getContributionOptions,
   submitContribution,
   uploadContributionImage,
   validateContributionPosition,
 } from "@/service/contributePlaceService";
+import { getAllCategories, getSubCategory } from "@/service/categoryService";
 
 const MAP_STYLE_URL =
-  process.env.EXPO_PUBLIC_MAP_API || "https://demotiles.maplibre.org/style.json";
+  process.env.EXPO_PUBLIC_MAP_API ||
+  "https://demotiles.maplibre.org/style.json";
 
 type SelectedImage = {
   id: string;
@@ -48,19 +48,41 @@ type Coordinates = {
   longitude: number;
 };
 
+type CategoryOption = {
+  _id: string;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+};
+
+type SubCategoryOption = {
+  _id: string;
+  name: string;
+  isActive?: boolean;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null && "response" in error) {
+    const response = error as {
+      response?: { data?: { message?: string } };
+    };
+    if (response.response?.data?.message) {
+      return response.response.data.message;
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 const stepLabels = [
-  "1. Thông tin + AI tag",
+  "1. Thông tin + danh mục",
   "2. Vị trí",
   "3. Hình ảnh",
   "4. Xác nhận",
-];
-
-const fallbackTags = [
-  { id: "fallback-good-price", name: "Giá tốt" },
-  { id: "fallback-clean", name: "Sạch sẽ" },
-  { id: "fallback-easy-find", name: "Dễ tìm" },
-  { id: "fallback-group", name: "Phù hợp nhóm" },
-  { id: "fallback-worth-trying", name: "Đáng thử" },
 ];
 
 export default function ContributePlaceScreen() {
@@ -71,12 +93,16 @@ export default function ContributePlaceScreen() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
-  const [categories, setCategories] = useState<ContributionCategory[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategoryOption[]>([]);
+  const [subCategoryLoading, setSubCategoryLoading] = useState(false);
+  const [subCategoryError, setSubCategoryError] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [suggestedTagIds, setSuggestedTagIds] = useState<string[]>([]);
+  const [selectedSubCategoryIds, setSelectedSubCategoryIds] = useState<
+    string[]
+  >([]);
   const [similarLocations, setSimilarLocations] = useState<
     Array<{
       id: string;
@@ -94,16 +120,14 @@ export default function ContributePlaceScreen() {
   const [images, setImages] = useState<SelectedImage[]>([]);
 
   const selectedCategory = useMemo(
-    () => categories.find((item) => item.id === selectedCategoryId) ?? null,
+    () => categories.find((item) => item._id === selectedCategoryId) ?? null,
     [categories, selectedCategoryId],
   );
-  const visibleTags = useMemo(() => {
-    if (!selectedCategory) {
-      return [];
-    }
-
-    return selectedCategory.tags.length > 0 ? selectedCategory.tags : fallbackTags;
-  }, [selectedCategory]);
+  const selectedSubCategories = useMemo(
+    () =>
+      subCategories.filter((item) => selectedSubCategoryIds.includes(item._id)),
+    [selectedSubCategoryIds, subCategories],
+  );
 
   const duplicateWarning = similarLocations.length > 0;
   const resolvedAddress = manualAddress.trim() || autoAddress.trim();
@@ -112,12 +136,21 @@ export default function ContributePlaceScreen() {
     const bootstrap = async () => {
       try {
         const [optionsResponse, styleResponse] = await Promise.all([
-          getContributionOptions(),
+          getAllCategories(),
           fetch(MAP_STYLE_URL),
         ]);
-
+        console.log("optionsResponse:", optionsResponse);
         const styleJson = await styleResponse.json();
-        setCategories(optionsResponse.categories ?? []);
+        if (!optionsResponse.success) {
+          throw new Error(
+            optionsResponse.message || "Không tải được danh mục.",
+          );
+        }
+        setCategories(
+          (optionsResponse.data ?? []).filter(
+            (category: CategoryOption) => category.isActive !== false,
+          ),
+        );
         setMapStyle(styleJson);
       } catch (error) {
         console.log("Error bootstrapping contribute place:", error);
@@ -131,15 +164,67 @@ export default function ContributePlaceScreen() {
   }, []);
 
   useEffect(() => {
+    if (!selectedCategoryId) {
+      return;
+    }
+
+    let active = true;
+    const loadSubCategories = async () => {
+      setSubCategoryLoading(true);
+      setSubCategoryError("");
+
+      try {
+        const response = await getSubCategory(selectedCategoryId);
+        if (!active) {
+          return;
+        }
+
+        if (response.success) {
+          setSubCategories(
+            (response.data ?? []).filter(
+              (item: SubCategoryOption) => item.isActive !== false,
+            ),
+          );
+        } else {
+          setSubCategories([]);
+          setSubCategoryError(
+            response.message || "Không tải được danh mục con.",
+          );
+        }
+      } catch (error) {
+        console.log("Error loading sub categories:", error);
+        if (active) {
+          setSubCategories([]);
+          setSubCategoryError("Không tải được danh mục con.");
+        }
+      } finally {
+        if (active) {
+          setSubCategoryLoading(false);
+        }
+      }
+    };
+
+    loadSubCategories();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedCategoryId]);
+
+  useEffect(() => {
     if (step !== 1 || deviceCoords) {
       return;
     }
 
     const loadLocation = async () => {
       try {
-        const permission = await ExpoLocation.requestForegroundPermissionsAsync();
+        const permission =
+          await ExpoLocation.requestForegroundPermissionsAsync();
         if (permission.status !== "granted") {
-          Alert.alert("Cần quyền vị trí", "Hãy cấp quyền vị trí để đóng góp địa điểm.");
+          Alert.alert(
+            "Cần quyền vị trí",
+            "Hãy cấp quyền vị trí để đóng góp địa điểm.",
+          );
           return;
         }
 
@@ -179,9 +264,11 @@ export default function ContributePlaceScreen() {
 
   useEffect(() => {
     if (name.trim().length < 3) {
-      setSuggestedTagIds([]);
-      setSimilarLocations([]);
-      return;
+      const timeout = setTimeout(() => {
+        setSimilarLocations([]);
+      }, 0);
+
+      return () => clearTimeout(timeout);
     }
 
     const timeout = setTimeout(async () => {
@@ -190,7 +277,6 @@ export default function ContributePlaceScreen() {
           name.trim(),
           selectedCategoryId || undefined,
         );
-        setSuggestedTagIds((analysis.aiSuggestedTags ?? []).map((item) => item.id));
         setSimilarLocations(analysis.similarLocations ?? []);
       } catch (error) {
         console.log("Error analyzing draft:", error);
@@ -200,11 +286,11 @@ export default function ContributePlaceScreen() {
     return () => clearTimeout(timeout);
   }, [name, selectedCategoryId]);
 
-  const toggleTag = (tagId: string) => {
-    setSelectedTagIds((current) =>
-      current.includes(tagId)
-        ? current.filter((item) => item !== tagId)
-        : [...current, tagId],
+  const toggleSubCategory = (subCategoryId: string) => {
+    setSelectedSubCategoryIds((current) =>
+      current.includes(subCategoryId)
+        ? current.filter((item) => item !== subCategoryId)
+        : [...current, subCategoryId],
     );
   };
 
@@ -267,11 +353,14 @@ export default function ContributePlaceScreen() {
 
       setImages(uploadedImages);
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("Error uploading contribution images:", error);
       Alert.alert(
         "Upload thất bại",
-        error?.message || "Không thể upload ảnh lên Supabase. Thử lại giúp mình.",
+        getErrorMessage(
+          error,
+          "Không thể upload ảnh lên Supabase. Thử lại giúp mình.",
+        ),
       );
       return false;
     } finally {
@@ -306,11 +395,13 @@ export default function ContributePlaceScreen() {
           address: resolvedAddress,
         });
         setStep(2);
-      } catch (error: any) {
+      } catch (error: unknown) {
         Alert.alert(
           "Ngoài phạm vi",
-          error?.response?.data?.message ||
+          getErrorMessage(
+            error,
             "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
+          ),
         );
       } finally {
         setSaving(false);
@@ -334,15 +425,14 @@ export default function ContributePlaceScreen() {
 
       try {
         setSaving(true);
-        const realTagIds = selectedCategory?.tags
-          .filter((tag) => selectedTagIds.includes(tag.id))
-          .map((tag) => tag.id) ?? [];
-        const uploadedUrls = images.map((item) => item.uploadedUrl).filter(Boolean);
+        const uploadedUrls = images
+          .map((item) => item.uploadedUrl)
+          .filter(Boolean);
         await submitContribution({
           name: name.trim(),
           description: description.trim(),
           categoryId: selectedCategoryId,
-          tagIds: realTagIds,
+          tagIds: selectedSubCategoryIds,
           address: resolvedAddress,
           latitude: pinCoords.latitude,
           longitude: pinCoords.longitude,
@@ -350,23 +440,21 @@ export default function ContributePlaceScreen() {
           deviceLongitude: deviceCoords.longitude,
           accuracyMeters,
           imageUrls: uploadedUrls as string[],
-          suspectedDuplicateLocationIds: similarLocations.map((item) => item.id),
+          suspectedDuplicateLocationIds: similarLocations.map(
+            (item) => item.id,
+          ),
         });
 
-        Alert.alert(
-          "Đã gửi để duyệt",
-          "Địa điểm của bạn đang chờ phê duyệt.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/(tabs)/home"),
-            },
-          ],
-        );
-      } catch (error: any) {
+        Alert.alert("Đã gửi để duyệt", "Địa điểm của bạn đang chờ phê duyệt.", [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/home"),
+          },
+        ]);
+      } catch (error: unknown) {
         Alert.alert(
           "Gửi thất bại",
-          error?.response?.data?.message || "Không thể gửi địa điểm để duyệt.",
+          getErrorMessage(error, "Không thể gửi địa điểm để duyệt."),
         );
       } finally {
         setSaving(false);
@@ -386,22 +474,25 @@ export default function ContributePlaceScreen() {
     });
   };
 
-  const renderChips = (
-    items: Array<{ id: string; name: string }>,
+  const renderSubCategoryChips = (
+    items: SubCategoryOption[],
     activeIds: string[],
     accentColor = "#ff5a1f",
   ) => (
     <View style={styles.chipWrap}>
       {items.map((item) => {
-        const active = activeIds.includes(item.id);
+        const active = activeIds.includes(item._id);
         return (
           <Pressable
-            key={item.id}
+            key={item._id}
             style={[
               styles.chip,
-              active && { backgroundColor: accentColor, borderColor: accentColor },
+              active && {
+                backgroundColor: accentColor,
+                borderColor: accentColor,
+              },
             ]}
-            onPress={() => toggleTag(item.id)}
+            onPress={() => toggleSubCategory(item._id)}
           >
             <Text style={[styles.chipText, active && styles.chipTextActive]}>
               {item.name}
@@ -440,17 +531,19 @@ export default function ContributePlaceScreen() {
           {categories.length > 0 ? (
             <View style={styles.categoryGrid}>
               {categories.map((category) => {
-                const active = category.id === selectedCategoryId;
+                const active = category._id === selectedCategoryId;
                 return (
                   <Pressable
-                    key={category.id}
+                    key={category._id}
                     style={[
                       styles.categoryOption,
                       active && styles.categoryOptionActive,
                     ]}
                     onPress={() => {
-                      setSelectedCategoryId(category.id);
-                      setSelectedTagIds([]);
+                      setSelectedCategoryId(category._id);
+                      setSelectedSubCategoryIds([]);
+                      setSubCategories([]);
+                      setSubCategoryError("");
                     }}
                   >
                     <View
@@ -492,33 +585,41 @@ export default function ContributePlaceScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="shape-outline" size={22} color="#9ca3af" />
-              <Text style={styles.emptyStateText}>Chưa có danh mục để chọn.</Text>
+              <MaterialCommunityIcons
+                name="shape-outline"
+                size={22}
+                color="#9ca3af"
+              />
+              <Text style={styles.emptyStateText}>
+                Chưa có danh mục để chọn.
+              </Text>
             </View>
           )}
 
-          <Text style={styles.label}>Tag mô tả</Text>
-          {suggestedTagIds.length > 0 && selectedCategory && (
-            <View style={styles.suggestionBox}>
-              <Text style={styles.suggestionTitle}>AI gợi ý dựa trên tên</Text>
-              {renderChips(
-                selectedCategory.tags.filter((item) => suggestedTagIds.includes(item.id)),
-                selectedTagIds,
-                "#ff8c66",
-              )}
-            </View>
-          )}
+          <Text style={styles.label}>Danh mục con</Text>
           {selectedCategory ? (
             <>
-              {selectedCategory.tags.length === 0 ? (
+              {subCategoryLoading ? (
+                <View style={styles.emptyState}>
+                  <ActivityIndicator color="#ff5a1f" />
+                  <Text style={styles.emptyStateText}>
+                    Đang tải danh mục con...
+                  </Text>
+                </View>
+              ) : subCategoryError ? (
+                <Text style={styles.helperText}>{subCategoryError}</Text>
+              ) : subCategories.length > 0 ? (
+                renderSubCategoryChips(subCategories, selectedSubCategoryIds)
+              ) : (
                 <Text style={styles.helperText}>
-                  Chưa có tag riêng cho danh mục này, bạn có thể chọn tag gợi ý bên dưới.
+                  Danh mục này chưa có danh mục con.
                 </Text>
-              ) : null}
-              {renderChips(visibleTags, selectedTagIds)}
+              )}
             </>
           ) : (
-            <Text style={styles.helperText}>Chọn danh mục để hiện tag phù hợp.</Text>
+            <Text style={styles.helperText}>
+              Chọn danh mục để hiện danh mục con phù hợp.
+            </Text>
           )}
         </View>
       );
@@ -562,7 +663,11 @@ export default function ContributePlaceScreen() {
 
           <Text style={styles.label}>Địa chỉ tự động</Text>
           <View style={styles.addressCard}>
-            <MaterialCommunityIcons name="map-marker-outline" size={20} color="#ff5a1f" />
+            <MaterialCommunityIcons
+              name="map-marker-outline"
+              size={20}
+              color="#ff5a1f"
+            />
             <Text style={styles.addressText}>
               {resolvedAddress || "Đang lấy địa chỉ..."}
             </Text>
@@ -591,7 +696,12 @@ export default function ContributePlaceScreen() {
               if (image) {
                 return (
                   <View key={image.id} style={styles.imageTile}>
-                    <Image source={image.uri} style={styles.imagePreview} contentFit="cover" />
+                    <Image
+                      source={image.uri}
+                      style={styles.imagePreview}
+                      contentFit="cover"
+                      alt="Ảnh địa điểm đã chọn"
+                    />
                     {index === 0 && (
                       <View style={styles.coverBadge}>
                         <Text style={styles.coverBadgeText}>Ảnh chính</Text>
@@ -600,10 +710,16 @@ export default function ContributePlaceScreen() {
                     <Pressable
                       style={styles.removeImageButton}
                       onPress={() =>
-                        setImages((current) => current.filter((item) => item.id !== image.id))
+                        setImages((current) =>
+                          current.filter((item) => item.id !== image.id),
+                        )
                       }
                     >
-                      <MaterialCommunityIcons name="close" size={16} color="#fff" />
+                      <MaterialCommunityIcons
+                        name="close"
+                        size={16}
+                        color="#fff"
+                      />
                     </Pressable>
                   </View>
                 );
@@ -615,7 +731,11 @@ export default function ContributePlaceScreen() {
                   style={styles.emptyImageTile}
                   onPress={handlePickImages}
                 >
-                  <MaterialCommunityIcons name="image-plus" size={28} color="#9ca3af" />
+                  <MaterialCommunityIcons
+                    name="image-plus"
+                    size={28}
+                    color="#9ca3af"
+                  />
                   <Text style={styles.emptyImageText}>Thêm ảnh</Text>
                 </Pressable>
               );
@@ -639,7 +759,8 @@ export default function ContributePlaceScreen() {
                 Có vẻ trùng với {similarLocations[0]?.name}
               </Text>
               <Text style={styles.warningText}>
-                Một chỗ tương tự đã tồn tại gần đây. Bạn có muốn tiếp tục đăng riêng không?
+                Một chỗ tương tự đã tồn tại gần đây. Bạn có muốn tiếp tục đăng
+                riêng không?
               </Text>
               <View style={styles.warningActions}>
                 <Pressable
@@ -662,7 +783,12 @@ export default function ContributePlaceScreen() {
 
         <View style={styles.summaryCard}>
           {previewImage ? (
-            <Image source={previewImage} style={styles.summaryImage} contentFit="cover" />
+            <Image
+              source={previewImage}
+              style={styles.summaryImage}
+              contentFit="cover"
+              alt="Ảnh xem trước địa điểm"
+            />
           ) : null}
           <View style={styles.summaryBody}>
             <Text style={styles.summaryCategory}>
@@ -671,22 +797,25 @@ export default function ContributePlaceScreen() {
             <Text style={styles.summaryName}>{name.trim()}</Text>
             <Text style={styles.summaryDescription}>{description.trim()}</Text>
             <View style={styles.chipWrap}>
-              {visibleTags
-                .filter((tag) => selectedTagIds.includes(tag.id))
-                .map((tag) => (
-                  <View key={tag.id} style={styles.summaryTag}>
-                    <Text style={styles.summaryTagText}>{tag.name}</Text>
-                  </View>
-                ))}
+              {selectedSubCategories.map((subCategory) => (
+                <View key={subCategory._id} style={styles.summaryTag}>
+                  <Text style={styles.summaryTagText}>{subCategory.name}</Text>
+                </View>
+              ))}
             </View>
             <View style={styles.addressRow}>
-              <MaterialCommunityIcons name="map-marker-outline" size={16} color="#6b7280" />
+              <MaterialCommunityIcons
+                name="map-marker-outline"
+                size={16}
+                color="#6b7280"
+              />
               <Text style={styles.summaryAddress}>{resolvedAddress}</Text>
             </View>
           </View>
         </View>
         <Text style={styles.noteText}>
-          Địa điểm sẽ được duyệt trong khoảng 24h trước khi hiển thị trên bản đồ.
+          Địa điểm sẽ được duyệt trong khoảng 24h trước khi hiển thị trên bản
+          đồ.
         </Text>
       </View>
     );
@@ -708,7 +837,9 @@ export default function ContributePlaceScreen() {
         </Pressable>
         <View style={styles.headerTextWrap}>
           <Text style={styles.title}>Đóng góp địa điểm</Text>
-          <Text style={styles.subtitle}>Bước {step + 1}/4 - {stepLabels[step]}</Text>
+          <Text style={styles.subtitle}>
+            Bước {step + 1}/4 - {stepLabels[step]}
+          </Text>
         </View>
       </View>
 
@@ -836,19 +967,6 @@ const styles = StyleSheet.create({
   multilineInput: {
     minHeight: 96,
     textAlignVertical: "top",
-  },
-  suggestionBox: {
-    backgroundColor: "#fff1eb",
-    borderWidth: 1,
-    borderColor: "#ffd4c2",
-    borderRadius: 16,
-    padding: 12,
-    gap: 10,
-  },
-  suggestionTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#ff5a1f",
   },
   helperText: {
     fontSize: 14,
