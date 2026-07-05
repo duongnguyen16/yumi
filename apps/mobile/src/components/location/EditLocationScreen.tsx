@@ -1,26 +1,16 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Keyboard,
-  ScrollView,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
-import {
-  ActivityIndicator,
-  Button,
-  Chip,
-  Icon,
-  Text,
-  TextInput,
-  Searchbar,
-} from "react-native-paper";
+import { Alert, ScrollView, View } from "react-native";
+import { Button, Chip, Text, TextInput, Searchbar } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import { getAllCategories, getSubCategory } from "@/service/categoryService";
 import { TimePickerModal } from "react-native-paper-dates";
 import CustomMap from "./ui/CustomMap";
 import GetNewLocation from "./modals/GetNewLocation";
-import { updateLocation } from "@/service/locationService";
+import {
+  sentUpdatePhoneOtp,
+  updateLocation,
+  verifyUpdatePhoneOtp,
+} from "@/service/locationService";
 
 type TimeValue = {
   hours: number;
@@ -57,6 +47,13 @@ export default function EditLocationScreen({
   const [pickerMode, setPickerMode] = useState<TimePickerMode>("start");
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pinLocation, setPinLocation] = useState<{
+    longitude: number;
+    latitude: number;
+  } | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
 
   const uploadMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,6 +77,46 @@ export default function EditLocationScreen({
     setAssets(result.assets);
   };
 
+  // const handleDismissModal = async () => {
+  //   setVisible(false);
+  //   try{
+  //     const response = await analyzeLocationDraft()
+  //   }
+  // }
+
+  const sentOtp = async () => {
+    try {
+      const response = await sentUpdatePhoneOtp(data._id, phone);
+      if (response.success) {
+        setOtpSent(true);
+        Alert.alert("Gửi mã OTP thành công");
+      }
+      if (!response.success) {
+        Alert.alert("Gửi mã OTP thất bại");
+      }
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      Alert.alert("Gửi mã OTP thất bại");
+    }
+  };
+
+  const verifyOtp = async () => {
+    try {
+      const response = await verifyUpdatePhoneOtp(data._id, otp);
+      console.log(response);
+      if (response.success) {
+        setOtpVerified(true);
+        Alert.alert("Mã OTP xác nhận thành công");
+      }
+      if (!response.success) {
+        Alert.alert("Mã OTP xác nhận thất bại");
+      }
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      Alert.alert("Xác nhận mã OTP thất bại");
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     if (selectedChip.includes("name")) {
@@ -101,6 +138,11 @@ export default function EditLocationScreen({
         return;
       }
     }
+    if (selectedChip.includes("phone") && !otpVerified) {
+      Alert.alert("Vui lòng xác nhận số điện thoại");
+      setLoading(false);
+      return;
+    }
     if (!selectedCategory) return;
     const submitData = {
       name: selectedChip.includes("name") ? name : undefined,
@@ -118,10 +160,20 @@ export default function EditLocationScreen({
       subCategoryIds: selectedChip.includes("category")
         ? selectedSubCategory[selectedCategory] || []
         : undefined,
-      coordinates: selectedChip.includes("coordinates")
-        ? coordinates
+      pinLongitude: selectedChip.includes("address")
+        ? (pinLocation?.longitude ?? coordinates[0])
+        : undefined,
+      pinLatitude: selectedChip.includes("address")
+        ? (pinLocation?.latitude ?? coordinates[1])
+        : undefined,
+      deviceLongitude: selectedChip.includes("address")
+        ? coordinates[0]
+        : undefined,
+      deviceLatitude: selectedChip.includes("address")
+        ? coordinates[1]
         : undefined,
     };
+    console.log(submitData);
     const formData = new FormData();
     formData.append("data", JSON.stringify(submitData));
     assets.forEach((asset) => {
@@ -221,7 +273,17 @@ export default function EditLocationScreen({
       setPhone(data.phone || "");
       setCategory(response.data || "");
       setSelectedCategory(data.categoryId._id || "");
+      const locationCoordinates =
+        data.geo?.coordinates || data.pinLocation?.coordinates || null;
       setCoordinates(data.geo?.coordinates || null);
+      setPinLocation(
+        locationCoordinates
+          ? {
+              longitude: locationCoordinates[0],
+              latitude: locationCoordinates[1],
+            }
+          : null,
+      );
       setSelectedSubCategory({
         [data.categoryId._id]:
           data.subCategoryIds?.map((subCategory) => subCategory._id) || [],
@@ -310,6 +372,8 @@ export default function EditLocationScreen({
                   coordinates={coordinates}
                   setCoordinates={setCoordinates}
                   previewMode={true}
+                  pinLocation={pinLocation}
+                  setPinLocation={setPinLocation}
                 />
               )}
               {selectedChip.length !== 0 &&
@@ -398,12 +462,64 @@ export default function EditLocationScreen({
           {selectedChip.includes("phone") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Số điện thoại</Text>
-              <TextInput
-                placeholder="Hãy nhập số điện thoại"
-                mode="outlined"
-                value={phone}
-                onChangeText={setPhone}
-              />
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <TextInput
+                  placeholder="Hãy nhập số điện thoại"
+                  mode="outlined"
+                  value={phone}
+                  onChangeText={setPhone}
+                  style={{ flex: 1, marginRight: 10 }}
+                />
+                <Button
+                  mode="contained"
+                  style={{ borderRadius: 4, paddingVertical: 6 }}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    sentOtp();
+                  }}
+                >
+                  Gửi mã
+                </Button>
+              </View>
+              {otpSent && (
+                <View style={{ marginBottom: 12 }}>
+                  <Text>Nhập mã xác nhận</Text>
+
+                  <View
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                    }}
+                  >
+                    <TextInput
+                      placeholder="Hãy nhập mã xác nhận"
+                      mode="outlined"
+                      value={otp}
+                      onChangeText={setOtp}
+                      style={{ flex: 1, marginRight: 10 }}
+                    />
+
+                    <Button
+                      mode="contained"
+                      style={{ borderRadius: 4, paddingVertical: 6 }}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        verifyOtp();
+                      }}
+                      disabled={otpVerified}
+                    >
+                      Xác nhận
+                    </Button>
+                  </View>
+                </View>
+              )}
             </View>
           )}
           {selectedChip.includes("category") && (
@@ -488,6 +604,8 @@ export default function EditLocationScreen({
         setCoordinates={setCoordinates}
         setVisible={setVisible}
         visible={visible}
+        pinLocation={pinLocation}
+        setPinLocation={setPinLocation}
       />
     </View>
   );
