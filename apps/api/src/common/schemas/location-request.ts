@@ -142,12 +142,9 @@ export class LocationRequest {
   @Prop({ type: Object })
   verificationProof?: {
     proofUrls?: string[];
+    licenseUrls?: string[];
     systemCode?: string;
-    capturedLat?: number;
-    capturedLng?: number;
     capturedAt?: Date;
-    distanceToNewPinMeters?: number;
-    otpVerified?: boolean;
   };
 }
 
