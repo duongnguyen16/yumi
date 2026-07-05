@@ -12,8 +12,8 @@ import {
 const BASE_URL_ENV =
   process.env.EXPO_PUBLIC_BASE_URL ||
   (Platform.OS === "android"
-    ? "http://10.0.2.2:3000/api"
-    : "http://localhost:3000/api");
+    ? "http://10.0.2.2:9999/api"
+    : "http://localhost:9999/api");
 
 const getBaseUrl = () => {
   return BASE_URL_ENV;
