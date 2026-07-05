@@ -1,0 +1,66 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  InternalServerErrorException,
+  NotFoundException,
+  Param,
+  Patch,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AdminGuard } from 'src/common/guard/admin.guard';
+import { AdminLocationService } from './admin-location.service';
+import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
+import { RejectRequestDTO } from './dto/reject-request.dto';
+
+@ApiTags('admin-location-requests')
+@ApiBearerAuth()
+@Controller('admin/location-requests')
+@UseGuards(AuthGuard('jwt-at'), AdminGuard)
+export class AdminLocationController {
+  constructor(private readonly service: AdminLocationService) {}
+
+  @Get('queue')
+  async getList(@Query() query: ListPendingRequestsDTO) {
+    const r = await this.service.getList(query);
+    if (!r.success) throw new InternalServerErrorException(r.message);
+    return r;
+  }
+
+  @Patch(':id/approve')
+  async approve(@Param('id') id: string, @Request() req: any) {
+    return this.handle(await this.service.approve(id, req.user.userId));
+  }
+
+  @Patch(':id/reject')
+  async reject(
+    @Param('id') id: string,
+    @Body() body: RejectRequestDTO,
+    @Request() req: any,
+  ) {
+    return this.handle(
+      await this.service.reject(
+        id,
+        req.user.userId,
+        body.reason,
+        body.duplicateOfLocationId,
+      ),
+    );
+  }
+
+  private handle(r: any) {
+    if (!r.success) {
+      if (r.statusCode === 400) throw new BadRequestException(r.message);
+      if (r.statusCode === 404) throw new NotFoundException(r.message);
+      if (r.statusCode === 409) throw new ForbiddenException(r.message);
+      throw new InternalServerErrorException(r.message);
+    }
+    return r;
+  }
+}
