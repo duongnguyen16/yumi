@@ -26,10 +26,15 @@ import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
 import { ReviewLocationRequestDto } from './dto/review-location-request.dto';
 import { VendorGuard } from 'src/common/guard/vendor.guard';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
+import { CreateLocationDto } from './dto/vendor-register-location.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -203,5 +208,58 @@ export class LocationController {
         'Xảy ra lỗi khi cập nhật địa điểm',
       );
     }
+  }
+
+  @Post('register')
+  @UseGuards(AuthGuard('jwt-at'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'videoFiles', maxCount: 10 },
+      { name: 'licenseFiles', maxCount: 10 },
+      { name: 'imageFiles', maxCount: 10 },
+    ]),
+  )
+  async registerLocation(
+    @Body('request') requestData: string,
+    @Body('locationData') locationData: string,
+    @Request() req: AuthenticatedRequest,
+    @UploadedFiles()
+    files: {
+      videoFiles?: Express.Multer.File[];
+      licenseFiles?: Express.Multer.File[];
+      imageFiles?: Express.Multer.File[];
+    },
+  ) {
+    try {
+      const requestDataParsed: any = JSON.parse(requestData);
+      const locationDataParsed: any = JSON.parse(locationData);
+      const result = await this.locationService.registerLocation(
+        req.user.userId,
+        requestDataParsed,
+        locationDataParsed,
+        files,
+      );
+      if (!result.success) {
+        if (result.statusCode === 400) {
+          throw new BadRequestException(result.message);
+        }
+        if (result.statusCode === 404) {
+          throw new NotFoundException(result.message);
+        }
+        if (result.statusCode === 500) {
+          throw new InternalServerErrorException(result.message);
+        }
+      }
+      return result;
+    } catch (error) {
+      console.error('Error in registerLocation controller:', error);
+      throw new InternalServerErrorException('Xảy ra lỗi khi đăng ký địa điểm');
+    }
+  }
+
+  @Get('register/code')
+  @UseGuards(AuthGuard('jwt-at'))
+  generateSystemCode() {
+    return { code: this.locationService.generateSystemCode() };
   }
 }
