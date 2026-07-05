@@ -7,6 +7,7 @@ import { LocationService } from './location.service';
 import { SchemaModule } from 'src/common/schemas/schema.module';
 import { VendorGuard } from 'src/common/guard/vendor.guard';
 import { ImagesService } from '../images/images.service';
+import { SmsService } from '../auth/services/sms.service';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 
 @Module({
@@ -19,6 +20,7 @@ import { TrustEngineService } from '../trust-engine/trust-engine.service';
     LocationService,
     VendorGuard,
     ImagesService,
+    SmsService,
     TrustEngineService,
   ],
 })
