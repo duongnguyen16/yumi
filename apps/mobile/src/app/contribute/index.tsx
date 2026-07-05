@@ -621,6 +621,42 @@ export default function ContributePlaceScreen() {
           accuracyMeters,
           address: resolvedAddress,
         });
+
+        const analysis = await analyzeLocationDraft(
+          name.trim(),
+          selectedCategoryId || undefined,
+          pinCoords.latitude,
+          pinCoords.longitude,
+        );
+        const duplicates = analysis.similarLocations ?? [];
+        setSimilarLocations(duplicates);
+
+        if (duplicates.length > 0) {
+          Alert.alert(
+            "Co the bi trung",
+            `Tim thay dia diem gan ten "${duplicates[0].name}" trong pham vi 50m. Ban muon tiep tuc gui dia diem rieng?`,
+          );
+          setStep(2);
+          return;
+
+          Alert.alert(
+            "CĂ³ thá»ƒ bá»‹ trĂ¹ng",
+            `TĂ¬m tháº¥y Ä‘á»‹a Ä‘iá»ƒm gáº§n tĂªn "${duplicates[0].name}" trong pháº¡m vi 50m. Báº¡n muá»‘n tiáº¿p tá»¥c gá»­i Ä‘á»‹a Ä‘iá»ƒm riĂªng?`,
+            [
+              {
+                text: "Xem chá»— cÅ©",
+                onPress: () => router.push(`/location/${duplicates[0].id}`),
+              },
+              {
+                text: "Tiáº¿p tá»¥c",
+                style: "default",
+                onPress: () => setStep(2),
+              },
+            ],
+          );
+          return;
+        }
+
         setStep(2);
       } catch (error: unknown) {
         Alert.alert(
