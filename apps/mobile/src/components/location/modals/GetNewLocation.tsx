@@ -1,14 +1,23 @@
 import React, { useRef } from "react";
 import { StyleSheet, View } from "react-native";
-import { Button, IconButton, Modal, Portal, Text } from "react-native-paper";
-import CustomMap from "../ui/CustomMap";
+import { Button, Modal, Portal, Text } from "react-native-paper";
+import CustomMap, { CustomMapHandle } from "../ui/CustomMap";
 
 export default function GetNewLocation({
   visible,
   setVisible,
   coordinates,
   setCoordinates,
+  pinLocation,
+  setPinLocation,
 }) {
+  const mapRef = useRef<CustomMapHandle>(null);
+
+  const handleConfirm = async () => {
+    await mapRef.current?.syncPinToCenter();
+    setVisible(false);
+  };
+
   return (
     <Portal>
       <Modal
@@ -24,9 +33,12 @@ export default function GetNewLocation({
           <View style={styles.mapContainer}>
             {coordinates && (
               <CustomMap
+                ref={mapRef}
                 coordinates={coordinates}
                 previewMode={false}
                 setCoordinates={setCoordinates}
+                pinLocation={pinLocation}
+                setPinLocation={setPinLocation}
               />
             )}
           </View>
@@ -35,7 +47,7 @@ export default function GetNewLocation({
               Hủy
             </Button>
 
-            <Button mode="contained" onPress={() => setVisible(false)}>
+            <Button mode="contained" onPress={handleConfirm}>
               Xác nhận
             </Button>
           </View>
