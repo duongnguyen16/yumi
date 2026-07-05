@@ -1,5 +1,6 @@
 import { useLocationContext } from "@/contexts/locationContext";
 import { getCurrentLocation } from "@/service/locationService";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   Camera,
   CameraRef,
@@ -223,16 +224,12 @@ export default function CustomMap({
           position: "absolute",
           left: "50%",
           top: "50%",
-          width: 28,
-          height: 28,
           marginLeft: -14,
           marginTop: -28,
-          borderRadius: 14,
-          backgroundColor: "red",
-          borderWidth: 3,
-          borderColor: "white",
         }}
-      ></View>
+      >
+        <MaterialCommunityIcons name="map-marker" size={42} color="#ff5a1f" />
+      </View>
       {!previewMode && (
         <IconButton
           icon="crosshairs-gps"
