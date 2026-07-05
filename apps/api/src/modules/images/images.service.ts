@@ -18,7 +18,7 @@ const ALLOWED_MIME_TYPES = [
   'video/quicktime',
   'video/mpeg',
 ];
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 @Injectable()
 export class ImagesService {

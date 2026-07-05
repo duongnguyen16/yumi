@@ -20,9 +20,16 @@ import {
 import {
   LocationSource,
   LocationStatus,
+  TrustEventType,
+  TrustLevel,
   UserRole,
+  UserStatus,
 } from 'src/common/schemas/common.enums';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
+import {
+  AuditLog,
+  AuditLogDocument,
+} from 'src/common/schemas/audit-log.schema';
 import {
   Notification,
   NotificationDocument,
@@ -38,9 +45,14 @@ import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { ImagesService } from '../images/images.service';
+import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { generateSystemCode } from 'src/common/func/generate-code';
 import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
+
+const DUPLICATE_DISTANCE_METERS = 50;
+const DUPLICATE_SIMILARITY_THRESHOLD = 0.8;
+const CONTRIBUTION_DAILY_LIMIT = 3;
 
 type LocationRating = {
   _id: unknown;
@@ -53,6 +65,7 @@ type DuplicateLocationPreview = {
   name: string;
   address: string;
   distanceMeters?: number | null;
+  similarity?: number;
   status: LocationStatus;
 };
 
@@ -73,7 +86,10 @@ export class LocationService {
     private notificationModel: Model<NotificationDocument>,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    @InjectModel(AuditLog.name)
+    private auditLogModel: Model<AuditLogDocument>,
     private readonly imagesService: ImagesService,
+    private readonly trustEngineService: TrustEngineService,
   ) {}
 
   async getAllLocations() {
@@ -156,7 +172,12 @@ export class LocationService {
   }
 
   async analyzeDraft(dto: AnalyzeLocationDraftDto) {
-    const similarLocations = await this.findPossibleDuplicates(dto.name);
+    const similarLocations = await this.findPossibleDuplicates(
+      dto.name,
+      dto.latitude,
+      dto.longitude,
+      dto.categoryId,
+    );
 
     return {
       success: true,
@@ -173,20 +194,38 @@ export class LocationService {
       dto.pinLongitude,
     );
 
-    if (distanceMeters > 50) {
-      throw new BadRequestException(
-        'Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.',
-      );
-    }
-
     return {
       success: true,
       distanceMeters,
-      withinRange: true,
+      withinRange: distanceMeters <= 50,
+      requiresManualPin: (dto.accuracyMeters ?? 0) > 50,
     };
   }
 
   async submitContribution(userId: string, dto: SubmitLocationRequestDto) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || user.status === UserStatus.BANNED) {
+      throw new BadRequestException('Tai khoan khong the gui dia diem');
+    }
+
+    if (user.trustLevel === TrustLevel.RESTRICTED) {
+      throw new BadRequestException(
+        'Tai khoan dang bi gioi han nen khong the gui dia diem',
+      );
+    }
+
+    const submittedToday = await this.locationModel.countDocuments({
+      submittedBy: new Types.ObjectId(userId),
+      source: LocationSource.CUSTOMER,
+      submittedAt: { $gte: getStartOfVietnamDay() },
+      status: { $in: [LocationStatus.SUBMITTED, LocationStatus.PUBLISHED] },
+    });
+    if (submittedToday >= CONTRIBUTION_DAILY_LIMIT) {
+      throw new BadRequestException(
+        'Ban chi duoc gui toi da 3 dia diem moi ngay',
+      );
+    }
+
     const category = await this.categoryModel
       .findOne({ _id: dto.categoryId, isActive: true })
       .exec();
@@ -219,6 +258,7 @@ export class LocationService {
       dto.name,
       dto.latitude,
       dto.longitude,
+      dto.categoryId,
     );
     const suspectedDuplicateIds = duplicateCandidates.map(
       (item) => new Types.ObjectId(item.id),
@@ -361,6 +401,26 @@ export class LocationService {
     await Promise.all([
       request.save(),
       location.save(),
+      this.trustEngineService.recordEvent({
+        userId: request.submittedBy,
+        type: TrustEventType.LOCATION_APPROVED,
+        reason: 'Location contribution approved',
+        refCollection: 'location_requests',
+        refId: request._id,
+      }),
+      this.auditLogModel.create({
+        actorId: new Types.ObjectId(reviewerId),
+        action: 'LOCATION_REQUEST_APPROVED',
+        targetCollection: 'location_requests',
+        targetId: request._id,
+        diff: {
+          locationId: request.locationId,
+          status: {
+            from: LocationStatus.SUBMITTED,
+            to: LocationStatus.PUBLISHED,
+          },
+        },
+      }),
       this.notificationModel.create({
         userId: request.submittedBy,
         type: 'LOCATION_REQUEST_APPROVED',
@@ -404,6 +464,20 @@ export class LocationService {
     await Promise.all([
       request.save(),
       location.save(),
+      this.auditLogModel.create({
+        actorId: new Types.ObjectId(reviewerId),
+        action: 'LOCATION_REQUEST_REJECTED',
+        targetCollection: 'location_requests',
+        targetId: request._id,
+        reason: rejectReason,
+        diff: {
+          locationId: request.locationId,
+          status: {
+            from: LocationStatus.SUBMITTED,
+            to: LocationStatus.REJECTED,
+          },
+        },
+      }),
       this.notificationModel.create({
         userId: request.submittedBy,
         type: 'LOCATION_REQUEST_REJECTED',
@@ -573,32 +647,65 @@ export class LocationService {
     name: string,
     latitude?: number,
     longitude?: number,
+    categoryId?: string,
   ): Promise<DuplicateLocationPreview[]> {
-    const normalizedName = escapeRegex(name.trim());
+    const query: Record<string, unknown> = {
+      status: { $in: [LocationStatus.PUBLISHED, LocationStatus.SUBMITTED] },
+    };
+
+    if (categoryId) {
+      query.categoryId = new Types.ObjectId(categoryId);
+    }
+
+    if (latitude !== undefined && longitude !== undefined) {
+      query.geo = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
+          },
+          $maxDistance: DUPLICATE_DISTANCE_METERS,
+        },
+      };
+    } else {
+      query.name = { $regex: escapeRegex(name.trim()), $options: 'i' };
+    }
+
     const locations = await this.locationModel
-      .find({
-        name: { $regex: normalizedName, $options: 'i' },
-        status: { $in: [LocationStatus.PUBLISHED, LocationStatus.SUBMITTED] },
-      })
-      .limit(5)
+      .find(query)
+      .limit(20)
       .lean()
       .exec();
 
-    return locations.map((location) => ({
-      id: String(location._id),
-      name: location.name,
-      address: location.address,
-      status: location.status,
-      distanceMeters:
-        latitude !== undefined && longitude !== undefined
-          ? getDistanceMeters(
-              latitude,
-              longitude,
-              location.geo.coordinates[1],
-              location.geo.coordinates[0],
-            )
-          : null,
-    }));
+    return locations
+      .map((location) => {
+        const distanceMeters =
+          latitude !== undefined && longitude !== undefined
+            ? getDistanceMeters(
+                latitude,
+                longitude,
+                location.geo.coordinates[1],
+                location.geo.coordinates[0],
+              )
+            : null;
+        const similarity = getNameSimilarity(name, location.name);
+
+        return {
+          id: String(location._id),
+          name: location.name,
+          address: location.address,
+          status: location.status,
+          distanceMeters,
+          similarity,
+        };
+      })
+      .filter(
+        (location) =>
+          location.similarity >= DUPLICATE_SIMILARITY_THRESHOLD &&
+          (location.distanceMeters === null ||
+            location.distanceMeters <= DUPLICATE_DISTANCE_METERS),
+      )
+      .slice(0, 5);
   }
 
   async updateLocation(
@@ -834,4 +941,66 @@ function getDistanceMeters(
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getStartOfVietnamDay() {
+  const now = new Date();
+  const vietnamDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+
+  return new Date(`${vietnamDate}T00:00:00+07:00`);
+}
+
+function normalizePlaceName(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getNameSimilarity(left: string, right: string) {
+  const first = normalizePlaceName(left);
+  const second = normalizePlaceName(right);
+
+  if (!first || !second) {
+    return 0;
+  }
+
+  if (first === second) {
+    return 1;
+  }
+
+  const distance = getLevenshteinDistance(first, second);
+  return 1 - distance / Math.max(first.length, second.length);
+}
+
+function getLevenshteinDistance(left: string, right: string) {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: right.length + 1 }, () => 0);
+
+  for (let i = 1; i <= left.length; i += 1) {
+    current[0] = i;
+
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitutionCost = left[i - 1] === right[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + substitutionCost,
+      );
+    }
+
+    for (let j = 0; j <= right.length; j += 1) {
+      previous[j] = current[j];
+    }
+  }
+
+  return previous[right.length];
 }
