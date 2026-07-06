@@ -132,7 +132,7 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                   pathname: `/location/edit/[id]`,
                   params: {
                     id: data._id,
-                    type: "openingHours",
+                    type: "description",
                   },
                 });
                 setVisible(false);
