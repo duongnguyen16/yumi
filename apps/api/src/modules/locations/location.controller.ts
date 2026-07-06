@@ -273,7 +273,14 @@ export class LocationController {
         req?.user?.userId as string,
         file,
       );
-      return result;
+      if (!result.success) {
+        if (result.statusCode === 400) {
+          throw new BadRequestException(result.message);
+        }
+        if (result.statusCode === 403) {
+          throw new BadRequestException(result.message);
+        }
+      }
     } catch (error) {
       console.error('Error in updateLocation controller:', error);
       throw new InternalServerErrorException(
