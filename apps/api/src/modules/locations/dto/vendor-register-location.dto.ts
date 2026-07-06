@@ -29,7 +29,7 @@ export class CreateLocationDto {
   @IsOptional()
   @IsArray()
   @IsMongoId({ each: true })
-  tagIds?: string[];
+  subCategoryIds?: string[];
 
   @IsString()
   @IsNotEmpty()
