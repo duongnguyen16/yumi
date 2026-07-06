@@ -743,6 +743,13 @@ export class LocationService {
           statusCode: 404,
         };
       }
+      if (location.ownerId !== userId) {
+        return {
+          success: false,
+          message: 'Bạn không có quyền chỉnh sửa địa điểm này',
+          statusCode: 403,
+        };
+      }
       let reviewRequiredData: ReviewRequiredData = {};
       let nonReviewData: Record<string, unknown> = {};
       if (updateData?.name || updateData?.address) {
@@ -868,10 +875,14 @@ export class LocationService {
         'vendor-verification',
         files?.imageFiles ?? [],
       );
-      const uploadedLicenseFiles = await this.imagesService.uploadMultiMedia(
-        'vendor-verification',
-        files?.licenseFiles ?? [],
-      );
+      let uploadedLicenseFiles: { url: string }[] = [];
+      const licenseFiles = files?.licenseFiles ?? [];
+      if (licenseFiles.length > 0) {
+        uploadedLicenseFiles = await this.imagesService.uploadMultiMedia(
+          'vendor-verification',
+          files?.licenseFiles ?? [],
+        );
+      }
       const uploadedVideoFiles = await this.imagesService.uploadMultiMedia(
         'vendor-verification',
         files?.videoFiles ?? [],
@@ -896,8 +907,10 @@ export class LocationService {
             ? LocationSource.VENDOR
             : LocationSource.CUSTOMER,
         categoryId: new Types.ObjectId(locationDataParsed.categoryId),
-        subCategoryIds: locationDataParsed.tagIds
-          ? locationDataParsed.tagIds.map((id) => new Types.ObjectId(id))
+        subCategoryIds: locationDataParsed.subCategoryIds
+          ? locationDataParsed.subCategoryIds.map(
+              (id) => new Types.ObjectId(id),
+            )
           : [],
         submittedAt: new Date(),
       });

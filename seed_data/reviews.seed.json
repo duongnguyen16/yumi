@@ -328,5 +328,115 @@
     "status": "PUBLISHED",
     "createdAt": { "$date": "2026-06-26T03:25:00.000Z" },
     "updatedAt": { "$date": "2026-06-26T03:25:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000031" },
+    "locationId": { "$oid": "667200000000000000000002" },
+    "userId": { "$oid": "667300000000000000000006" },
+    "rating": 4,
+    "comment": "Quan phuc vu nhanh, ban ghe sach va nuoc dung hop vi voi bua sang.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T03:30:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T03:30:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000032" },
+    "locationId": { "$oid": "667200000000000000000004" },
+    "userId": { "$oid": "667300000000000000000008" },
+    "rating": 5,
+    "comment": "Banh mi nong gion, lam nhanh va rat tien khi can an sang mang di.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T03:35:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T03:35:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000033" },
+    "locationId": { "$oid": "667200000000000000000006" },
+    "userId": { "$oid": "667300000000000000000001" },
+    "rating": 4,
+    "comment": "Do uong ra nhanh, tra sua khong qua ngot va gia hop ly cho sinh vien.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T03:40:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T03:40:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000034" },
+    "locationId": { "$oid": "667200000000000000000007" },
+    "userId": { "$oid": "667300000000000000000003" },
+    "rating": 5,
+    "comment": "Khu doc sach yen tinh, ban ngoi thoai mai va phu hop hoc tap dai gio.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T03:45:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T03:45:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000035" },
+    "locationId": { "$oid": "667200000000000000000009" },
+    "userId": { "$oid": "667300000000000000000005" },
+    "rating": 4,
+    "comment": "San vuon thoang, phong don gian nhung sach va phu hop nghi cong tac.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T03:50:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T03:50:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000036" },
+    "locationId": { "$oid": "667200000000000000000011" },
+    "userId": { "$oid": "667300000000000000000007" },
+    "rating": 5,
+    "comment": "Nhan file va in nhanh, ban in ro net va phu hop in bai nop gap.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T03:55:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T03:55:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000037" },
+    "locationId": { "$oid": "667200000000000000000012" },
+    "userId": { "$oid": "667300000000000000000002" },
+    "rating": 4,
+    "comment": "San de tim, mat co on va co the dat gio linh hoat cho nhom ban.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T04:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000038" },
+    "locationId": { "$oid": "667200000000000000000015" },
+    "userId": { "$oid": "667300000000000000000004" },
+    "rating": 4,
+    "comment": "Sinh to dac, trai cay tuoi va quan phu hop mua mang di sau gio hoc.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T04:05:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:05:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000039" },
+    "locationId": { "$oid": "667200000000000000000018" },
+    "userId": { "$oid": "667300000000000000000006" },
+    "rating": 5,
+    "comment": "Dich vu giat say dung hen, do gap gon va nhan vien huong dan ky.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T04:10:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:10:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667400000000000000000040" },
+    "locationId": { "$oid": "667200000000000000000019" },
+    "userId": { "$oid": "667300000000000000000008" },
+    "rating": 4,
+    "comment": "Cua hang nho nhung hang sap xep de tim va mo cua muon rat tien.",
+    "images": [],
+    "status": "PUBLISHED",
+    "createdAt": { "$date": "2026-06-26T04:15:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:15:00.000Z" }
   }
 ]
