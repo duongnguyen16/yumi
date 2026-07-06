@@ -34,7 +34,7 @@ export default function EditLocationModal({ visible, setVisible, data }) {
             }}
           >
             <Text>
-              {user?.id === data.ownerId
+              {user?._id === data.ownerId
                 ? "Đề Xuất Chỉnh Sửa"
                 : "Chỉnh sửa thông tin địa điểm"}
             </Text>
@@ -132,7 +132,7 @@ export default function EditLocationModal({ visible, setVisible, data }) {
                   pathname: `/location/edit/[id]`,
                   params: {
                     id: data._id,
-                    type: "openingHours",
+                    type: "description",
                   },
                 });
                 setVisible(false);
