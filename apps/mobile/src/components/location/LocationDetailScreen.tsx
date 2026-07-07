@@ -101,7 +101,9 @@ export default function LocationDetailScreen({ data, productData }) {
         {tab === "general" && (
           <GeneralTab data={data} productData={productData} />
         )}
-        {tab === "review" && <ReviewTab />}
+        {tab === "review" && (
+          <ReviewTab locationId={locationId} initialRating={data?.rating} />
+        )}
         {tab === "picture" && <PictureTab />}
       </View>
     </ScrollView>
