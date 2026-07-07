@@ -10,6 +10,11 @@ import { viewCount } from "@/service/locationService";
 export default function LocationDetailScreen({ data, productData }) {
   const [tab, setTab] = useState("general");
   const locationId = data?._id;
+  const coverImage =
+    data?.imagesUrls?.find?.((image) => image?.isCover)?.url ||
+    data?.imagesUrls?.[0]?.url ||
+    data?.imageUrls?.[0] ||
+    null;
 
   const handleShare = async () => {
     if (!locationId) {
@@ -45,9 +50,11 @@ export default function LocationDetailScreen({ data, productData }) {
       <View>
         <Image
           style={{ width: "100%", height: 200, resizeMode: "cover" }}
-          alt="Location Image"
+          alt={data?.name || "Location Image"}
           source={{
-            uri: "https://lh3.googleusercontent.com/gps-cs-s/APNQkAFwLdUiO4AMZUkKhCcZQJduHyXsEGUYggQ5etGbL2YR2zH8NBGrEuLJDAuk8vaxZCnMayLsM1ivTGMpFWECWRMJpv5CrDQvW8sYFu7k3XWlNFb2augqPzIg7VJouqfmGx98dLtElg=w408-h306-k-no",
+            uri:
+              coverImage ||
+              "https://placehold.co/800x450/F4EFE8/5F574F?text=No+image",
           }}
         />
 
