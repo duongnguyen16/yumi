@@ -1,17 +1,21 @@
 import {
+  createReview,
   getReviewsByLocation,
   LocationReview,
   ReviewSummary,
 } from "@/service/reviewService";
-import React, { useEffect, useMemo, useState } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import * as Location from "expo-location";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Image, Pressable, StyleSheet, View } from "react-native";
 import {
   ActivityIndicator,
   Button,
   Card,
   Chip,
   Icon,
+  Snackbar,
   Text,
+  TextInput,
 } from "react-native-paper";
 
 type ReviewTabProps = {
@@ -19,7 +23,10 @@ type ReviewTabProps = {
   initialRating?: Partial<ReviewSummary> | null;
 };
 
-export default function ReviewTab({ locationId, initialRating }: ReviewTabProps) {
+export default function ReviewTab({
+  locationId,
+  initialRating,
+}: ReviewTabProps) {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<ReviewSummary>({
     avgRating: Number(initialRating?.avgRating ?? 0),
@@ -27,44 +34,87 @@ export default function ReviewTab({ locationId, initialRating }: ReviewTabProps)
   });
   const [reviews, setReviews] = useState<LocationReview[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  const loadReviews = useCallback(async (options?: { showLoading?: boolean }) => {
+    if (!locationId) {
+      setLoading(false);
+      return;
+    }
+
+    if (options?.showLoading !== false) {
+      setLoading(true);
+    }
+    const response = await getReviewsByLocation(locationId);
+
+    if (response.success) {
+      setSummary(response.summary);
+      setReviews(response.reviews);
+      setErrorMessage("");
+    } else {
+      setReviews([]);
+      setErrorMessage(response.message);
+    }
+    setLoading(false);
+  }, [locationId]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadReviews = async () => {
-      if (!locationId) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      const response = await getReviewsByLocation(locationId);
-      if (!mounted) {
-        return;
-      }
-
-      if (response.success) {
-        setSummary(response.summary);
-        setReviews(response.reviews);
-        setErrorMessage("");
-      } else {
-        setReviews([]);
-        setErrorMessage(response.message);
-      }
-      setLoading(false);
-    };
-
-    loadReviews();
-
-    return () => {
-      mounted = false;
-    };
-  }, [locationId]);
+    void Promise.resolve().then(() => loadReviews());
+  }, [loadReviews]);
 
   const formattedRating = useMemo(
     () => Number(summary.avgRating || 0).toFixed(1),
     [summary.avgRating],
   );
+
+  const handleSubmitReview = async () => {
+    if (!locationId || submitting) {
+      return;
+    }
+
+    const trimmedComment = comment.trim();
+    if (trimmedComment.length < 20) {
+      setNotice("Nội dung đánh giá cần ít nhất 20 ký tự.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== "granted") {
+        setNotice("Bạn cần bật quyền vị trí để gửi đánh giá mới.");
+        return;
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const response = await createReview({
+        locationId,
+        rating,
+        comment: trimmedComment,
+        deviceLatitude: currentLocation.coords.latitude,
+        deviceLongitude: currentLocation.coords.longitude,
+        accuracyMeters: currentLocation.coords.accuracy ?? undefined,
+      });
+
+      if (!response.success) {
+        setNotice(response.message);
+        return;
+      }
+
+      setComment("");
+      setRating(5);
+      setNotice("Đã gửi đánh giá.");
+      await loadReviews({ showLoading: false });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -95,6 +145,34 @@ export default function ReviewTab({ locationId, initialRating }: ReviewTabProps)
         </Card.Content>
       </Card>
 
+      <Card mode="contained" style={styles.formCard}>
+        <Card.Content>
+          <Text variant="titleMedium" style={styles.formTitle}>
+            Viết đánh giá
+          </Text>
+          <PressableStarRating rating={rating} onChange={setRating} />
+          <TextInput
+            mode="outlined"
+            value={comment}
+            onChangeText={setComment}
+            placeholder="Chia sẻ trải nghiệm của bạn..."
+            multiline
+            numberOfLines={4}
+            style={styles.commentInput}
+          />
+          <Button
+            mode="contained"
+            icon="send"
+            loading={submitting}
+            disabled={submitting}
+            onPress={handleSubmitReview}
+            style={styles.submitButton}
+          >
+            Gửi đánh giá
+          </Button>
+        </Card.Content>
+      </Card>
+
       {errorMessage ? (
         <Text style={styles.errorText}>{errorMessage}</Text>
       ) : null}
@@ -110,6 +188,14 @@ export default function ReviewTab({ locationId, initialRating }: ReviewTabProps)
       ) : (
         reviews.map((review) => <ReviewCard key={review.id} review={review} />)
       )}
+
+      <Snackbar
+        visible={Boolean(notice)}
+        onDismiss={() => setNotice("")}
+        duration={3000}
+      >
+        {notice}
+      </Snackbar>
     </View>
   );
 }
@@ -171,22 +257,13 @@ function ReviewCard({ review }: { review: LocationReview }) {
         {hasReply ? (
           <View style={styles.replyBox}>
             <Text variant="labelMedium" style={styles.replyLabel}>
-              Bạn đã trả lời
+              Chủ địa điểm đã trả lời
             </Text>
             <Text variant="bodySmall" style={styles.replyText}>
               {review.reply?.content}
             </Text>
           </View>
-        ) : (
-          <Button
-            mode="contained-tonal"
-            icon="reply"
-            compact
-            style={styles.replyButton}
-          >
-            Phản hồi
-          </Button>
-        )}
+        ) : null}
       </Card.Content>
     </Card>
   );
@@ -203,6 +280,36 @@ function StarRating({ rating, size = 15 }: { rating: number; size?: number }) {
           color={index < Math.round(rating || 0) ? "#F5A400" : "#D7D2CA"}
         />
       ))}
+    </View>
+  );
+}
+
+function PressableStarRating({
+  rating,
+  onChange,
+}: {
+  rating: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <View style={styles.pressableStars}>
+      {Array.from({ length: 5 }).map((_, index) => {
+        const value = index + 1;
+        return (
+          <Pressable
+            key={value}
+            onPress={() => onChange(value)}
+            hitSlop={8}
+            style={styles.starButton}
+          >
+            <Icon
+              source="star"
+              size={28}
+              color={value <= rating ? "#F5A400" : "#D7D2CA"}
+            />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -287,6 +394,35 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#B3261E",
+  },
+  formCard: {
+    borderRadius: 8,
+    backgroundColor: "#FFFDF9",
+  },
+  formTitle: {
+    fontWeight: "700",
+    color: "#28231E",
+  },
+  pressableStars: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 10,
+  },
+  starButton: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commentInput: {
+    marginTop: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  submitButton: {
+    alignSelf: "flex-end",
+    marginTop: 12,
+    borderRadius: 8,
   },
   emptyCard: {
     borderRadius: 8,
@@ -373,10 +509,5 @@ const styles = StyleSheet.create({
   },
   replyText: {
     color: "#514942",
-  },
-  replyButton: {
-    alignSelf: "flex-start",
-    marginTop: 12,
-    borderRadius: 8,
   },
 });

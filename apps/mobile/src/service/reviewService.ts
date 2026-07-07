@@ -28,6 +28,16 @@ export type ReviewSummary = {
   reviewCount: number;
 };
 
+export type CreateReviewPayload = {
+  locationId: string;
+  rating: number;
+  comment: string;
+  imageUrls?: string[];
+  deviceLatitude?: number;
+  deviceLongitude?: number;
+  accuracyMeters?: number;
+};
+
 const emptySummary: ReviewSummary = {
   avgRating: 0,
   reviewCount: 0,
@@ -53,4 +63,22 @@ const getReviewsByLocation = async (locationId: string) => {
   }
 };
 
-export { getReviewsByLocation };
+const createReview = async (payload: CreateReviewPayload) => {
+  try {
+    const response = await api.post("/reviews", payload);
+    return {
+      success: true,
+      review: response.data?.review,
+      message: response.data?.message || "Đã gửi đánh giá.",
+    };
+  } catch (error) {
+    console.log("Error creating review:", error);
+    return {
+      success: false,
+      message:
+        error?.response?.data?.message || "Không thể gửi đánh giá lúc này.",
+    };
+  }
+};
+
+export { createReview, getReviewsByLocation };
