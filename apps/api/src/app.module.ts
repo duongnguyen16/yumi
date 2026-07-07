@@ -12,6 +12,10 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { UsersModule } from './modules/users/users.module';
 import { ImagesModule } from './modules/images/images.module';
 import { ProductsModule } from './modules/products/products.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
+import { LocationAdminModule } from './modules/location-admin/location-admin.module';
+import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
 
 @Module({
   imports: [
@@ -38,6 +42,10 @@ import { ProductsModule } from './modules/products/products.module';
     UsersModule,
     ImagesModule,
     ProductsModule,
+    ReviewsModule,
+    LocationContributionsModule,
+    LocationAdminModule,
+    VendorLocationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
