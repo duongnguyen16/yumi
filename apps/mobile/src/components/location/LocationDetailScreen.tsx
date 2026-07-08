@@ -7,7 +7,7 @@ import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
 
-export default function LocationDetailScreen({ data }) {
+export default function LocationDetailScreen({ data, onRefresh }) {
   const [tab, setTab] = useState("general");
   const locationId = data?.location?._id;
 
@@ -98,7 +98,9 @@ export default function LocationDetailScreen({ data }) {
 
       {/* Nội dung tab */}
       <View style={{ padding: 16 }}>
-        {tab === "general" && <GeneralTab data={data} />}
+        {tab === "general" && (
+          <GeneralTab data={data} onProductsChanged={onRefresh} />
+        )}
         {tab === "review" && <ReviewTab />}
         {tab === "picture" && <PictureTab />}
       </View>
