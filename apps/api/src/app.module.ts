@@ -11,6 +11,7 @@ import { AdminCategoryModule } from './modules/admin-category/admin-category.mod
 import { CategoriesModule } from './modules/categories/categories.module';
 import { UsersModule } from './modules/users/users.module';
 import { ImagesModule } from './modules/images/images.module';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ImagesModule } from './modules/images/images.module';
     CategoriesModule,
     UsersModule,
     ImagesModule,
+    ProductsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

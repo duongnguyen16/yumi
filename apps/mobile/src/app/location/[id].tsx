@@ -12,25 +12,46 @@ export default function LocationDetail() {
   const [loading, setLoading] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   console.log("locationDetail", id);
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      try {
-        const response = await getLocationById(id as string);
-        if (response.success) {
-          setLocationData(response);
-        } else {
-          console.log("Error fetching location data:", response.message);
-          setDialogVisible(true);
-        }
-      } catch (error) {
-        console.log("Error fetching location data:", error);
+  const fetchLocationData = async () => {
+    if (!id) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await getLocationById(id as string);
+      if (response.success) {
+        setLocationData(response);
+      } else {
+        console.log("Error fetching location data:", response.message);
         setDialogVisible(true);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.log("Error fetching location data:", error);
+      setDialogVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchLocationData();
   }, [id]);
+
+  const refreshLocationData = async () => {
+    try {
+      const response = await getLocationById(id as string);
+      if (response.success) {
+        setLocationData(response);
+      } else {
+        console.log("Error fetching location data:", response.message);
+        setDialogVisible(true);
+      }
+    } catch (error) {
+      console.log("Error fetching location data:", error);
+      setDialogVisible(true);
+    }
+  };
   if (loading) {
     return (
       <SafeAreaView
@@ -51,7 +72,10 @@ export default function LocationDetail() {
           ),
         }}
       />
-      <LocationDetailScreen data={locationData} />
+      <LocationDetailScreen
+        data={locationData}
+        onRefresh={refreshLocationData}
+      />
       <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
         <Dialog.Title>Lỗi</Dialog.Title>
         <Dialog.Content>
