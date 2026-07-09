@@ -2,12 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class LocationGeoService {
-  getDistanceMeters(
-    lat1: number,
-    lng1: number,
-    lat2: number,
-    lng2: number,
-  ) {
+  getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
     const earthRadius = 6371000;
     const dLat = this.toRadians(lat2 - lat1);
     const dLng = this.toRadians(lng2 - lng1);
