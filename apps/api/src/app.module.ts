@@ -16,6 +16,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
 import { LocationAdminModule } from './modules/location-admin/location-admin.module';
 import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
+import { LocationReportsModule } from './modules/location-reports/location-reports.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { VendorLocationsModule } from './modules/vendor-locations/vendor-locatio
     LocationContributionsModule,
     LocationAdminModule,
     VendorLocationsModule,
+    LocationReportsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
