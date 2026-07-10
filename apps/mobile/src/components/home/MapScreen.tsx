@@ -11,12 +11,18 @@ import {
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useLocationContext } from "@/contexts/locationContext";
 import { getAllLocations, getCurrentLocation } from "@/service/locationService";
-import { IconButton, Text, TextInput } from "react-native-paper";
+import {
+  ActivityIndicator,
+  IconButton,
+  Text,
+  TextInput,
+} from "react-native-paper";
 import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
+import Option from "../ui/Option";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_APƯ ||
+  process.env.EXPO_PUBLIC_MAP_APu ||
   "https://demotiles.maplibre.org/style.json";
 
 const emptyGeoJson = {
@@ -40,12 +46,15 @@ export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [geoJson, setGeoJson] = useState(emptyGeoJson);
   const cameraRef = useRef<CameraRef>(null);
   const router = useRouter();
   const searchInputRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScreen, setSearchScreen] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [option, setOption] = useState(null);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -62,14 +71,16 @@ export default function MapScreen() {
   useEffect(() => {
     const loadStyle = async () => {
       try {
-        console.log("Loading map style from API:", MAP_API);
         const response = await fetch(MAP_API);
         if (!response.ok) {
           throw new Error(`Map style request failed: ${response.status}`);
         }
         const styleJson = (await response.json()) as MutableMapStyle;
-        // styleJson.glyphs =
-        //   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        if (!Array.isArray(styleJson.layers)) {
+          throw new Error("Map style response is missing layers");
+        }
+        styleJson.glyphs =
+          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
@@ -96,10 +107,14 @@ export default function MapScreen() {
             },
           };
         });
-        setMapStyle(styleJson);
+        setMapStyle(styleJson as StyleSpecification);
+        setMapError(null);
         setLoading(false);
       } catch (error) {
         console.error("Error loading map style:", error);
+        setMapError(
+          error instanceof Error ? error.message : "Không tải được bản đồ.",
+        );
         setLoading(false);
       }
     };
@@ -133,8 +148,6 @@ export default function MapScreen() {
     try {
       const currentLocation = await getCurrentLocation();
 
-      console.log("Current location fetched:", currentLocation);
-
       if (!currentLocation) {
         console.error("Current location is null or undefined");
         return;
@@ -161,8 +174,34 @@ export default function MapScreen() {
     }
   };
 
-  if (loading || !mapStyle || !location) {
-    return <View style={styles.container} />;
+  const handleOptionSelect = (selectedOption) => {
+    console.log("Selected option:", selectedOption);
+    if (selectedOption === "add-location") {
+      router.push({ pathname: "/contribute", params: { type: "add" } });
+    }
+    if (selectedOption === "register-location") {
+      router.push({ pathname: "/contribute", params: { type: "register" } });
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerState}>
+        <ActivityIndicator size="large" />
+        <Text>Đang tải bản đồ...</Text>
+      </View>
+    );
+  }
+
+  if (!mapStyle || !location) {
+    return (
+      <View style={styles.centerState}>
+        <Text variant="titleMedium">Không hiện được bản đồ</Text>
+        <Text style={styles.stateText}>
+          {mapError || "Không có dữ liệu vị trí hiện tại."}
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -328,10 +367,31 @@ export default function MapScreen() {
               size={35}
               icon="plus"
               onPress={() => {
-                router.push("/contribute" as never);
+                // router.push("/contribute" as never);
+                setVisible(true);
               }}
             />
           </View>
+          <Option
+            visible={visible}
+            setVisible={setVisible}
+            title="Bạn muốn làm gì?"
+            options={[
+              {
+                label: "Thêm địa điểm",
+                value: "add-location",
+                icon: "plus",
+              },
+              {
+                label: "Đăng ký địa điểm",
+                value: "register-location",
+                icon: "file-document-edit-outline",
+              },
+            ]}
+            option={option}
+            setOption={setOption}
+            onDismiss={(selectedOption) => handleOptionSelect(selectedOption)}
+          />
         </View>
       )}
     </View>
@@ -342,6 +402,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: "relative",
+  },
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
+    backgroundColor: "#fff",
+  },
+  stateText: {
+    textAlign: "center",
   },
   map: {
     flex: 1,
