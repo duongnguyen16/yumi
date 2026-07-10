@@ -1,8 +1,8 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
-  ForbiddenException,
   Get,
   InternalServerErrorException,
   NotFoundException,
@@ -28,9 +28,7 @@ export class AdminLocationController {
 
   @Get('queue')
   async getList(@Query() query: ListPendingRequestsDTO) {
-    const r = await this.service.getList(query);
-    if (!r.success) throw new InternalServerErrorException(r.message);
-    return r;
+    return this.handle(await this.service.getList(query));
   }
 
   @Patch(':id/approve')
@@ -58,7 +56,7 @@ export class AdminLocationController {
     if (!r.success) {
       if (r.statusCode === 400) throw new BadRequestException(r.message);
       if (r.statusCode === 404) throw new NotFoundException(r.message);
-      if (r.statusCode === 409) throw new ForbiddenException(r.message);
+      if (r.statusCode === 409) throw new ConflictException(r.message);
       throw new InternalServerErrorException(r.message);
     }
     return r;
