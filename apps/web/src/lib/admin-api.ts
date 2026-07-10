@@ -33,7 +33,13 @@ export async function login(
   password: string,
 ): Promise<LoginResponse> {
   const res = await api.post<LoginResponse>('/auth/login', { email, password });
-  return res.data;
+  // Backend returns userData, frontend expects user
+  const data = res.data;
+  if (data.success && (data as any).userData) {
+    (data as any).user = (data as any).userData;
+    delete (data as any).userData;
+  }
+  return data;
 }
 
 export async function listCategories(): Promise<AdminCategory[]> {
