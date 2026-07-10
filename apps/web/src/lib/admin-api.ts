@@ -105,3 +105,64 @@ export async function setSubCategoryStatus(
   );
   return res.data;
 }
+
+export interface LocationRequestFlags {
+  suspectedDuplicate: boolean;
+  suspectedDuplicateLocationIds: string[];
+  farPin: boolean;
+}
+
+export interface AdminLocationRequest {
+  _id: string;
+  type?: string;
+  status: string;
+  submittedBy?: { _id: string; fullName?: string; email?: string } | string;
+  locationId?: { _id: string; name?: string; address?: string; status?: string } | string;
+  newData?: Record<string, unknown>;
+  oldData?: Record<string, unknown> | null;
+  changedFields?: string[];
+  imageUrls?: string[];
+  isPotentialDuplicate?: boolean;
+  suspectedDuplicateLocationIds?: string[];
+  deviceDistanceMeters?: number | null;
+  reviewerId?: string | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  flags?: LocationRequestFlags;
+}
+
+export interface LocationRequestQueueResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  items: AdminLocationRequest[];
+}
+
+export async function getLocationRequestQueue(
+  page = 1,
+  limit = 30,
+): Promise<LocationRequestQueueResponse> {
+  const res = await api.get<LocationRequestQueueResponse>(
+    '/admin/location-requests/queue',
+    { params: { page, limit } },
+  );
+  return res.data;
+}
+
+export async function approveLocationRequest(id: string): Promise<void> {
+  await api.patch(`/admin/location-requests/${id}/approve`);
+}
+
+export async function rejectLocationRequest(
+  id: string,
+  reason: string,
+  duplicateOfLocationId?: string,
+): Promise<void> {
+  await api.patch(`/admin/location-requests/${id}/reject`, {
+    reason,
+    duplicateOfLocationId,
+  });
+}
