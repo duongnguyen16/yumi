@@ -9,6 +9,7 @@ import Feather from "@expo/vector-icons/Feather";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
 import {
   Image,
   Modal,
@@ -43,6 +44,7 @@ type ProfileData = {
 };
 
 export default function Profile() {
+  const router = useRouter();
   const { user, setUser, handleLogout } = useContext(userContext);
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -339,6 +341,16 @@ export default function Profile() {
           <MenuItem icon="star" label="Reviews đã viết" />
           <Divider />
           <MenuItem icon="mail" label="Thông báo" />
+          {user?.role === "VENDOR" ? (
+            <>
+              <Divider />
+              <MenuItem
+                icon="repeat"
+                label="Yêu cầu chuyển quyền"
+                onPress={() => router.push("/request-access" as never)}
+              />
+            </>
+          ) : null}
         </View>
 
         <Button
