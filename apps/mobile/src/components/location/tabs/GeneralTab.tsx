@@ -88,6 +88,21 @@ export default function GeneralTab({
             </Button>
           </Card.Actions>
         ) : null}
+        {user?.role === "VENDOR" && data?.ownerId && user?._id !== data.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="outlined"
+              onPress={() =>
+                router.push({
+                  pathname: "/request-access/new/[locationId]",
+                  params: { locationId: String(data?._id), name: data?.name || "" },
+                } as never)
+              }
+            >
+              Xin quyền quản lý
+            </Button>
+          </Card.Actions>
+        ) : null}
       </Card>
 
       <ProductSection
