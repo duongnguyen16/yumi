@@ -137,7 +137,7 @@ export class TrustEngineService {
   private async findUser(userId: string | Types.ObjectId) {
     const user = await this.userModel.findById(this.toObjectId(userId));
     if (!user) {
-      throw new NotFoundException('Khong tim thay nguoi dung');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     return user;
@@ -147,7 +147,7 @@ export class TrustEngineService {
     if (input.type === TrustEventType.ADMIN_ADJUSTMENT) {
       if (typeof input.pointChange !== 'number') {
         throw new BadRequestException(
-          'ADMIN_ADJUSTMENT can ghi ro pointChange',
+          'ADMIN_ADJUSTMENT cần ghi rõ pointChange',
         );
       }
 

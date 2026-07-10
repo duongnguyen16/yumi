@@ -1,6 +1,7 @@
 import LocationDetailScreen from "@/components/location/LocationDetailScreen";
 import Badge from "@/components/ui/Badge";
 import { getLocationById } from "@/service/locationService";
+import { getAllProductsByLocation } from "@/service/product";
 import { Stack, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Button, Dialog, Text } from "react-native-paper";
@@ -11,13 +12,13 @@ export default function LocationDetail() {
   const [locationData, setLocationData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
-  console.log("locationDetail", id);
+  const [productData, setProductData] = useState(null);
   useEffect(() => {
     const fetchLocationData = async () => {
       try {
         const response = await getLocationById(id as string);
         if (response.success) {
-          setLocationData(response);
+          setLocationData(response.data);
         } else {
           console.log("Error fetching location data:", response.message);
           setDialogVisible(true);
@@ -29,7 +30,18 @@ export default function LocationDetail() {
         setLoading(false);
       }
     };
+    const fetchProductData = async () => {
+      try {
+        const response = await getAllProductsByLocation(id as string);
+        if (response.success) {
+          setProductData(response.data);
+        }
+      } catch (error) {
+        console.log("Error fetching product data:", error);
+      }
+    };
     fetchLocationData();
+    fetchProductData();
   }, [id]);
   if (loading) {
     return (
@@ -44,14 +56,14 @@ export default function LocationDetail() {
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <Stack.Screen
         options={{
-          headerTitle: locationData?.location?.name || "Chi tiết vị trí",
+          headerTitle: locationData?.name || "Chi tiết vị trí",
           headerShown: true,
           headerRight: () => (
-            <Badge status={locationData?.location?.status || "CLOSED"} />
+            <Badge status={locationData?.status || "CLOSED"} />
           ),
         }}
       />
-      <LocationDetailScreen data={locationData} />
+      <LocationDetailScreen data={locationData} productData={productData} />
       <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
         <Dialog.Title>Lỗi</Dialog.Title>
         <Dialog.Content>
