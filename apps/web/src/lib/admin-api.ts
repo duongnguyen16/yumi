@@ -105,3 +105,71 @@ export async function setSubCategoryStatus(
   );
   return res.data;
 }
+
+// ─── Admin User Management (F31) ────────────────────────────────
+
+export interface AdminUser {
+  _id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  status: string;
+  phone?: string;
+  phoneVerified: boolean;
+  avatarUrl?: string;
+  trustScore: number;
+  trustLevel: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listUsers(): Promise<AdminUser[]> {
+  const res = await api.get<{ success: boolean; users: AdminUser[] }>(
+    '/admin/users',
+  );
+  return res.data.users;
+}
+
+export async function getUserDetail(id: string): Promise<AdminUser> {
+  const res = await api.get<{ success: boolean; user: AdminUser }>(
+    `/admin/users/${id}`,
+  );
+  return res.data.user;
+}
+
+export async function updateUserStatus(
+  id: string,
+  status: string,
+  reason?: string,
+): Promise<AdminUser> {
+  const res = await api.patch<{ success: boolean; user: AdminUser }>(
+    `/admin/users/${id}/status`,
+    { status, reason },
+  );
+  return res.data.user;
+}
+
+export async function updateUserRole(
+  id: string,
+  role: string,
+  reason?: string,
+): Promise<AdminUser> {
+  const res = await api.patch<{ success: boolean; user: AdminUser }>(
+    `/admin/users/${id}/role`,
+    { role, reason },
+  );
+  return res.data.user;
+}
+
+export async function adjustUserTrust(
+  id: string,
+  pointChange: number,
+  reason?: string,
+): Promise<{ trustScore: number; trustLevel: string }> {
+  const res = await api.patch<{
+    success: boolean;
+    trustScore: number;
+    trustLevel: string;
+  }>(`/admin/users/${id}/trust`, { pointChange, reason });
+  return res.data;
+}
