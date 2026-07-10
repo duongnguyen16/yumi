@@ -38,6 +38,12 @@ export type CreateReviewPayload = {
   accuracyMeters?: number;
 };
 
+export type UpdateReviewPayload = {
+  rating?: number;
+  comment?: string;
+  imageUrls?: string[];
+};
+
 const emptySummary: ReviewSummary = {
   avgRating: 0,
   reviewCount: 0,
@@ -81,4 +87,40 @@ const createReview = async (payload: CreateReviewPayload) => {
   }
 };
 
-export { createReview, getReviewsByLocation };
+const updateReview = async (reviewId: string, payload: UpdateReviewPayload) => {
+  try {
+    const response = await api.patch(`/reviews/${reviewId}`, payload);
+    return {
+      success: true,
+      review: response.data?.review,
+      message: response.data?.message || "Đã cập nhật đánh giá.",
+    };
+  } catch (error) {
+    console.log("Error updating review:", error);
+    return {
+      success: false,
+      message:
+        error?.response?.data?.message ||
+        "Không thể cập nhật đánh giá lúc này.",
+    };
+  }
+};
+
+const deleteReview = async (reviewId: string) => {
+  try {
+    const response = await api.delete(`/reviews/${reviewId}`);
+    return {
+      success: true,
+      message: response.data?.message || "Đã xóa đánh giá.",
+    };
+  } catch (error) {
+    console.log("Error deleting review:", error);
+    return {
+      success: false,
+      message:
+        error?.response?.data?.message || "Không thể xóa đánh giá lúc này.",
+    };
+  }
+};
+
+export { createReview, deleteReview, getReviewsByLocation, updateReview };

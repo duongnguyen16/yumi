@@ -39,7 +39,7 @@ export class Review {
   @Prop({ type: Number, required: true, min: 1, max: 5 })
   rating!: number;
 
-  @Prop({ required: true, trim: true, minlength: 20 })
+  @Prop({ required: true, trim: true })
   comment!: string;
 
   @Prop({ type: [ImageAssetSchema], default: [] })
