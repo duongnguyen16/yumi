@@ -64,7 +64,8 @@ export default class AuthService {
       const { accessToken, refreshToken } = this.generateTokens(
         String(user._id),
       );
-      return { success: true, user, accessToken, refreshToken };
+      const userData = await this.userModel.findById(user._id, '-passwordHash');
+      return { success: true, userData, accessToken, refreshToken };
     } catch (error) {
       console.error('Login error:', error);
       return {
