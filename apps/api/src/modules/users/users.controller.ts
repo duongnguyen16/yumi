@@ -38,7 +38,7 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('avatar', {
       fileFilter: (_req, file, callback) => {
-        if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.mimetype)) {
           return callback(
             new UnsupportedMediaTypeException(
               'Avatar chi chap nhan file jpg/png',
@@ -60,7 +60,7 @@ export class UsersController {
           maxSize: 2 * 1024 * 1024,
         })
         .addFileTypeValidator({
-          fileType: /(image\/jpeg|image\/png)$/,
+          fileType: /(image\/jpeg|image\/jpg|image\/png)$/,
         })
         .build({
           fileIsRequired: false,
@@ -76,7 +76,7 @@ export class UsersController {
   private extractUserId(req: any) {
     const userId = (req as { user?: { userId?: string } }).user?.userId;
     if (!userId) {
-      throw new UnauthorizedException('Khong tim thay nguoi dung');
+      throw new UnauthorizedException('Không tìm thấy người dùng');
     }
 
     return userId;

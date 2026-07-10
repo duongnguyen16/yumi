@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { LocationStatus, ReviewStatus } from 'src/common/schemas/common.enums';
+import {
+  Location,
+  LocationDocument,
+} from 'src/common/schemas/location.schema';
 import {
   LocationView,
   LocationViewDocument,
 } from 'src/common/schemas/location-view';
-import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 
 type LocationRating = {
@@ -25,7 +29,9 @@ export class LocationService {
 
   async getAllLocations() {
     try {
-      const locations = await this.locationModel.find().exec();
+      const locations = await this.locationModel
+        .find({ status: LocationStatus.PUBLISHED })
+        .exec();
       const geoJson = {
         type: 'FeatureCollection',
         features: locations.map((location) => ({
@@ -41,28 +47,9 @@ export class LocationService {
           properties: {
             id: location._id,
             name: location.name,
-            // category: location.populate('category').then((cat) => cat.name),
-            // subCategory: location
-            //   .populate('subCategory')
-            //   .then((subCat) => subCat.name),
-            // description: location.description,
-            // address: location.address,
-            //   rating: await this.reviewModel.aggregate([
-            //     {
-            //       $match: { locationId: location._id },
-            //     },
-            //     {
-            //       $group: {
-            //         _id: '$locationId',
-            //         averageRating: { $avg: '$rating' },
-            //         reviewCount: { $sum: 1 },
-            //       },
-            //     },
-            //   ]),
           },
         })),
       };
-      console.log('geoJson:', geoJson);
       if (!locations || locations.length === 0) {
         return {
           success: false,
@@ -85,9 +72,12 @@ export class LocationService {
 
   async getLocationById(locationId: string, userId: string) {
     void userId;
-
     try {
-      const location = await this.locationModel.findById(locationId).exec();
+      const location = await this.locationModel
+        .findById(locationId)
+        .populate('subCategoryIds')
+        .populate('categoryId')
+        .exec();
       if (!location) {
         return {
           success: false,
@@ -97,7 +87,10 @@ export class LocationService {
       }
       const rating = await this.reviewModel.aggregate<LocationRating>([
         {
-          $match: { locationId: location._id },
+          $match: {
+            locationId: location._id,
+            status: ReviewStatus.PUBLISHED,
+          },
         },
         {
           $group: {
@@ -154,6 +147,75 @@ export class LocationService {
         };
       }
       throw error;
+    }
+  }
+
+  async searchLocation(
+    limit: number,
+    page: number,
+    lat: number,
+    lng: number,
+    keyword?: string,
+    categoryId?: string,
+    subCategoryId?: string,
+  ) {
+    try {
+      const filter: Record<string, unknown> = {
+        status: LocationStatus.PUBLISHED,
+      };
+      if (keyword) {
+        const regex = keyword.trim();
+        filter.$or = [
+          { name: { $regex: regex, $options: 'i' } },
+          { description: { $regex: regex, $options: 'i' } },
+          { address: { $regex: regex, $options: 'i' } },
+        ];
+      }
+      if (categoryId) {
+        filter.categoryId = categoryId;
+      }
+      if (subCategoryId) {
+        const ids = subCategoryId.split(',');
+        if (ids.length > 0) {
+          filter.subCategoryIds = {
+            $in: ids,
+          };
+        }
+      }
+      const skip = (page - 1) * limit;
+      const result = await this.locationModel.aggregate([
+        {
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: [lng, lat],
+            },
+            distanceField: 'distance',
+            spherical: true,
+            query: filter,
+          },
+        },
+
+        {
+          $facet: {
+            locations: [{ $skip: skip }, { $limit: limit }],
+            total: [{ $count: 'count' }],
+          },
+        },
+      ]);
+      const locations = result[0].locations || [];
+      const total = result[0].total[0]?.count || 0;
+
+      return {
+        success: true,
+        locations,
+        total,
+        page,
+        limit,
+        hasMore: page * limit < total,
+      };
+    } catch (error) {
+      console.log('Error occur at searchLocation: ', error);
     }
   }
 }
