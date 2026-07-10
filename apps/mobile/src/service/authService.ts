@@ -15,7 +15,7 @@ const login = async (email: string, password: string) => {
       await saveAccessTokens(response.data.accessToken);
       return {
         accessToken: response.data.accessToken,
-        user: response.data.user,
+        user: response.data.userData,
         success: true,
         message: response.data.message,
       };
@@ -55,15 +55,15 @@ const register = async (email: string, password: string, name: string) => {
     }
     return {
       success: false,
-      message: response.data?.message || "Dang ky that bai",
+      message: response.data?.message || "Đăng ký thất bại",
     };
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
     return {
       success: false,
       message:
         error.response?.data?.message ||
-        "Dang ky that bai. Vui long kiem tra lai thong tin.",
+        "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.",
     };
   }
 };

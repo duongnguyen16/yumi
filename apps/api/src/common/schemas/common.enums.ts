@@ -93,18 +93,12 @@ export enum AppealStatus {
   UPHELD = 'UPHELD',
 }
 
-export enum ReportTargetType {
-  LOCATION = 'LOCATION',
-  REVIEW = 'REVIEW',
-  USER = 'USER',
-  OWNERSHIP = 'OWNERSHIP',
-}
-
-export enum ReportStatus {
-  PENDING = 'PENDING',
-  RESOLVED = 'RESOLVED',
-  DISMISSED = 'DISMISSED',
-}
+export {
+  ReportReason,
+  ReportRoute,
+  ReportStatus,
+  ReportTargetType,
+} from '@wdp301/shared';
 
 export enum OwnershipHoldStatus {
   ACTIVE = 'ACTIVE',

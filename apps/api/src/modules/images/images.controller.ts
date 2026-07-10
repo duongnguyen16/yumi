@@ -29,7 +29,7 @@ export class ImagesController {
   ) {
     const userId = req.user?.userId;
     if (!userId) {
-      throw new UnauthorizedException('Khong tim thay thong tin xac thuc');
+      throw new UnauthorizedException('Không tìm thấy thông tin xác thực');
     }
 
     return this.imagesService.createUploadUrl(userId, dto);

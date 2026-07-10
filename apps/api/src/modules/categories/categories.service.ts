@@ -17,7 +17,7 @@ export class CategoriesService {
 
   async getAllCategory() {
     try {
-      const result = await this.CategoryModel.find();
+      const result = await this.CategoryModel.find({ isActive: true });
       if (!result) {
         return {
           success: false,
@@ -44,6 +44,7 @@ export class CategoriesService {
       console.log(categoryId);
       const result = await this.SubCategoryModel.find({
         categoryId: categoryId,
+        isActive: true,
       });
       if (!result) {
         return {
