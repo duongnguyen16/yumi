@@ -9,6 +9,7 @@ import {
   LocationRequest,
   LocationRequestDocument,
   LocationRequestStatus,
+  LocationRequestType,
 } from 'src/common/schemas/location-request';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
@@ -22,7 +23,34 @@ import {
 } from 'src/common/contracts/notification.port';
 import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
 
-const MAX_DIS = 50; // mét — BR-42/59, chốt số với team
+const FAR_PIN_THRESHOLD = 50; // mét — BR-42/59
+
+// Trạng thái phiếu mà admin được phép xử lý (PENDING = tạo mới, PENDING_RE_APPROVAL = sửa BR-30).
+const REVIEWABLE_STATUSES: LocationRequestStatus[] = [
+  LocationRequestStatus.PENDING,
+  LocationRequestStatus.PENDING_RE_APPROVAL,
+];
+
+// Các field của Location được phép cập nhật từ newData (allow-list).
+// Loại trừ các field hệ thống (submittedBy, ownerId, status, source, viewCount, isDuplicate, ...).
+const ALLOWED_SNAPSHOT_FIELDS = new Set([
+  'name',
+  'description',
+  'address',
+  'geo',
+  'accuracyMeters',
+  'openingHours',
+  'phone',
+  'categoryId',
+  'subCategoryIds',
+  'tagIds',
+  'imagesUrls',
+  'imageUrls',
+  'latitude',
+  'longitude',
+  'pinLatitude',
+  'pinLongitude',
+]);
 
 @Injectable()
 export class AdminLocationService {
@@ -41,7 +69,7 @@ export class AdminLocationService {
     try {
       const page = q.page ?? 1,
         limit = q.limit ?? 30;
-      const filter = { status: LocationRequestStatus.PENDING };
+      const filter = { status: { $in: REVIEWABLE_STATUSES } };
 
       const [list, total] = await Promise.all([
         this.reqModel
@@ -63,7 +91,7 @@ export class AdminLocationService {
           suspectedDuplicateLocationIds: r.suspectedDuplicateLocationIds ?? [],
           farPin:
             typeof r.deviceDistanceMeters === 'number' &&
-            r.deviceDistanceMeters > MAX_DIS,
+            r.deviceDistanceMeters > FAR_PIN_THRESHOLD,
         },
       }));
 
@@ -116,7 +144,8 @@ export class AdminLocationService {
           message: 'Không tìm thấy phiếu duyệt',
         };
       }
-      if (req.status !== LocationRequestStatus.PENDING) {
+      const fromReqStatus = req.status;
+      if (!REVIEWABLE_STATUSES.includes(req.status)) {
         return {
           success: false,
           statusCode: 409,
@@ -139,20 +168,18 @@ export class AdminLocationService {
 
       if (action === 'APPROVE') {
         req.status = LocationRequestStatus.APPROVED;
-        // Áp dữ liệu đề xuất vào bản chính rồi công khai.
-        // SEAM (tùy F13/F32 tạo snapshot): copy field từ req.submittedDataSnapshot vào location.
-        // Object.assign(location, pickAllowedFields(req.submittedDataSnapshot));
+        req.reviewNote = null;
+        // Áp newData (snapshot đề xuất) vào bản chính rồi công khai.
+        this.applySnapshot(location, req.newData, req.type);
         location.status = LocationStatus.PUBLISHED;
-        location.rejectionReason = undefined;
       } else {
-        req.status = LocationRequestStatus.REJECTED;
-        req.rejectReason = duplicateOfLocationId
+        const note = duplicateOfLocationId
           ? `${reason} (trùng với địa điểm ${duplicateOfLocationId})`
           : (reason ?? null);
-        // Không áp snapshot. Địa điểm mới → để REJECTED; edit (Location đang PUBLISHED) → giữ nguyên bản cũ.
+        req.status = LocationRequestStatus.REJECTED;
+        req.reviewNote = note;
         if (location.status !== LocationStatus.PUBLISHED) {
           location.status = LocationStatus.REJECTED;
-          location.rejectionReason = req.rejectReason ?? undefined;
         }
       }
 
@@ -194,10 +221,7 @@ export class AdminLocationService {
         targetId: req._id,
         reason,
         diff: {
-          requestStatus: {
-            from: LocationRequestStatus.PENDING,
-            to: req.status,
-          },
+          requestStatus: { from: fromReqStatus, to: req.status },
           locationStatus: { from: fromLocStatus, to: location.status },
         },
       });
@@ -217,5 +241,75 @@ export class AdminLocationService {
         message: 'Lỗi khi xử lý duyệt địa điểm',
       };
     }
+  }
+  private applySnapshot(
+    location: LocationDocument,
+    snapshot: Record<string, any> | null | undefined,
+    type: LocationRequestType,
+  ) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    for (const key of Object.keys(snapshot)) {
+      if (!ALLOWED_SNAPSHOT_FIELDS.has(key)) continue;
+      const value = snapshot[key];
+
+      switch (key) {
+        case 'name':
+          if (typeof value === 'string') location.name = value.trim();
+          break;
+        case 'description':
+          if (typeof value === 'string') location.description = value.trim();
+          break;
+        case 'address':
+          if (typeof value === 'string') location.address = value.trim();
+          break;
+        case 'openingHours':
+          if (typeof value === 'string') location.openingHours = value;
+          break;
+        case 'phone':
+          if (typeof value === 'string') location.phone = value;
+          break;
+        case 'accuracyMeters':
+          if (typeof value === 'number') location.accuracyMeters = value;
+          break;
+        case 'categoryId':
+          if (value) location.categoryId = new Types.ObjectId(String(value));
+          break;
+        case 'subCategoryIds':
+        case 'tagIds': {
+          if (Array.isArray(value)) {
+            location.subCategoryIds = value.map((id: any) =>
+              new Types.ObjectId(String(id)),
+            );
+          }
+          break;
+        }
+        case 'geo':
+          if (value?.coordinates) location.geo = value;
+          break;
+        case 'latitude':
+        case 'pinLatitude': {
+          const lat = value;
+          const lng =
+            snapshot.longitude ?? snapshot.pinLongitude;
+          if (typeof lat === 'number' && typeof lng === 'number') {
+            location.geo = { type: 'Point', coordinates: [lng, lat] };
+          }
+          break;
+        }
+        case 'imagesUrls':
+        case 'imageUrls': {
+          if (Array.isArray(value)) {
+            location.imagesUrls = value.map((url: string, i: number) => ({
+              url,
+              isCover: i === 0,
+              uploadedAt: new Date(),
+            }));
+          }
+          break;
+        }
+      }
+    }
+
   }
 }
