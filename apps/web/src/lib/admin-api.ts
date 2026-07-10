@@ -32,8 +32,16 @@ export async function login(
   email: string,
   password: string,
 ): Promise<LoginResponse> {
-  const res = await api.post<LoginResponse>('/auth/login', { email, password });
-  return res.data;
+  const res = await api.post<Record<string, unknown>>('/auth/login', { email, password });
+  // API returns userData but client expects user — normalize
+  const raw = res.data as Record<string, unknown>;
+  return {
+    success: !!raw.success,
+    user: raw.userData as StoredUser,
+    accessToken: raw.accessToken as string,
+    refreshToken: raw.refreshToken as string,
+    message: raw.message as string | undefined,
+  };
 }
 
 export async function listCategories(): Promise<AdminCategory[]> {
@@ -171,5 +179,69 @@ export async function adjustUserTrust(
     trustScore: number;
     trustLevel: string;
   }>(`/admin/users/${id}/trust`, { pointChange, reason });
+  return res.data;
+}
+
+/* ── Dashboard ─────────────────────────────────────────── */
+
+export interface AuditLogEntry {
+  _id: string;
+  actorId: { _id: string; fullName: string; email: string };
+  action: string;
+  targetCollection: string;
+  targetId: string;
+  reason?: string;
+  diff?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface DashboardOverview {
+  users: {
+    total: number;
+    byRole: Record<string, number>;
+    byStatus: Record<string, number>;
+  };
+  locations: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  reviews: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  reports: {
+    total: number;
+    byStatus: Record<string, number>;
+  };
+  recentActivity: AuditLogEntry[];
+}
+
+export interface PaginatedAuditLogs {
+  success: boolean;
+  data: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getDashboardOverview(): Promise<{
+  success: boolean;
+  data: DashboardOverview;
+}> {
+  const res = await api.get<{ success: boolean; data: DashboardOverview }>(
+    '/admin/dashboard/overview',
+  );
+  return res.data;
+}
+
+export async function listAuditLogs(params?: {
+  page?: number;
+  limit?: number;
+  action?: string;
+  actorId?: string;
+}): Promise<PaginatedAuditLogs> {
+  const res = await api.get<PaginatedAuditLogs>('/admin/dashboard/audit-logs', {
+    params,
+  });
   return res.data;
 }
