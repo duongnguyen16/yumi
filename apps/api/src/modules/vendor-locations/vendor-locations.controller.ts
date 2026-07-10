@@ -197,6 +197,12 @@ export class VendorLocationsController {
     }
   }
 
+  @Get('owned')
+  @UseGuards(AuthGuard('jwt-at'), VendorGuard)
+  async listOwnedLocations(@Request() req: AuthenticatedRequest) {
+    return this.vendorLocationsService.listOwnedLocations(req.user.userId);
+  }
+
   @Get('register/code')
   @UseGuards(AuthGuard('jwt-at'))
   generateSystemCode() {
