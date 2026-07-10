@@ -11,11 +11,16 @@ import { AdminCategoryModule } from './modules/admin-category/admin-category.mod
 import { CategoriesModule } from './modules/categories/categories.module';
 import { UsersModule } from './modules/users/users.module';
 import { ImagesModule } from './modules/images/images.module';
+import { AdminUsersModule } from './modules/admin-users/admin-users.module';
+import { AuditModule } from './common/services/audit.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
 import { LocationAdminModule } from './modules/location-admin/location-admin.module';
 import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
+import { LocationReportsModule } from './modules/location-reports/location-reports.module';
+import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
+import { AdminDashboardModule } from './modules/admin-dashboard/admin-dashboard.module';
 
 @Module({
   imports: [
@@ -41,11 +46,16 @@ import { VendorLocationsModule } from './modules/vendor-locations/vendor-locatio
     CategoriesModule,
     UsersModule,
     ImagesModule,
+    AuditModule,
+    AdminUsersModule,
     ProductsModule,
     ReviewsModule,
     LocationContributionsModule,
     LocationAdminModule,
     VendorLocationsModule,
+    LocationReportsModule,
+    AdminReportsModule,
+    AdminDashboardModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
