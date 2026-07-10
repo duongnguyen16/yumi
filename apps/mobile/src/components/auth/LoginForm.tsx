@@ -12,7 +12,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
-  const { setUser, setAccessToken } = useContext(userContext);
+  const { setUser, setAccessToken, user } = useContext(userContext);
   const router = useRouter();
   const handleLogin = async () => {
     try {
@@ -27,7 +27,6 @@ export default function LoginForm() {
       if (response?.success) {
         setUser(response?.user);
         setAccessToken(response?.accessToken);
-        router.replace("/home");
       } else {
         setError(
           response?.message ||
