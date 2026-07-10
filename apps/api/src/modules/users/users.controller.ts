@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Request,
   UnauthorizedException,
   UnsupportedMediaTypeException,
@@ -14,6 +15,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ParseFilePipeBuilder } from '@nestjs/common';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import {
+  SendPhoneVerificationOtpDto,
+  VerifyPhoneVerificationOtpDto,
+} from './dto/phone-verification.dto';
 import { UsersService } from './users.service';
 
 type AvatarUploadFile = {
@@ -32,6 +37,24 @@ export class UsersController {
   async getProfile(@Request() req: any) {
     const userId = this.extractUserId(req);
     return this.usersService.getProfile(userId);
+  }
+
+  @Post('profile/phone/send-otp')
+  async sendPhoneVerificationOtp(
+    @Request() req: any,
+    @Body() body: SendPhoneVerificationOtpDto,
+  ) {
+    const userId = this.extractUserId(req);
+    return this.usersService.sendPhoneVerificationOtp(userId, body.phone);
+  }
+
+  @Post('profile/phone/verify-otp')
+  async verifyPhoneVerificationOtp(
+    @Request() req: any,
+    @Body() body: VerifyPhoneVerificationOtpDto,
+  ) {
+    const userId = this.extractUserId(req);
+    return this.usersService.verifyPhoneVerificationOtp(userId, body.otp);
   }
 
   @Patch('profile')
