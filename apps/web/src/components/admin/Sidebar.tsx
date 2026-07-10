@@ -33,7 +33,11 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { icon: <DashboardOutlinedIcon />, label: 'Tổng quan' },
-  { icon: <LocationOnOutlinedIcon />, label: 'Duyệt địa điểm' },
+  {
+    icon: <LocationOnOutlinedIcon />,
+    label: 'Duyệt địa điểm',
+    href: '/admin/location-requests',
+  },
   { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
   { icon: <FlagOutlinedIcon />, label: 'Xử lý Report' },
   { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User' },
