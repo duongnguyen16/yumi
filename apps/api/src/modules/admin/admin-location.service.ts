@@ -9,7 +9,6 @@ import {
   LocationRequest,
   LocationRequestDocument,
   LocationRequestStatus,
-  LocationRequestType,
 } from 'src/common/schemas/location-request';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
@@ -52,6 +51,28 @@ const ALLOWED_SNAPSHOT_FIELDS = new Set([
   'pinLongitude',
 ]);
 
+type LocationRequestQueueItem = {
+  isPotentialDuplicate?: boolean;
+  suspectedDuplicateLocationIds?: Types.ObjectId[];
+  deviceDistanceMeters?: number | null;
+  [key: string]: unknown;
+};
+
+function isGeoPoint(value: unknown): value is {
+  coordinates: [number, number];
+} {
+  if (!value || typeof value !== 'object' || !('coordinates' in value)) {
+    return false;
+  }
+
+  const coordinates = value.coordinates;
+  return (
+    Array.isArray(coordinates) &&
+    coordinates.length === 2 &&
+    coordinates.every((coordinate) => typeof coordinate === 'number')
+  );
+}
+
 @Injectable()
 export class AdminLocationService {
   constructor(
@@ -84,7 +105,7 @@ export class AdminLocationService {
         this.reqModel.countDocuments(filter).exec(),
       ]);
 
-      const data = (list as any[]).map((r: any) => ({
+      const data = (list as unknown as LocationRequestQueueItem[]).map((r) => ({
         ...r,
         flags: {
           suspectedDuplicate: r.isPotentialDuplicate === true,
@@ -136,6 +157,18 @@ export class AdminLocationService {
         };
       }
 
+      const rejectionReason = reason?.trim();
+      if (
+        action === 'REJECT' &&
+        (!rejectionReason || rejectionReason.length < 5)
+      ) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'Lý do từ chối phải có ít nhất 5 ký tự',
+        };
+      }
+
       const req = await this.reqModel.findById(requestId).exec();
       if (!req) {
         return {
@@ -170,12 +203,12 @@ export class AdminLocationService {
         req.status = LocationRequestStatus.APPROVED;
         req.reviewNote = null;
         // Áp newData (snapshot đề xuất) vào bản chính rồi công khai.
-        this.applySnapshot(location, req.newData, req.type);
+        this.applySnapshot(location, req.newData);
         location.status = LocationStatus.PUBLISHED;
       } else {
         const note = duplicateOfLocationId
-          ? `${reason} (trùng với địa điểm ${duplicateOfLocationId})`
-          : (reason ?? null);
+          ? `${rejectionReason} (trùng với địa điểm ${duplicateOfLocationId})`
+          : rejectionReason;
         req.status = LocationRequestStatus.REJECTED;
         req.reviewNote = note;
         if (location.status !== LocationStatus.PUBLISHED) {
@@ -208,7 +241,7 @@ export class AdminLocationService {
         body:
           action === 'APPROVE'
             ? `"${location.name}" đã được công khai.`
-            : `"${location.name}" bị từ chối. Lý do: ${reason}`,
+            : `"${location.name}" bị từ chối. Lý do: ${req.reviewNote}`,
         refCollection: 'location_requests',
         refId: String(req._id),
       });
@@ -219,7 +252,7 @@ export class AdminLocationService {
         action: action === 'APPROVE' ? 'LOCATION_APPROVE' : 'LOCATION_REJECT',
         targetCollection: 'location_requests',
         targetId: req._id,
-        reason,
+        reason: action === 'REJECT' ? (req.reviewNote ?? undefined) : undefined,
         diff: {
           requestStatus: { from: fromReqStatus, to: req.status },
           locationStatus: { from: fromLocStatus, to: location.status },
@@ -244,8 +277,7 @@ export class AdminLocationService {
   }
   private applySnapshot(
     location: LocationDocument,
-    snapshot: Record<string, any> | null | undefined,
-    type: LocationRequestType,
+    snapshot: Record<string, unknown> | null | undefined,
   ) {
     if (!snapshot || typeof snapshot !== 'object') return;
 
@@ -273,19 +305,26 @@ export class AdminLocationService {
           if (typeof value === 'number') location.accuracyMeters = value;
           break;
         case 'categoryId':
-          if (value) location.categoryId = new Types.ObjectId(String(value));
+          if (typeof value === 'string' && Types.ObjectId.isValid(value)) {
+            location.categoryId = new Types.ObjectId(value);
+          }
           break;
         case 'subCategoryIds':
         case 'tagIds': {
           if (Array.isArray(value)) {
-            location.subCategoryIds = value.map((id: any) =>
-              new Types.ObjectId(String(id)),
-            );
+            location.subCategoryIds = value
+              .filter(
+                (id): id is string =>
+                  typeof id === 'string' && Types.ObjectId.isValid(id),
+              )
+              .map((id) => new Types.ObjectId(id));
           }
           break;
         }
         case 'geo':
-          if (value?.coordinates) location.geo = value;
+          if (isGeoPoint(value)) {
+            location.geo = { type: 'Point', coordinates: value.coordinates };
+          }
           break;
         case 'latitude':
         case 'pinLatitude': {
@@ -300,11 +339,13 @@ export class AdminLocationService {
         case 'imagesUrls':
         case 'imageUrls': {
           if (Array.isArray(value)) {
-            location.imagesUrls = value.map((url: string, i: number) => ({
-              url,
-              isCover: i === 0,
-              uploadedAt: new Date(),
-            }));
+            location.imagesUrls = value
+              .filter((url): url is string => typeof url === 'string')
+              .map((url, i) => ({
+                url,
+                isCover: i === 0,
+                uploadedAt: new Date(),
+              }));
           }
           break;
         }
