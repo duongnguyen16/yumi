@@ -8,7 +8,6 @@ import {
   IsUrl,
   Max,
   Min,
-  MinLength,
 } from 'class-validator';
 
 export class CreateReviewDto {
@@ -21,7 +20,6 @@ export class CreateReviewDto {
   rating!: number;
 
   @IsString()
-  @MinLength(20)
   comment!: string;
 
   @IsOptional()
