@@ -6,6 +6,7 @@ import {
 } from "@/service/profileService";
 import Feather from "@expo/vector-icons/Feather";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   Image,
@@ -41,6 +42,7 @@ type ProfileData = {
 
 export default function Profile() {
   const { user, setUser, handleLogout } = useContext(userContext);
+  const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<{
@@ -251,6 +253,16 @@ export default function Profile() {
         </View>
 
         <View style={styles.menu}>
+          {profile?.role === 'VENDOR' && (
+            <>
+              <MenuItem
+                icon="bar-chart-2"
+                label="Dashboard"
+                onPress={() => router.push('/vendor/dashboard')}
+              />
+              <Divider />
+            </>
+          )}
           <MenuItem
             icon="user"
             label="Chỉnh sửa hồ sơ"
