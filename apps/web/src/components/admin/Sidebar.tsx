@@ -35,7 +35,7 @@ const NAV: NavItem[] = [
   { icon: <DashboardOutlinedIcon />, label: 'Tổng quan' },
   { icon: <LocationOnOutlinedIcon />, label: 'Duyệt địa điểm' },
   { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
-  { icon: <FlagOutlinedIcon />, label: 'Xử lý Report' },
+  { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/admin/reports' },
   { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User' },
   {
     icon: <CategoryOutlinedIcon />,
