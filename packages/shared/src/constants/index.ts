@@ -10,31 +10,40 @@ export const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500,
 } as const;
 
-export enum ReportReason {
-  INCORRECT_INFORMATION = 'INCORRECT_INFORMATION',
-  SPAM = 'SPAM',
-  PERMANENTLY_CLOSED = 'PERMANENTLY_CLOSED',
-  WRONG_OWNER = 'WRONG_OWNER',
-  OTHER = 'OTHER',
-}
+export const ReportReason = {
+  INCORRECT_INFORMATION: 'INCORRECT_INFORMATION',
+  SPAM: 'SPAM',
+  PERMANENTLY_CLOSED: 'PERMANENTLY_CLOSED',
+  WRONG_OWNER: 'WRONG_OWNER',
+  OTHER: 'OTHER',
+} as const;
 
-export enum ReportTargetType {
-  LOCATION = 'LOCATION',
-  REVIEW = 'REVIEW',
-  USER = 'USER',
-  OWNERSHIP = 'OWNERSHIP',
-}
+export type ReportReason = (typeof ReportReason)[keyof typeof ReportReason];
 
-export enum ReportStatus {
-  PENDING = 'PENDING',
-  UNDER_REVIEW = 'UNDER_REVIEW',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  APPEALED = 'APPEALED',
-  RESOLVED = 'RESOLVED',
-}
+export const ReportTargetType = {
+  LOCATION: 'LOCATION',
+  REVIEW: 'REVIEW',
+  USER: 'USER',
+  OWNERSHIP: 'OWNERSHIP',
+} as const;
 
-export enum ReportRoute {
-  STANDARD_REVIEW = 'STANDARD_REVIEW',
-  OWNERSHIP_REVIEW = 'OWNERSHIP_REVIEW',
-}
+export type ReportTargetType =
+  (typeof ReportTargetType)[keyof typeof ReportTargetType];
+
+export const ReportStatus = {
+  PENDING: 'PENDING',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  APPEALED: 'APPEALED',
+  RESOLVED: 'RESOLVED',
+} as const;
+
+export type ReportStatus = (typeof ReportStatus)[keyof typeof ReportStatus];
+
+export const ReportRoute = {
+  STANDARD_REVIEW: 'STANDARD_REVIEW',
+  OWNERSHIP_REVIEW: 'OWNERSHIP_REVIEW',
+} as const;
+
+export type ReportRoute = (typeof ReportRoute)[keyof typeof ReportRoute];
