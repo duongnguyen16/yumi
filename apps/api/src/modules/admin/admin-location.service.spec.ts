@@ -1,9 +1,14 @@
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { AuditLogDocument } from 'src/common/schemas/audit-log.schema';
+import { LocationDocument } from 'src/common/schemas/location.schema';
 import {
+  LocationRequestDocument,
   LocationRequestStatus,
   LocationRequestType,
 } from 'src/common/schemas/location-request';
 import { LocationStatus } from 'src/common/schemas/common.enums';
+import { NotificationPort } from 'src/common/contracts/notification.port';
+import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { AdminLocationService } from './admin-location.service';
 
 function query<T>(value: T) {
@@ -30,11 +35,11 @@ describe('AdminLocationService', () => {
 
     return {
       service: new AdminLocationService(
-        reqModel as any,
-        locModel as any,
-        logModel as any,
-        trust as any,
-        notification as any,
+        reqModel as unknown as Model<LocationRequestDocument>,
+        locModel as unknown as Model<LocationDocument>,
+        logModel as unknown as Model<AuditLogDocument>,
+        trust as unknown as TrustEngineService,
+        notification as unknown as NotificationPort,
       ),
       reqModel,
       locModel,
