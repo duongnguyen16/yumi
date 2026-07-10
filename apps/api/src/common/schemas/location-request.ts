@@ -182,3 +182,19 @@ LocationRequestSchema.index(
     name: 'uniq_pending_update_request_per_location',
   },
 );
+
+LocationRequestSchema.index(
+  {
+    locationId: 1,
+    type: 1,
+    status: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      type: LocationRequestType.UPDATE,
+      status: LocationRequestStatus.PENDING_RE_APPROVAL,
+    },
+    name: 'uniq_pending_reapproval_request_per_location',
+  },
+);
