@@ -250,7 +250,7 @@ export default function AdminUsersPage() {
                     onClick={() => setSelectedUser(u)}
                   >
                     <TableCell>
-                      <Stack direction="row" spacing={1.5} alignItems="center">
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
                         <Avatar
                           sx={{
                             width: 32,
@@ -319,7 +319,7 @@ export default function AdminUsersPage() {
                       </Tooltip>
                     </TableCell>
                     <TableCell align="right">
-                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                      <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
                         <Tooltip title="Đổi trạng thái">
                           <IconButton
                             size="small"
@@ -380,9 +380,7 @@ export default function AdminUsersPage() {
             <Stack
               direction="row"
               spacing={2}
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{ mb: 3 }}
+              sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 3 }}
             >
               <Typography sx={{ fontWeight: 700, fontSize: 16 }}>
                 Chi tiết người dùng
