@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "npm run build --workspace=@wdp301/shared",
     "dev": "next dev -p 3001",
+    "prebuild": "npm run build --workspace=@wdp301/shared",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
