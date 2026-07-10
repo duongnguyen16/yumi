@@ -9,6 +9,15 @@ import { LocationModule } from './modules/locations/location.module';
 import { TrustEngineModule } from './modules/trust-engine/trust-engine.module';
 import { AdminCategoryModule } from './modules/admin-category/admin-category.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { UsersModule } from './modules/users/users.module';
+import { ImagesModule } from './modules/images/images.module';
+import { ProductsModule } from './modules/products/products.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
+import { LocationAdminModule } from './modules/location-admin/location-admin.module';
+import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
+import { LocationReportsModule } from './modules/location-reports/location-reports.module';
 
 @Module({
   imports: [
@@ -24,7 +33,7 @@ import { AdminModule } from './modules/admin/admin.module';
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60000, limit: 10 }],
+      throttlers: [{ ttl: 5000, limit: 10 }],
     }),
     AuthModule,
     SchemaModule,
@@ -32,6 +41,15 @@ import { AdminModule } from './modules/admin/admin.module';
     TrustEngineModule,
     AdminCategoryModule,
     AdminModule,
+    CategoriesModule,
+    UsersModule,
+    ImagesModule,
+    ProductsModule,
+    ReviewsModule,
+    LocationContributionsModule,
+    LocationAdminModule,
+    VendorLocationsModule,
+    LocationReportsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

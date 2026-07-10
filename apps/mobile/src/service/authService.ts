@@ -15,7 +15,7 @@ const login = async (email: string, password: string) => {
       await saveAccessTokens(response.data.accessToken);
       return {
         accessToken: response.data.accessToken,
-        user: response.data.user,
+        user: response.data.userData,
         success: true,
         message: response.data.message,
       };
@@ -31,6 +31,39 @@ const login = async (email: string, password: string) => {
       message:
         error.response?.data?.message ||
         "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
+    };
+  }
+};
+
+const register = async (email: string, password: string, name: string) => {
+  try {
+    const response = await api.post("/auth/register", {
+      email,
+      password,
+      name,
+    });
+    if (response.data?.success) {
+      setAccessToken(response.data.accessToken);
+      await saveRefreshTokens(response.data.refreshToken);
+      await saveAccessTokens(response.data.accessToken);
+      return {
+        accessToken: response.data.accessToken,
+        user: response.data.user,
+        success: true,
+        message: response.data.message,
+      };
+    }
+    return {
+      success: false,
+      message: response.data?.message || "Đăng ký thất bại",
+    };
+  } catch (error: any) {
+    console.log(error);
+    return {
+      success: false,
+      message:
+        error.response?.data?.message ||
+        "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.",
     };
   }
 };
@@ -99,4 +132,4 @@ const clearSession = async () => {
 //   }
 // };
 
-export { login, authMe, restoreSession, clearSession };
+export { login, register, authMe, restoreSession, clearSession };

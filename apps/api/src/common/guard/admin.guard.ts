@@ -13,29 +13,26 @@ import { UserDocument } from 'src/common/schemas/user.schema';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
-  constructor(
-    @InjectModel('User') private userModel: Model<UserDocument>,
-  ) {}
+  constructor(@InjectModel('User') private userModel: Model<UserDocument>) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const userId = (
-      request as unknown as { user?: { userId?: string } }
-    ).user?.userId;
+    const userId = (request as unknown as { user?: { userId?: string } }).user
+      ?.userId;
 
     if (!userId) {
       throw new UnauthorizedException('Không tìm thấy thông tin xác thực');
     }
 
-    const user = await this.userModel
-      .findById(userId)
-      .select('-passwordHash');
+    const user = await this.userModel.findById(userId).select('-passwordHash');
     if (!user) {
       throw new UnauthorizedException('Không tìm thấy người dùng');
     }
 
     if (user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Bạn không có quyền truy cập trang quản trị');
+      throw new ForbiddenException(
+        'Bạn không có quyền truy cập trang quản trị',
+      );
     }
 
     return true;

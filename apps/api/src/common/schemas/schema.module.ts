@@ -18,6 +18,7 @@ import { AuditLog, AuditLogSchema } from './audit-log.schema';
 import { TrustEvent, TrustEventSchema } from './trust-event.schema';
 import { LocationView, LocationViewSchema } from './location-view';
 import { LocationRequest, LocationRequestSchema } from './location-request';
+import { Otp, OtpSchema } from './otp.schema';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { LocationRequest, LocationRequestSchema } from './location-request';
       { name: AuditLog.name, schema: AuditLogSchema },
       { name: TrustEvent.name, schema: TrustEventSchema },
       { name: LocationView.name, schema: LocationViewSchema },
-      { name: LocationRequest.name, schema: LocationRequestSchema }
+      { name: LocationRequest.name, schema: LocationRequestSchema },
+      { name: Otp.name, schema: OtpSchema },
     ]),
   ],
   exports: [MongooseModule],

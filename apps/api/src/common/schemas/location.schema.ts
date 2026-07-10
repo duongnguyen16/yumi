@@ -48,6 +48,9 @@ export class Location {
   @Prop({ type: String, trim: true })
   openingHours?: string;
 
+  @Prop({ type: String, trim: true })
+  phone?: string;
+
   @Prop({
     type: String,
     enum: LocationStatus,
@@ -76,7 +79,6 @@ export class Location {
   })
   categoryId!: Types.ObjectId;
 
-  // MongoDB style replacement for Location_Sub_Category table
   @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'SubCategory' }],
     default: [],
@@ -84,18 +86,14 @@ export class Location {
   })
   subCategoryIds!: Types.ObjectId[];
 
-  // MongoDB style replacement for Location_Image table
   @Prop({ type: [ImageAssetSchema], default: [] })
-  images!: ImageAsset[];
+  imagesUrls!: ImageAsset[];
 
   @Prop({ type: Date })
   submittedAt?: Date;
 
   @Prop({ type: Date })
   holdExpiresAt?: Date;
-
-  @Prop({ type: String, trim: true })
-  rejectionReason?: string;
 }
 
 export const LocationSchema = SchemaFactory.createForClass(Location);

@@ -5,15 +5,38 @@ import { Location } from './location.schema';
 
 export type LocationRequestDocument = HydratedDocument<LocationRequest>;
 
+export enum LocationRequestType {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+}
+
 export enum LocationRequestStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   CANCELLED = 'CANCELLED',
+  PENDING_RE_APPROVAL = 'PENDING_RE_APPROVAL',
 }
 
 @Schema({ timestamps: true, collection: 'location_requests' })
 export class LocationRequest {
+  @Prop({
+    type: String,
+    enum: LocationRequestType,
+    required: true,
+    index: true,
+  })
+  type!: LocationRequestType;
+
+  @Prop({
+    type: String,
+    enum: LocationRequestStatus,
+    default: LocationRequestStatus.PENDING,
+    index: true,
+  })
+  status!: LocationRequestStatus;
+
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: User.name,
@@ -25,24 +48,32 @@ export class LocationRequest {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: Location.name,
-    required: true,
+    required: function (this: LocationRequest) {
+      return this.type !== LocationRequestType.CREATE;
+    },
+    default: null,
     index: true,
   })
-  locationId!: Types.ObjectId;
+  locationId?: Types.ObjectId | null;
 
   @Prop({
-    type: String,
-    enum: LocationRequestStatus,
-    default: LocationRequestStatus.PENDING,
-    index: true,
+    type: MongooseSchema.Types.Mixed,
+    default: null,
   })
-  status!: LocationRequestStatus;
+  oldData?: Record<string, unknown> | null;
 
   @Prop({
     type: MongooseSchema.Types.Mixed,
     required: true,
   })
-  submittedDataSnapshot!: Record<string, any>;
+  newData!: Record<string, unknown>;
+
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  changedFields!: string[];
+
   @Prop({
     type: [String],
     default: [],
@@ -57,6 +88,7 @@ export class LocationRequest {
     type: 'Point';
     coordinates: [number, number];
   } | null;
+
   @Prop({
     type: MongooseSchema.Types.Mixed,
     default: null,
@@ -105,7 +137,15 @@ export class LocationRequest {
     trim: true,
     default: null,
   })
-  rejectReason?: string | null;
+  reviewNote?: string | null;
+
+  @Prop({ type: Object })
+  verificationProof?: {
+    proofUrls?: string[];
+    licenseUrls?: string[];
+    systemCode?: string;
+    capturedAt?: Date;
+  };
 }
 
 export const LocationRequestSchema =
@@ -126,3 +166,19 @@ LocationRequestSchema.index({
   status: 1,
   createdAt: -1,
 });
+
+LocationRequestSchema.index(
+  {
+    locationId: 1,
+    type: 1,
+    status: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      type: LocationRequestType.UPDATE,
+      status: LocationRequestStatus.PENDING,
+    },
+    name: 'uniq_pending_update_request_per_location',
+  },
+);
