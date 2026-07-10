@@ -1,4 +1,6 @@
 import {
+  IsLatitude,
+  IsLongitude,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
@@ -17,4 +19,12 @@ export class AnalyzeLocationDraftDto {
   @IsOptional()
   @IsMongoId()
   categoryId?: string;
+
+  @IsOptional()
+  @IsLatitude()
+  latitude?: number;
+
+  @IsOptional()
+  @IsLongitude()
+  longitude?: number;
 }
