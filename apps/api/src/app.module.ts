@@ -17,6 +17,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
 import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
 import { LocationReportsModule } from './modules/location-reports/location-reports.module';
+import { ClaimModule } from './modules/claims/claim.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { LocationReportsModule } from './modules/location-reports/location-repor
     LocationContributionsModule,
     VendorLocationsModule,
     LocationReportsModule,
+    ClaimModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
