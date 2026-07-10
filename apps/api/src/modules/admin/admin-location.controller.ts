@@ -9,15 +9,26 @@ import {
   Param,
   Patch,
   Query,
-  Request,
+  Request as NestRequest,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AdminGuard } from 'src/common/guard/admin.guard';
 import { AdminLocationService } from './admin-location.service';
 import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
 import { RejectRequestDTO } from './dto/reject-request.dto';
+
+interface AuthenticatedRequest extends Request {
+  user: { userId: string };
+}
+
+interface ServiceResponse {
+  success: boolean;
+  statusCode?: number;
+  message?: string;
+}
 
 @ApiTags('admin-location-requests')
 @ApiBearerAuth()
@@ -32,7 +43,10 @@ export class AdminLocationController {
   }
 
   @Patch(':id/approve')
-  async approve(@Param('id') id: string, @Request() req: any) {
+  async approve(
+    @Param('id') id: string,
+    @NestRequest() req: AuthenticatedRequest,
+  ) {
     return this.handle(await this.service.approve(id, req.user.userId));
   }
 
@@ -40,7 +54,7 @@ export class AdminLocationController {
   async reject(
     @Param('id') id: string,
     @Body() body: RejectRequestDTO,
-    @Request() req: any,
+    @NestRequest() req: AuthenticatedRequest,
   ) {
     return this.handle(
       await this.service.reject(
@@ -52,7 +66,7 @@ export class AdminLocationController {
     );
   }
 
-  private handle(r: any) {
+  private handle<T extends ServiceResponse>(r: T) {
     if (!r.success) {
       if (r.statusCode === 400) throw new BadRequestException(r.message);
       if (r.statusCode === 404) throw new NotFoundException(r.message);
