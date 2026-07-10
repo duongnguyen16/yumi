@@ -11,6 +11,8 @@ import { AdminCategoryModule } from './modules/admin-category/admin-category.mod
 import { CategoriesModule } from './modules/categories/categories.module';
 import { UsersModule } from './modules/users/users.module';
 import { ImagesModule } from './modules/images/images.module';
+import { AdminUsersModule } from './modules/admin-users/admin-users.module';
+import { AuditModule } from './common/services/audit.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
@@ -42,6 +44,8 @@ import { LocationReportsModule } from './modules/location-reports/location-repor
     CategoriesModule,
     UsersModule,
     ImagesModule,
+    AuditModule,
+    AdminUsersModule,
     ProductsModule,
     ReviewsModule,
     LocationContributionsModule,
