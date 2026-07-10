@@ -105,3 +105,102 @@ export async function setSubCategoryStatus(
   );
   return res.data;
 }
+
+/* ───── Report types ───── */
+
+export type ReportReason =
+  | 'INCORRECT_INFORMATION'
+  | 'SPAM'
+  | 'PERMANENTLY_CLOSED'
+  | 'WRONG_OWNER'
+  | 'OTHER';
+
+export type ReportTargetType = 'LOCATION' | 'REVIEW' | 'USER' | 'OWNERSHIP';
+
+export type ReportStatus =
+  | 'PENDING'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'DISMISSED'
+  | 'APPEALED'
+  | 'RESOLVED';
+
+export type ReportRoute = 'STANDARD_REVIEW' | 'OWNERSHIP_REVIEW';
+
+export interface ReportEvidenceFile {
+  url: string;
+  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  geo?: { type: 'Point'; coordinates: [number, number] };
+  accuracyMeters?: number;
+  capturedAt?: string;
+}
+
+export interface AdminReport {
+  id: string;
+  targetType: ReportTargetType;
+  targetId: string;
+  reason: ReportReason;
+  description: string;
+  evidenceFiles: ReportEvidenceFile[];
+  route: ReportRoute;
+  status: ReportStatus;
+  affectedVendorId: string | null;
+  resultReason: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  reporter: { id: string; fullName: string; email: string } | null;
+  handledBy: { id: string; fullName: string; email: string } | null;
+}
+
+export interface ReportListResponse {
+  success: boolean;
+  data: AdminReport[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ReportActionResponse {
+  success: boolean;
+  message: string;
+  report: {
+    id: string;
+    status: ReportStatus;
+    handledBy: string;
+    resultReason: string;
+    resolvedAt: string;
+  };
+}
+
+export async function listReports(
+  page = 1,
+  limit = 20,
+): Promise<ReportListResponse> {
+  const res = await api.get<ReportListResponse>('/admin/reports', {
+    params: { page, limit },
+  });
+  return res.data;
+}
+
+export async function resolveReport(
+  id: string,
+  resultReason: string,
+  removeReviewId?: string,
+): Promise<ReportActionResponse> {
+  const res = await api.post<ReportActionResponse>(`/admin/reports/${id}/resolve`, {
+    resultReason,
+    ...(removeReviewId ? { removeReviewId } : {}),
+  });
+  return res.data;
+}
+
+export async function dismissReport(
+  id: string,
+  resultReason: string,
+): Promise<ReportActionResponse> {
+  const res = await api.post<ReportActionResponse>(`/admin/reports/${id}/dismiss`, {
+    resultReason,
+  });
+  return res.data;
+}
