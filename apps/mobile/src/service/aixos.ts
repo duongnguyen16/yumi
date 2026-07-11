@@ -1,4 +1,5 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
+import { Platform } from "react-native";
 import {
   deleteAllTokens,
   getAccessToken,
@@ -10,8 +11,9 @@ import {
 
 const BASE_URL_ENV =
   process.env.EXPO_PUBLIC_BASE_URL ||
-  process.env.EXPO_PUBLIC_API_URL ||
-  "http://192.168.120.53:9999/api";
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:9999/api"
+    : "http://localhost:9999/api");
 
 const getBaseUrl = () => BASE_URL_ENV.trim().replace(/\/+$/, "");
 
