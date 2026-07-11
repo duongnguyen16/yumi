@@ -74,11 +74,7 @@ export class AdminClaimController {
     @NestRequest() req: AdminRequest,
   ) {
     return this.handle(
-      await this.service.requestEvidence(
-        id,
-        req.user.userId,
-        body.message,
-      ),
+      await this.service.requestEvidence(id, req.user.userId, body.message),
     );
   }
 
