@@ -4,6 +4,7 @@ import {
   toAbsoluteUrl,
   updateProfile,
 } from "@/service/profileService";
+import PhoneVerificationModal from "@/components/profile/PhoneVerificationModal";
 import Feather from "@expo/vector-icons/Feather";
 import * as ImagePicker from "expo-image-picker";
 import React, { useContext, useEffect, useMemo, useState } from "react";
@@ -34,6 +35,7 @@ type ProfileData = {
   avatar_url?: string | null;
   avatarUrl?: string | null;
   phone?: string | null;
+  phoneVerified?: boolean;
   email?: string;
   role?: string;
   joined_at?: string | null;
@@ -53,30 +55,50 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [avatarOptionsVisible, setAvatarOptionsVisible] = useState(false);
+  const [phoneModalVisible, setPhoneModalVisible] = useState(false);
 
-  const displayName = profile?.display_name ?? profile?.fullName ?? "Người dùng";
+  const displayName =
+    profile?.display_name ?? profile?.fullName ?? "Người dùng";
   const email = profile?.email ?? user?.email ?? "";
+  const phone = profile?.phone ?? user?.phone ?? "";
+  const phoneVerified =
+    profile?.phoneVerified === true || user?.phoneVerified === true;
   const avatarUrl = useMemo(() => {
     if (avatar?.uri) return avatar.uri;
     return toAbsoluteUrl(profile?.avatar_url ?? profile?.avatarUrl);
   }, [avatar, profile]);
   const avatarInitial = displayName.trim().charAt(0).toUpperCase() || "U";
 
-  const loadProfile = async () => {
-    setLoading(true);
-    const response = await getProfile();
-    if (response?.success) {
-      setProfile(response.user);
-      setName(response.user?.display_name ?? response.user?.fullName ?? "");
-    } else {
-      setMessage(response?.message || "Không thể lấy hồ sơ.");
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    loadProfile();
-  }, []);
+    let active = true;
+
+    const loadProfile = async () => {
+      const response = await getProfile();
+      if (!active) {
+        return;
+      }
+
+      if (response?.success) {
+        setProfile(response.user);
+        setName(response.user?.display_name ?? response.user?.fullName ?? "");
+        setUser((current) => ({
+          ...(current ?? {}),
+          phone: response.user?.phone ?? current?.phone,
+          phoneVerified:
+            response.user?.phoneVerified ?? current?.phoneVerified,
+        }));
+      } else {
+        setMessage(response?.message || "Không thể lấy hồ sơ.");
+      }
+      setLoading(false);
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [setUser]);
 
   useEffect(() => {
     console.log("Resolved avatarUrl:", avatarUrl);
@@ -96,7 +118,8 @@ export default function Profile() {
   const pickAvatarFromLibrary = async () => {
     try {
       setAvatarOptionsVisible(false);
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         setMessage("Cần cấp quyền truy cập ảnh để đổi avatar.");
         return;
@@ -164,6 +187,8 @@ export default function Profile() {
         ...user,
         fullName: response.user?.display_name,
         avatarUrl: response.user?.avatar_url,
+        phone: response.user?.phone ?? user?.phone,
+        phoneVerified: response.user?.phoneVerified ?? user?.phoneVerified,
       });
       setAvatar(null);
       setEditing(false);
@@ -172,6 +197,34 @@ export default function Profile() {
       setMessage(response?.message || "Không thể cập nhật hồ sơ.");
     }
     setSaving(false);
+  };
+
+  const handlePhoneVerified = (verifiedUser: ProfileData | null) => {
+    const nextPhone = verifiedUser?.phone ?? phone;
+
+    setProfile((current) => ({
+      ...(current ?? {}),
+      ...(verifiedUser ?? {}),
+      phone: nextPhone,
+      phoneVerified: true,
+    }));
+    setUser((current) => ({
+      ...(current ?? user ?? {}),
+      phone: nextPhone,
+      phoneVerified: true,
+      fullName:
+        verifiedUser?.display_name ??
+        verifiedUser?.fullName ??
+        current?.fullName ??
+        user?.fullName,
+      avatarUrl:
+        verifiedUser?.avatar_url ??
+        verifiedUser?.avatarUrl ??
+        current?.avatarUrl ??
+        user?.avatarUrl,
+    }));
+    setPhoneModalVisible(false);
+    setMessage("Xác minh số điện thoại thành công.");
   };
 
   if (loading) {
@@ -257,6 +310,16 @@ export default function Profile() {
             onPress={() => setEditing(true)}
           />
           <Divider />
+          <MenuItem
+            icon="phone"
+            label={
+              phoneVerified
+                ? "Số điện thoại đã xác minh"
+                : "Xác minh số điện thoại"
+            }
+            onPress={() => setPhoneModalVisible(true)}
+          />
+          <Divider />
           <MenuItem icon="bookmark" label="Địa điểm đã lưu" />
           <Divider />
           <MenuItem icon="edit-3" label="Đóng góp của tôi" />
@@ -290,7 +353,10 @@ export default function Profile() {
         >
           <View style={styles.avatarSheet}>
             <Text style={styles.sheetTitle}>Đổi ảnh đại diện</Text>
-            <TouchableOpacity style={styles.sheetAction} onPress={takeAvatarPhoto}>
+            <TouchableOpacity
+              style={styles.sheetAction}
+              onPress={takeAvatarPhoto}
+            >
               <Feather name="camera" size={20} color="#24211d" />
               <Text style={styles.sheetActionText}>Chụp ảnh</Text>
             </TouchableOpacity>
@@ -305,6 +371,15 @@ export default function Profile() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {phoneModalVisible ? (
+        <PhoneVerificationModal
+          visible={phoneModalVisible}
+          initialPhone={phone}
+          onDismiss={() => setPhoneModalVisible(false)}
+          onVerified={handlePhoneVerified}
+        />
+      ) : null}
 
       <Snackbar visible={!!message} onDismiss={() => setMessage("")}>
         {message}

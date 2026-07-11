@@ -3,6 +3,15 @@ import { Redirect } from "expo-router";
 import { useContext } from "react";
 import { Text, View } from "react-native";
 import { ActivityIndicator } from "react-native-paper";
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated";
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 
 export default function Index() {
   const { user, loading } = useContext(userContext);
