@@ -1,0 +1,362 @@
+[
+  {
+    "_id": { "$oid": "667500000000000000000001" },
+    "locationId": { "$oid": "667200000000000000000001" },
+    "name": "Com suon nuong",
+    "description": "Com trang an kem suon nuong, dua leo, do chua va canh trong ngay.",
+    "price": 45000,
+    "createdAt": { "$date": "2026-06-26T04:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000002" },
+    "locationId": { "$oid": "667200000000000000000001" },
+    "name": "Com ga xao nam",
+    "description": "Phan com trua voi ga xao nam, rau luoc va canh theo ngay.",
+    "price": 40000,
+    "createdAt": { "$date": "2026-06-26T04:01:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:01:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000003" },
+    "locationId": { "$oid": "667200000000000000000002" },
+    "name": "Pho bo tai",
+    "description": "Bat pho bo tai phuc vu buoi sang voi hanh, rau thom va nuoc dung nong.",
+    "price": 50000,
+    "createdAt": { "$date": "2026-06-26T04:02:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:02:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000004" },
+    "locationId": { "$oid": "667200000000000000000002" },
+    "name": "Pho bo chin",
+    "description": "Pho bo chin mem, nuoc dung dam vi, phu hop an sang hoac an trua som.",
+    "price": 50000,
+    "createdAt": { "$date": "2026-06-26T04:03:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:03:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000005" },
+    "locationId": { "$oid": "667200000000000000000003" },
+    "name": "Combo lau thai 2 nguoi",
+    "description": "Set lau thai nho gom nuoc lau, thit bo, vien tha lau, rau va mi.",
+    "price": 189000,
+    "createdAt": { "$date": "2026-06-26T04:04:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:04:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000006" },
+    "locationId": { "$oid": "667200000000000000000003" },
+    "name": "Combo nuong sinh vien",
+    "description": "Set nuong gia sinh vien gom ba chi, ga, xuc xich, rau nuong va sot cham.",
+    "price": 159000,
+    "createdAt": { "$date": "2026-06-26T04:05:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:05:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000007" },
+    "locationId": { "$oid": "667200000000000000000004" },
+    "name": "Banh mi thit nuong",
+    "description": "Banh mi nong voi thit nuong, pate, rau dua va sot dac trung.",
+    "price": 25000,
+    "createdAt": { "$date": "2026-06-26T04:06:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:06:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000008" },
+    "locationId": { "$oid": "667200000000000000000004" },
+    "name": "Banh mi trung op la",
+    "description": "Banh mi trung op la lam nhanh, phu hop mua mang di vao buoi sang.",
+    "price": 20000,
+    "createdAt": { "$date": "2026-06-26T04:07:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:07:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000009" },
+    "locationId": { "$oid": "667200000000000000000005" },
+    "name": "Ca phe sua da",
+    "description": "Ca phe sua da pha phin, vi dam, phu hop hoc tap hoac lam viec.",
+    "price": 30000,
+    "createdAt": { "$date": "2026-06-26T04:08:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:08:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000010" },
+    "locationId": { "$oid": "667200000000000000000005" },
+    "name": "Tra dao cam sa",
+    "description": "Tra dao cam sa mat lanh, vi chua ngot nhe cho buoi chieu hoc nhom.",
+    "price": 39000,
+    "createdAt": { "$date": "2026-06-26T04:09:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:09:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000011" },
+    "locationId": { "$oid": "667200000000000000000006" },
+    "name": "Tra sua tran chau duong den",
+    "description": "Tra sua tran chau duong den size vua, co the dieu chinh muc da va duong.",
+    "price": 35000,
+    "createdAt": { "$date": "2026-06-26T04:10:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:10:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000012" },
+    "locationId": { "$oid": "667200000000000000000006" },
+    "name": "Tra oolong sua kem trung",
+    "description": "Tra oolong sua phu kem trung mem, vi beo nhe va thom tra.",
+    "price": 42000,
+    "createdAt": { "$date": "2026-06-26T04:11:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:11:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000013" },
+    "locationId": { "$oid": "667200000000000000000007" },
+    "name": "Ve tu hoc theo ngay",
+    "description": "Goi su dung cho ngoi tu hoc trong ngay tai khu doc sach yen tinh.",
+    "price": 20000,
+    "createdAt": { "$date": "2026-06-26T04:12:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:12:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000014" },
+    "locationId": { "$oid": "667200000000000000000007" },
+    "name": "In tai lieu den trang",
+    "description": "Dich vu in tai lieu den trang kho A4 cho sinh vien tu hoc tai thu vien.",
+    "price": 1000,
+    "createdAt": { "$date": "2026-06-26T04:13:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:13:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000015" },
+    "locationId": { "$oid": "667200000000000000000008" },
+    "name": "Cho ngoi coworking theo ngay",
+    "description": "Goi cho ngoi linh hoat trong ngay, gom wifi, nuoc loc va khu lam viec chung.",
+    "price": 120000,
+    "createdAt": { "$date": "2026-06-26T04:14:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:14:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000016" },
+    "locationId": { "$oid": "667200000000000000000008" },
+    "name": "Phong hop nho 2 gio",
+    "description": "Phong hop cho nhom 4 den 6 nguoi, co bang viet va man hinh trinh chieu.",
+    "price": 180000,
+    "createdAt": { "$date": "2026-06-26T04:15:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:15:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000017" },
+    "locationId": { "$oid": "667200000000000000000009" },
+    "name": "Phong don homestay",
+    "description": "Phong don yen tinh cho mot den hai khach, co dieu hoa va phong tam rieng.",
+    "price": 450000,
+    "createdAt": { "$date": "2026-06-26T04:16:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:16:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000018" },
+    "locationId": { "$oid": "667200000000000000000009" },
+    "name": "Phong doi view vuon",
+    "description": "Phong doi co cua so nhin ra san vuon, phu hop khach cong tac ngan ngay.",
+    "price": 620000,
+    "createdAt": { "$date": "2026-06-26T04:17:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:17:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000019" },
+    "locationId": { "$oid": "667200000000000000000010" },
+    "name": "Mi ly an lien",
+    "description": "Mi ly tien loi kem nuoc soi tai quay, phu hop bua nhanh cho sinh vien.",
+    "price": 15000,
+    "createdAt": { "$date": "2026-06-26T04:18:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:18:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000020" },
+    "locationId": { "$oid": "667200000000000000000010" },
+    "name": "Nuoc suoi 500ml",
+    "description": "Chai nuoc suoi 500ml, san pham thiet yeu cho hoc tap va di chuyen.",
+    "price": 8000,
+    "createdAt": { "$date": "2026-06-26T04:19:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:19:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000021" },
+    "locationId": { "$oid": "667200000000000000000011" },
+    "name": "Photocopy A4 den trang",
+    "description": "Photocopy tai lieu A4 den trang, tinh gia theo mat in.",
+    "price": 800,
+    "createdAt": { "$date": "2026-06-26T04:20:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:20:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000022" },
+    "locationId": { "$oid": "667200000000000000000011" },
+    "name": "Dong quyen bao cao",
+    "description": "Dich vu dong quyen lo xo cho bao cao, do an hoac tap tai lieu.",
+    "price": 15000,
+    "createdAt": { "$date": "2026-06-26T04:21:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:21:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000023" },
+    "locationId": { "$oid": "667200000000000000000012" },
+    "name": "Thue san bong 1 gio",
+    "description": "Goi thue san co nhan tao trong 1 gio cho tran dau nho.",
+    "price": 250000,
+    "createdAt": { "$date": "2026-06-26T04:22:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:22:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000024" },
+    "locationId": { "$oid": "667200000000000000000012" },
+    "name": "Thue bong da",
+    "description": "Dich vu thue bong da tai san theo buoi, phu hop nhom sinh vien.",
+    "price": 30000,
+    "createdAt": { "$date": "2026-06-26T04:23:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:23:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000025" },
+    "locationId": { "$oid": "667200000000000000000013" },
+    "name": "Com rang dua bo",
+    "description": "Com rang dua bo nong, phan vua cho mot nguoi, phuc vu nhanh vao buoi trua.",
+    "price": 45000,
+    "createdAt": { "$date": "2026-06-26T04:24:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:24:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000026" },
+    "locationId": { "$oid": "667200000000000000000013" },
+    "name": "Mi xao hai san",
+    "description": "Mi xao hai san voi rau cai, trung va sot xao dam vi.",
+    "price": 50000,
+    "createdAt": { "$date": "2026-06-26T04:25:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:25:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000027" },
+    "locationId": { "$oid": "667200000000000000000014" },
+    "name": "Bac xiu da",
+    "description": "Bac xiu da vi sua beo nhe, phu hop ngoi ngoai troi vao buoi sang.",
+    "price": 32000,
+    "createdAt": { "$date": "2026-06-26T04:26:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:26:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000028" },
+    "locationId": { "$oid": "667200000000000000000014" },
+    "name": "Tra chanh mat ong",
+    "description": "Tra chanh mat ong thanh mat, hop cho gap ban cuoi tuan.",
+    "price": 28000,
+    "createdAt": { "$date": "2026-06-26T04:27:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:27:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000029" },
+    "locationId": { "$oid": "667200000000000000000015" },
+    "name": "Nuoc ep cam",
+    "description": "Ly nuoc ep cam tuoi khong pha gas, phu hop mua mang di.",
+    "price": 30000,
+    "createdAt": { "$date": "2026-06-26T04:28:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:28:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000030" },
+    "locationId": { "$oid": "667200000000000000000015" },
+    "name": "Sinh to bo",
+    "description": "Sinh to bo xay min, vi beo vua phai, phuc vu trong ngay.",
+    "price": 35000,
+    "createdAt": { "$date": "2026-06-26T04:29:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:29:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000031" },
+    "locationId": { "$oid": "667200000000000000000016" },
+    "name": "Phong tieu chuan 1 dem",
+    "description": "Phong tieu chuan cho mot den hai khach, gom dieu hoa va wifi.",
+    "price": 550000,
+    "createdAt": { "$date": "2026-06-26T04:30:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:30:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000032" },
+    "locationId": { "$oid": "667200000000000000000016" },
+    "name": "Phong gia dinh 1 dem",
+    "description": "Phong gia dinh rong hon, phu hop nhom nho hoac khach tham quan Son Tay.",
+    "price": 850000,
+    "createdAt": { "$date": "2026-06-26T04:31:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:31:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000033" },
+    "locationId": { "$oid": "667200000000000000000017" },
+    "name": "Phong homestay nha co",
+    "description": "Phong nghi gan lang co Duong Lam, khong gian moc mac va yen tinh.",
+    "price": 480000,
+    "createdAt": { "$date": "2026-06-26T04:32:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:32:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000034" },
+    "locationId": { "$oid": "667200000000000000000017" },
+    "name": "Goi tra chieu san vuon",
+    "description": "Set tra chieu nho cho khach luu tru, gom tra nong va banh dia phuong.",
+    "price": 120000,
+    "createdAt": { "$date": "2026-06-26T04:33:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:33:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000035" },
+    "locationId": { "$oid": "667200000000000000000018" },
+    "name": "Giat say 3kg",
+    "description": "Goi giat say nhanh toi da 3kg, phu hop do sinh hoat hang ngay.",
+    "price": 45000,
+    "createdAt": { "$date": "2026-06-26T04:34:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:34:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000036" },
+    "locationId": { "$oid": "667200000000000000000018" },
+    "name": "Giat hap ao so mi",
+    "description": "Dich vu giat hap va ui ao so mi, nhan theo tung chiec.",
+    "price": 30000,
+    "createdAt": { "$date": "2026-06-26T04:35:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:35:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000037" },
+    "locationId": { "$oid": "667200000000000000000019" },
+    "name": "Banh snack khoai tay",
+    "description": "Goi snack khoai tay cho bua an vat nhanh, co san tai quay tien loi.",
+    "price": 12000,
+    "createdAt": { "$date": "2026-06-26T04:36:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:36:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000038" },
+    "locationId": { "$oid": "667200000000000000000019" },
+    "name": "Sua hop 180ml",
+    "description": "Hop sua dung tich 180ml, phu hop mua nhanh cho hoc sinh va sinh vien.",
+    "price": 9000,
+    "createdAt": { "$date": "2026-06-26T04:37:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:37:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000039" },
+    "locationId": { "$oid": "667200000000000000000020" },
+    "name": "Ve tham quan nguoi lon",
+    "description": "Ve tham quan Thanh Co Son Tay danh cho khach nguoi lon.",
+    "price": 20000,
+    "createdAt": { "$date": "2026-06-26T04:38:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:38:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667500000000000000000040" },
+    "locationId": { "$oid": "667200000000000000000020" },
+    "name": "Ve tham quan sinh vien",
+    "description": "Ve tham quan uu dai cho sinh vien khi xuat trinh the hop le.",
+    "price": 10000,
+    "createdAt": { "$date": "2026-06-26T04:39:00.000Z" },
+    "updatedAt": { "$date": "2026-06-26T04:39:00.000Z" }
+  }
+]

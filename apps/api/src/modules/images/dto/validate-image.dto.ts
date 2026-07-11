@@ -11,6 +11,6 @@ export class ValidateImageDto {
 
   @IsInt()
   @Min(1)
-  @Max(10 * 1024 * 1024)
+  @Max(5 * 1024 * 1024)
   fileSize!: number;
 }

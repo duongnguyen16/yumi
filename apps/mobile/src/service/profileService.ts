@@ -19,7 +19,7 @@ const getProfile = async () => {
     console.log("Error fetching profile:", error);
     return {
       success: false,
-      message: error?.response?.data?.message || "Khong the lay ho so.",
+      message: error?.response?.data?.message || "Không thể lấy hồ sơ.",
     };
   }
 };
@@ -67,7 +67,38 @@ const updateProfile = async ({ name, avatar }: ProfileUpdate) => {
     console.log("Update profile error response:", error?.response?.data);
     return {
       success: false,
-      message: error?.response?.data?.message || "Khong the cap nhat ho so.",
+      message: error?.response?.data?.message || "Không thể cập nhật hồ sơ.",
+    };
+  }
+};
+
+const sendProfilePhoneOtp = async (phone: string) => {
+  try {
+    const response = await api.post("/users/profile/phone/send-otp", {
+      phone,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("Error sending profile phone OTP:", error);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Không thể gửi mã OTP.",
+    };
+  }
+};
+
+const verifyProfilePhoneOtp = async (otp: string) => {
+  try {
+    const response = await api.post("/users/profile/phone/verify-otp", {
+      otp,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("Error verifying profile phone OTP:", error);
+    return {
+      success: false,
+      message:
+        error?.response?.data?.message || "Không thể xác minh mã OTP.",
     };
   }
 };
@@ -79,4 +110,10 @@ const toAbsoluteUrl = (url?: string | null) => {
   return `${baseUrl}${url}`;
 };
 
-export { getProfile, updateProfile, toAbsoluteUrl };
+export {
+  getProfile,
+  updateProfile,
+  sendProfilePhoneOtp,
+  verifyProfilePhoneOtp,
+  toAbsoluteUrl,
+};

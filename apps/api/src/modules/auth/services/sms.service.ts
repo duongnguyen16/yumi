@@ -42,7 +42,7 @@ export class SmsService {
         ApiKey: apiKey,
         SecretKey: secretKey,
         Phone: this.normalizePhone(phone),
-        Content: `${otp} la ma xac minh dang ky tai khoan vendor cua ban`,
+        Content: `${otp} là mã xác minh đăng ký tài khoản vendor của bạn`,
         Brandname: brandname,
         SmsType: '2', // tin gửi kèm Brandname chăm sóc khách hàng
         IsUnicode: '0', // không dấu, tránh lỗi hiển thị trên 1 số đầu mạng
