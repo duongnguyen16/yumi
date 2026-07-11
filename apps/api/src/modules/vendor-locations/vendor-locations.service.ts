@@ -311,6 +311,27 @@ export class VendorLocationsService {
     }
   }
 
+  async listOwnedLocations(userId: string) {
+    try {
+      const locations = await this.locationModel
+        .find({ ownerId: new Types.ObjectId(userId) })
+        .sort({ updatedAt: -1 })
+        .lean()
+        .exec();
+      return {
+        success: true,
+        data: locations,
+      };
+    } catch (error) {
+      console.error('Error in listOwnedLocations:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi lấy danh sách địa điểm',
+        statusCode: 500,
+      };
+    }
+  }
+
   async sendOtpUpdatePhone(
     userId: string,
     locationId: string,
