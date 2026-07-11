@@ -34,7 +34,7 @@ export default function EditLocationModal({ visible, setVisible, data }) {
             }}
           >
             <Text>
-              {user?._id === data.ownerId
+              {user?._id === data?.ownerId
                 ? "Đề Xuất Chỉnh Sửa"
                 : "Chỉnh sửa thông tin địa điểm"}
             </Text>
