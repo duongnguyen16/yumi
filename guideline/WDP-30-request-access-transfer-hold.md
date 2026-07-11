@@ -248,51 +248,9 @@ export function assertNotUnderHold(
 
 ---
 
-### 5.2 — `notification.port.ts` (TÁI SỬ DỤNG từ WDP-19)
+### 5.2 — Tái sử dụng `NotificationPort` từ WDP-19
 
-> Nếu WDP-19 đã merge: **đừng tạo lại**, chỉ import. Bản dưới chép từ WDP-19 để bạn không bị chặn nếu code trước. Khi merge thì giữ **1 bản duy nhất**.
-
-**`common/contracts/notification.port.ts`**
-
-```ts
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Notification } from 'src/common/schemas/notification.schema';
-
-export interface NotificationPort {
-  // Interface M3 — KHỚP với WDP-7 (sync với Đăng)
-  notify(params: {
-    userId: string;
-    type: string;
-    title: string;
-    body: string;
-    refCollection?: string;
-    refId?: string;
-  }): Promise<void>;
-}
-
-export const NOTIFICATION_PORT = Symbol('NOTIFICATION_PORT');
-
-/** STUB TẠM — chỉ tạo in-app notification. Email/SMS + template là việc M3/WDP-7. */
-@Injectable()
-export class NotificationStub implements NotificationPort {
-  constructor(
-    @InjectModel(Notification.name) private model: Model<Notification>,
-  ) {}
-  async notify(p: {
-    userId: string;
-    type: string;
-    title: string;
-    body: string;
-    refCollection?: string;
-    refId?: string;
-  }): Promise<void> {
-    // TODO: depends on F03/WDP-7 — thay bằng M3 service thật (email/SMS/template)
-    await this.model.create({ ...p, isRead: false });
-  }
-}
-```
+`common/contracts/notification.port.ts` đã tồn tại trong codebase. Chỉ import `NOTIFICATION_PORT`, `NotificationPort` và `NotificationStub`; không copy interface hoặc tạo file khác. Module request-access vẫn tự khai báo provider `{ provide: NOTIFICATION_PORT, useClass: NotificationStub }` cho đến khi WDP-7 có service thật.
 
 ---
 
