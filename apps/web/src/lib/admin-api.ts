@@ -344,3 +344,198 @@ export async function listAuditLogs(params?: {
   });
   return res.data;
 }
+
+// ─── Admin Claim Management (WDP-28) ────────────────────────────────────────
+
+export interface AdminClaimLocation {
+  _id: string;
+  name: string;
+  address?: string;
+  ownerId?: string | null;
+  status?: string;
+  phone?: string;
+}
+
+export interface AdminClaimVendor {
+  _id: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface ClaimEvidenceFile {
+  url: string;
+  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  geo?: { type: 'Point'; coordinates: [number, number] };
+  capturedAt?: string;
+  metadata?: {
+    siteCode?: string;
+    adminScrutiny?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface ClaimFlags {
+  otpVerified: boolean;
+  needsAdminScrutiny: boolean;
+  hasOnSiteProof: boolean;
+  hasSiteCode: boolean;
+  hasLicense: boolean;
+  eligibleForApprove: boolean;
+}
+
+export interface AdminClaim {
+  _id: string;
+  vendorId: AdminClaimVendor | string;
+  locationId: AdminClaimLocation | string;
+  status: string;
+  otpVerified?: boolean;
+  evidenceFiles?: ClaimEvidenceFile[];
+  licenseUrl?: string;
+  deviceDistanceMeters?: number;
+  adminDecision?: {
+    decidedBy: string;
+    reason: string;
+    decidedAt: string;
+  };
+  flags: ClaimFlags;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ClaimQueueResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  items: AdminClaim[];
+}
+
+export interface ClaimActionResponse {
+  success: boolean;
+  message: string;
+  claim?: { id: string; status: string };
+  location?: { id: string; ownerId: string };
+  routedToDispute?: boolean;
+  dispute?: { id: string; status: string };
+}
+
+export async function getClaimQueue(
+  page = 1,
+  limit = 20,
+): Promise<ClaimQueueResponse> {
+  const res = await api.get<ClaimQueueResponse>('/admin/claims/queue', {
+    params: { page, limit },
+  });
+  return res.data;
+}
+
+export async function approveClaim(
+  id: string,
+  reason?: string,
+): Promise<ClaimActionResponse> {
+  const res = await api.patch<ClaimActionResponse>(
+    `/admin/claims/${id}/approve`,
+    { reason },
+  );
+  return res.data;
+}
+
+export async function rejectClaim(
+  id: string,
+  reason: string,
+): Promise<ClaimActionResponse> {
+  const res = await api.patch<ClaimActionResponse>(
+    `/admin/claims/${id}/reject`,
+    { reason },
+  );
+  return res.data;
+}
+
+export async function requestClaimEvidence(
+  id: string,
+  message: string,
+): Promise<ClaimActionResponse> {
+  const res = await api.patch<ClaimActionResponse>(
+    `/admin/claims/${id}/request-evidence`,
+    { message },
+  );
+  return res.data;
+}
+
+// ─── Admin Location Request Management (WDP-19 / location-requests) ──────────
+
+export interface AdminLocationRequestFlags {
+  suspectedDuplicate?: boolean;
+  farPin?: boolean;
+  suspectedDuplicateLocationIds?: string[];
+  [key: string]: unknown;
+}
+
+export interface AdminLocationRequest {
+  _id: string;
+  type: 'CREATE' | 'UPDATE';
+  status: string;
+  submittedBy: { _id: string; fullName?: string; email?: string } | string;
+  locationId?: { _id: string; name?: string; address?: string; status?: string } | string | null;
+  newData?: {
+    name?: string;
+    address?: string;
+    [key: string]: unknown;
+  };
+  flags?: AdminLocationRequestFlags;
+  deviceDistanceMeters?: number;
+  adminDecision?: {
+    decidedBy: string;
+    reason?: string;
+    decidedAt: string;
+    duplicateOfLocationId?: string;
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface LocationRequestQueueResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  items: AdminLocationRequest[];
+}
+
+export interface LocationRequestActionResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function getLocationRequestQueue(
+  page = 1,
+  limit = 30,
+): Promise<LocationRequestQueueResponse> {
+  const res = await api.get<LocationRequestQueueResponse>(
+    '/admin/location-requests/queue',
+    { params: { page, limit } },
+  );
+  return res.data;
+}
+
+export async function approveLocationRequest(
+  id: string,
+): Promise<LocationRequestActionResponse> {
+  const res = await api.patch<LocationRequestActionResponse>(
+    `/admin/location-requests/${id}/approve`,
+  );
+  return res.data;
+}
+
+export async function rejectLocationRequest(
+  id: string,
+  reason: string,
+  duplicateOfLocationId?: string,
+): Promise<LocationRequestActionResponse> {
+  const res = await api.patch<LocationRequestActionResponse>(
+    `/admin/location-requests/${id}/reject`,
+    { reason, ...(duplicateOfLocationId ? { duplicateOfLocationId } : {}) },
+  );
+  return res.data;
+}
