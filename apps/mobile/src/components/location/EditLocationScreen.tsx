@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { Button, Chip, Text, TextInput, Searchbar } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
@@ -11,6 +11,12 @@ import {
   updateLocation,
   verifyUpdatePhoneOtp,
 } from "@/service/locationService";
+import {
+  EditSuggestionChange,
+  EditSuggestionFlag,
+  submitEditSuggestion,
+} from "@/service/editSuggestionService";
+import { userContext } from "@/contexts/userContext";
 
 type TimeValue = {
   hours: number;
@@ -27,6 +33,7 @@ export default function EditLocationScreen({
   setSelectedChip,
   data,
 }) {
+  const { user } = useContext(userContext);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [openHours, setOpenHours] = useState<TimeValue | null>(null);
@@ -54,6 +61,12 @@ export default function EditLocationScreen({
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
+  const [flagValue, setFlagValue] =
+    useState<EditSuggestionFlag>("PERMANENTLY_CLOSED");
+  const [suggestionNote, setSuggestionNote] = useState("");
+  const isOwner = Boolean(
+    user?._id && data?.ownerId && String(user._id) === String(data.ownerId),
+  );
 
   const uploadMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -119,6 +132,10 @@ export default function EditLocationScreen({
 
   const handleSubmit = async () => {
     setLoading(true);
+    if (!isOwner) {
+      await handleSubmitSuggestion();
+      return;
+    }
     if (selectedChip.includes("name")) {
       if (!assets || assets.length === 0) {
         Alert.alert("Vui lòng thêm bằng chứng");
@@ -199,6 +216,76 @@ export default function EditLocationScreen({
     } finally {
       setLoading(false);
       setAssets([]);
+    }
+  };
+
+  const handleSubmitSuggestion = async () => {
+    if (!data?._id) {
+      Alert.alert("Khong tim thay dia diem");
+      setLoading(false);
+      return;
+    }
+
+    const changes: EditSuggestionChange[] = [];
+
+    if (selectedChip.includes("openingHours")) {
+      if (!openingHours.trim()) {
+        Alert.alert("Vui long nhap gio mo cua");
+        setLoading(false);
+        return;
+      }
+      changes.push({
+        fieldName: "openingHours",
+        textValue: openingHours.trim(),
+      });
+    }
+
+    if (selectedChip.includes("phone")) {
+      if (!phone.trim()) {
+        Alert.alert("Vui long nhap so dien thoai");
+        setLoading(false);
+        return;
+      }
+      changes.push({ fieldName: "phone", textValue: phone.trim() });
+    }
+
+    if (selectedChip.includes("address")) {
+      const longitude = pinLocation?.longitude ?? coordinates?.[0];
+      const latitude = pinLocation?.latitude ?? coordinates?.[1];
+      if (latitude === undefined || longitude === undefined) {
+        Alert.alert("Vui long chon vi tri de xuat");
+        setLoading(false);
+        return;
+      }
+      changes.push({
+        fieldName: "geo",
+        geoValue: { latitude, longitude },
+      });
+    }
+
+    if (selectedChip.includes("flag")) {
+      changes.push({ fieldName: "flag", flagValue });
+    }
+
+    if (changes.length === 0) {
+      Alert.alert("Vui long chon it nhat mot thong tin de de xuat");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await submitEditSuggestion(data._id, {
+        changes,
+        note: suggestionNote.trim() || undefined,
+      });
+      if (response.success) {
+        Alert.alert("Da gui de xuat chinh sua");
+        setSuggestionNote("");
+      } else {
+        Alert.alert(response.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -332,6 +419,14 @@ export default function EditLocationScreen({
           >
             Số điện thoại
           </Chip>
+          {!isOwner ? (
+            <Chip
+              onPress={() => setSelectedChip("flag")}
+              selected={selectedChip.includes("flag")}
+            >
+              Co trang thai
+            </Chip>
+          ) : null}
           <Chip
             onPress={() => setSelectedChip("category")}
             selected={selectedChip.includes("category")}
@@ -377,6 +472,7 @@ export default function EditLocationScreen({
                 />
               )}
               {selectedChip.length !== 0 &&
+                isOwner &&
                 selectedChip.includes("address") && (
                   <View
                     style={{ marginTop: 10, gap: 10, flexDirection: "row" }}
@@ -478,6 +574,7 @@ export default function EditLocationScreen({
                 />
                 <Button
                   mode="contained"
+                  disabled={!isOwner}
                   style={{ borderRadius: 4, paddingVertical: 6 }}
                   onPress={(e) => {
                     e.stopPropagation();
@@ -487,7 +584,7 @@ export default function EditLocationScreen({
                   Gửi mã
                 </Button>
               </View>
-              {otpSent && (
+              {isOwner && otpSent && (
                 <View style={{ marginBottom: 12 }}>
                   <Text>Nhập mã xác nhận</Text>
 
@@ -520,6 +617,31 @@ export default function EditLocationScreen({
                   </View>
                 </View>
               )}
+            </View>
+          )}
+          {!isOwner && selectedChip.includes("flag") && (
+            <View style={{ marginBottom: 12 }}>
+              <Text>Co trang thai</Text>
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <Chip
+                  selected={flagValue === "PERMANENTLY_CLOSED"}
+                  onPress={() => setFlagValue("PERMANENTLY_CLOSED")}
+                >
+                  Da dong cua
+                </Chip>
+                <Chip
+                  selected={flagValue === "DUPLICATE"}
+                  onPress={() => setFlagValue("DUPLICATE")}
+                >
+                  Trung lap
+                </Chip>
+                <Chip
+                  selected={flagValue === "NON_EXISTENT"}
+                  onPress={() => setFlagValue("NON_EXISTENT")}
+                >
+                  Khong ton tai
+                </Chip>
+              </View>
             </View>
           )}
           {selectedChip.includes("category") && (
@@ -571,8 +693,21 @@ export default function EditLocationScreen({
               )}
             </View>
           )}
+          {!isOwner && selectedChip.length !== 0 && (
+            <View style={{ marginBottom: 12 }}>
+              <Text>Ghi chu</Text>
+              <TextInput
+                placeholder="Them mo ta ngan cho nguoi duyet"
+                mode="outlined"
+                multiline
+                value={suggestionNote}
+                onChangeText={setSuggestionNote}
+              />
+            </View>
+          )}
         </View>
         {selectedChip.length !== 0 &&
+          isOwner &&
           selectedChip.includes("name") &&
           !selectedChip.includes("address") && (
             <View>

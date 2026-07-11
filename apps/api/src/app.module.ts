@@ -22,6 +22,7 @@ import { LocationReportsModule } from './modules/location-reports/location-repor
 import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
 import { AdminDashboardModule } from './modules/admin-dashboard/admin-dashboard.module';
 import { VendorDashboardModule } from './modules/vendor-dashboard/vendor-dashboard.module';
+import { EditSuggestionsModule } from './modules/edit-suggestions/edit-suggestions.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { VendorDashboardModule } from './modules/vendor-dashboard/vendor-dashboa
     AdminReportsModule,
     AdminDashboardModule,
     VendorDashboardModule,
+    EditSuggestionsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
