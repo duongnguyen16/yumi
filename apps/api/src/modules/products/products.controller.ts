@@ -30,6 +30,19 @@ export class ProductsController {
     return this.productsService.findByLocation(locationId);
   }
 
+  @Get(':locationId')
+  async getAllProductsByLocation(@Param('locationId') locationId: string) {
+    const response = await this.productsService.getAllProductsByLocation(locationId);
+    if (!response?.success) {
+      return {
+        success: false,
+        message: response?.message,
+        statusCode: response?.statusCode,
+      };
+    }
+    return response;
+  }
+
   @Post('location/:locationId')
   @UseGuards(AuthGuard('jwt-at'), VendorGuard)
   create(

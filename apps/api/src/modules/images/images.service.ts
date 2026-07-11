@@ -10,8 +10,15 @@ import { randomUUID } from 'crypto';
 import { ValidateImageDto } from './dto/validate-image.dto';
 import { CreateUploadUrlDto } from './dto/create-upload-url.dto';
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'video/mp4',
+  'video/quicktime',
+  'video/mpeg',
+];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 @Injectable()
 export class ImagesService {
@@ -24,23 +31,23 @@ export class ImagesService {
 
     if (!ALLOWED_MIME_TYPES.includes(dto.mimeType)) {
       throw new BadRequestException(
-        'Chi ho tro anh JPG, JPEG hoac PNG cho dia diem',
+        'Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG cho địa điểm',
       );
     }
 
     if (!['.jpg', '.jpeg', '.png'].includes(normalizedExtension)) {
       throw new BadRequestException(
-        'Dinh dang tep khong hop le. Chi ho tro .jpg, .jpeg, .png',
+        'Định dạng tệp không hợp lệ. Chỉ hỗ trợ .jpg, .jpeg, .png',
       );
     }
 
     if (dto.fileSize > MAX_IMAGE_SIZE) {
-      throw new BadRequestException('Moi anh phai nho hon hoac bang 10MB');
+      throw new BadRequestException('Mọi ảnh phải nhỏ hơn hoặc bằng 10MB');
     }
 
     return {
       success: true,
-      message: 'Anh hop le',
+      message: 'Ảnh hợp lệ',
       constraints: {
         mimeTypes: ALLOWED_MIME_TYPES,
         maxFileSize: MAX_IMAGE_SIZE,
@@ -112,7 +119,49 @@ export class ImagesService {
     return this.supabaseClient;
   }
 
+  async updateMedia(path: string, file: Express.Multer.File) {
+    const supabase = this.getSupabaseClient();
+    const bucket = this.getBucket();
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException('File không hợp lệ');
+    }
+    const fileType = file.mimetype.startsWith('image/') ? 'image' : 'video';
+    const maxSize =
+      fileType === 'image' ? 10 * 1024 * 1024 : 1000 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        `File ${fileType} phải nhỏ hơn hoặc bằng ${maxSize / (1024 * 1024)}MB`,
+      );
+    }
+    const filePath = `${path}/${randomUUID()}/${fileType}/${file.filename || file.originalname}`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+    if (error) {
+      throw new BadRequestException(`Không thể tải lên tệp: ${error.message}`);
+    }
+    const { data: publicData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return {
+      url: publicData.publicUrl,
+      path: data.path,
+    };
+  }
+
+  async uploadMultiMedia(path: string, files: Express.Multer.File[]) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Không có tệp nào được tải lên');
+    }
+    return Promise.all(files.map((file) => this.updateMedia(path, file)));
+  }
   private getBucket() {
-    return this.configService.get<string>('SUPABASE_STORAGE_BUCKET') ?? 'images';
+    return (
+      this.configService.get<string>('SUPABASE_STORAGE_BUCKET') ?? 'images'
+    );
   }
 }

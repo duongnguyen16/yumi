@@ -22,15 +22,15 @@ export default function Register() {
       setLoading(true);
       setError("");
       if (!name || !email || !password || !confirmPassword) {
-        setError("Vui long nhap day du thong tin.");
+        setError("Vui lòng nhập đầy đủ thông tin.");
         return;
       }
       if (password.length < 8) {
-        setError("Mat khau phai co it nhat 8 ky tu.");
+        setError("Mật khẩu phải có ít nhất 8 ký tự.");
         return;
       }
       if (password !== confirmPassword) {
-        setError("Mat khau xac nhan khong khop.");
+        setError("Mật khẩu xác nhận không khớp.");
         return;
       }
 
@@ -41,10 +41,10 @@ export default function Register() {
         router.replace("/home");
         return;
       }
-      setError(response?.message || "Dang ky that bai.");
+      setError(response?.message || "Đăng ký thất bại.");
     } catch (error) {
       console.error("Error occurred while registering:", error);
-      setError("Dang ky that bai. Vui long thu lai.");
+      setError("Đăng ký thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -69,12 +69,12 @@ export default function Register() {
               <Text style={{ color: "orange" }}>Yu</Text>
               <Text style={{ color: "pink" }}>Mi</Text>
             </Text>
-            <Text style={{ fontSize: 19, marginTop: 5 }}>Tao tai khoan moi</Text>
+            <Text style={{ fontSize: 19, marginTop: 5 }}>Tạo tài khoản mới</Text>
           </View>
 
           <View style={{ marginTop: 20, gap: 10 }}>
             <View>
-              <Text style={{ fontWeight: "bold" }}>Ho ten</Text>
+              <Text style={{ fontWeight: "bold" }}>Họ tên</Text>
               <TextInput
                 style={{ marginTop: 5 }}
                 mode="outlined"
@@ -94,7 +94,7 @@ export default function Register() {
               />
             </View>
             <View>
-              <Text style={{ fontWeight: "bold" }}>Mat khau</Text>
+              <Text style={{ fontWeight: "bold" }}>Mật khẩu</Text>
               <TextInput
                 style={{ marginTop: 5 }}
                 mode="outlined"
@@ -110,7 +110,7 @@ export default function Register() {
               />
             </View>
             <View>
-              <Text style={{ fontWeight: "bold" }}>Nhap lai mat khau</Text>
+              <Text style={{ fontWeight: "bold" }}>Nhập lại mật khẩu</Text>
               <TextInput
                 style={{ marginTop: 5 }}
                 mode="outlined"
@@ -133,10 +133,10 @@ export default function Register() {
               disabled={loading}
               style={{ justifyContent: "center", height: 50 }}
             >
-              Dang ky
+              Đăng ký
             </Button>
             <Text style={{ textAlign: "center", fontSize: 16 }}>
-              Da co tai khoan? <Link href="/auth/login">Dang nhap</Link>
+              Đã có tài khoản? <Link href="/auth/login">Đăng nhập</Link>
             </Text>
           </View>
         </View>

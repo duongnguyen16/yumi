@@ -1,7 +1,11 @@
-import React from "react";
+import { userContext } from "@/contexts/userContext";
+import { useRouter } from "expo-router";
+import React, { useContext, useState } from "react";
 import { View } from "react-native";
-import { Card, Icon, Text } from "react-native-paper";
+import { Button, Card, Icon, Text } from "react-native-paper";
+import EditLocationModal from "../modals/EditLocationModal";
 import ProductSection from "../ProductSection";
+import ProductCard from "../ui/ProductCard";
 
 type Product = {
   _id?: string;
@@ -15,25 +19,27 @@ type Product = {
 
 type GeneralTabProps = {
   data?: {
-    location?: {
-      _id?: string;
-      id?: string;
-      ownerId?: string | { _id?: string; id?: string } | null;
-      address?: string;
-      openingHours?: string;
-      description?: string;
-      viewCount?: number;
-      products?: Product[];
-    };
+    _id?: string;
+    id?: string;
+    ownerId?: string | { _id?: string; id?: string } | null;
+    address?: string;
+    openingHours?: string;
+    description?: string;
+    viewCount?: number;
+    products?: Product[];
   } | null;
-  onProductsChanged?: () => Promise<void> | void;
+  productData?: Product[] | null;
+  onRefresh?: () => Promise<void> | void;
 };
 
 export default function GeneralTab({
   data,
-  onProductsChanged,
+  productData,
+  onRefresh,
 }: GeneralTabProps) {
-  const location = data?.location;
+  const { user } = useContext(userContext);
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
 
   return (
     <View style={{ flex: 1 }}>
@@ -42,25 +48,84 @@ export default function GeneralTab({
         <Card.Content>
           <InfoRow
             icon="map-marker"
-            text={location?.address || "Dia chi khong co san"}
+            text={data?.address || "Địa chỉ không có sẵn"}
           />
           <InfoRow
             icon="clock"
-            text={location?.openingHours || "Gio mo cua khong co san"}
+            text={data?.openingHours || "Giờ mở cửa không có sẵn"}
           />
           <InfoRow
             icon="information"
-            text={location?.description || "Mo ta khong co san"}
+            text={data?.description || "Mô tả không có sẵn"}
           />
-          <InfoRow icon="eye" text={`${location?.viewCount || "0"} luot xem`} />
+          <InfoRow icon="eye" text={`${data?.viewCount || "0"} lượt xem`} />
         </Card.Content>
+        {user?._id ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              onPress={() => {
+                setVisible(true);
+              }}
+            >
+              Chỉnh sửa thông tin
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?._id && user?._id !== data?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              icon="flag-outline"
+              onPress={() => {
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data?._id,
+                    type: "flag",
+                  },
+                });
+              }}
+            >
+              Bao co trang thai
+            </Button>
+          </Card.Actions>
+        ) : null}
       </Card>
 
       <ProductSection
-        locationId={location?._id ?? location?.id}
-        ownerId={location?.ownerId}
-        products={location?.products ?? []}
-        onChanged={onProductsChanged}
+        locationId={data?._id ?? data?.id}
+        ownerId={data?.ownerId}
+        products={productData || data?.products || []}
+        onChanged={onRefresh}
+      />
+
+      <View
+        style={{
+          marginTop: 16,
+          flexDirection: "column",
+          gap: 16,
+          borderRadius: 8,
+          padding: 10,
+        }}
+      >
+        <Text variant="headlineSmall">Sản phẩm</Text>
+        {(productData || data?.products || []).map((product) => (
+          <ProductCard key={product._id} data={product} />
+        ))}
+        {user?._id === data?.ownerId ? (
+          <Button
+            mode="outlined"
+            onPress={() => {
+              // Handle button press
+            }}
+          >
+            Chỉnh sửa sản phẩm
+          </Button>
+        ) : null}
+      </View>
+      <EditLocationModal
+        setVisible={setVisible}
+        visible={visible}
+        data={data}
       />
     </View>
   );
