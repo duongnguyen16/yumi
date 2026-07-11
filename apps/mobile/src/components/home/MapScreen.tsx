@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { StyleSheet, View, Keyboard, BackHandler } from "react-native";
 import {
   Map,
@@ -20,6 +26,8 @@ import {
 import { useFocusEffect, useRouter } from "expo-router";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 import Option from "../ui/Option";
+import Dialog from "../ui/Dialog";
+import { userContext } from "@/contexts/userContext";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APu ||
@@ -44,6 +52,7 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
 
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
+  const { user } = useContext(userContext);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -54,6 +63,7 @@ export default function MapScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScreen, setSearchScreen] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [phoneDialogVisible, setPhoneDialogVisible] = useState(false);
   const [option, setOption] = useState(null);
 
   useEffect(() => {
@@ -180,6 +190,10 @@ export default function MapScreen() {
       router.push({ pathname: "/contribute", params: { type: "add" } });
     }
     if (selectedOption === "register-location") {
+      if (user?.phoneVerified !== true) {
+        setPhoneDialogVisible(true);
+        return;
+      }
       router.push({ pathname: "/contribute", params: { type: "register" } });
     }
   };
@@ -378,19 +392,33 @@ export default function MapScreen() {
             title="Bạn muốn làm gì?"
             options={[
               {
-                label: "Thêm địa điểm",
-                value: "add-location",
-                icon: "plus",
-              },
-              {
                 label: "Đăng ký địa điểm",
                 value: "register-location",
                 icon: "file-document-edit-outline",
+              },
+              {
+                label: "Đóng góp địa điểm",
+                value: "add-location",
+                icon: "plus",
               },
             ]}
             option={option}
             setOption={setOption}
             onDismiss={(selectedOption) => handleOptionSelect(selectedOption)}
+          />
+          <Dialog
+            visible={phoneDialogVisible}
+            setVisible={setPhoneDialogVisible}
+            title="Cần xác minh số điện thoại"
+            message="Bạn cần xác minh số điện thoại trước khi đăng ký địa điểm."
+            option
+            confirmLabel="Đến Profile"
+            cancelLabel="Để sau"
+            result={(confirmed) => {
+              if (confirmed) {
+                router.push("/profile");
+              }
+            }}
           />
         </View>
       )}

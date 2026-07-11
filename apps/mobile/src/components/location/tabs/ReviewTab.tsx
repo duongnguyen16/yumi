@@ -1,3 +1,4 @@
+import { userContext } from "@/contexts/userContext";
 import {
   createReview,
   deleteReview,
@@ -6,7 +7,6 @@ import {
   ReviewSummary,
   updateReview,
 } from "@/service/reviewService";
-import { userContext } from "@/contexts/userContext";
 import * as Location from "expo-location";
 import React, {
   useCallback,
@@ -16,6 +16,7 @@ import React, {
   useState,
 } from "react";
 import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
+import { Tabs } from "react-native-collapsible-tab-view";
 import {
   ActivityIndicator,
   Button,
@@ -28,12 +29,12 @@ import {
 } from "react-native-paper";
 
 type ReviewTabProps = {
-  locationId?: string;
+  locationData?: any;
   initialRating?: Partial<ReviewSummary> | null;
 };
 
 export default function ReviewTab({
-  locationId,
+  locationData,
   initialRating,
 }: ReviewTabProps) {
   const [loading, setLoading] = useState(true);
@@ -53,28 +54,32 @@ export default function ReviewTab({
     user?: { _id?: string; id?: string } | null;
   } | null;
   const currentUserId = userState?.user?._id ?? userState?.user?.id;
+  const locationId = locationData?._id ?? locationData?.id;
 
-  const loadReviews = useCallback(async (options?: { showLoading?: boolean }) => {
-    if (!locationId) {
+  const loadReviews = useCallback(
+    async (options?: { showLoading?: boolean }) => {
+      if (!locationId) {
+        console.log("No locationId provided, skipping loadReviews.");
+        setLoading(false);
+        return;
+      }
+      if (options?.showLoading !== false) {
+        setLoading(true);
+      }
+      const response = await getReviewsByLocation(locationId);
+
+      if (response.success) {
+        setSummary(response.summary);
+        setReviews(response.reviews);
+        setErrorMessage("");
+      } else {
+        setReviews([]);
+        setErrorMessage(response.message);
+      }
       setLoading(false);
-      return;
-    }
-
-    if (options?.showLoading !== false) {
-      setLoading(true);
-    }
-    const response = await getReviewsByLocation(locationId);
-
-    if (response.success) {
-      setSummary(response.summary);
-      setReviews(response.reviews);
-      setErrorMessage("");
-    } else {
-      setReviews([]);
-      setErrorMessage(response.message);
-    }
-    setLoading(false);
-  }, [locationId]);
+    },
+    [locationId],
+  );
 
   useEffect(() => {
     void Promise.resolve().then(() => loadReviews());
@@ -208,71 +213,83 @@ export default function ReviewTab({
   }
 
   return (
-    <View style={styles.container}>
-      <Card mode="contained" style={styles.summaryCard}>
-        <Card.Content style={styles.summaryContent}>
-          <View>
-            <Text variant="displaySmall" style={styles.ratingText}>
-              {formattedRating}
-            </Text>
-            <StarRating rating={summary.avgRating} />
-          </View>
-          <View style={styles.summaryMeta}>
-            <Text variant="titleMedium" style={styles.reviewCount}>
-              {summary.reviewCount} reviews
-            </Text>
-            <Text variant="bodySmall" style={styles.supportText}>
-              Dữ liệu đánh giá mới nhất
-            </Text>
-          </View>
-        </Card.Content>
-      </Card>
+    <Tabs.FlatList
+      data={reviews}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={{
+        gap: 12,
+      }}
+      ListHeaderComponent={
+        <>
+          <Card mode="contained" style={styles.summaryCard}>
+            <Card.Content style={styles.summaryContent}>
+              <View>
+                <Text variant="displaySmall" style={styles.ratingText}>
+                  {formattedRating}
+                </Text>
+                <StarRating rating={summary.avgRating} />
+              </View>
 
-      <Card mode="contained" style={styles.formCard}>
-        <Card.Content>
-          <Text variant="titleMedium" style={styles.formTitle}>
-            {editingReviewId ? "Sửa đánh giá" : "Viết đánh giá"}
-          </Text>
-          <PressableStarRating rating={rating} onChange={setRating} />
-          <TextInput
-            mode="outlined"
-            value={comment}
-            onChangeText={setComment}
-            placeholder="Chia sẻ trải nghiệm của bạn..."
-            multiline
-            numberOfLines={4}
-            style={styles.commentInput}
-          />
-          <View style={styles.formActions}>
-            {editingReviewId ? (
-              <Button
+              <View style={styles.summaryMeta}>
+                <Text variant="titleMedium" style={styles.reviewCount}>
+                  {summary.reviewCount} reviews
+                </Text>
+                <Text variant="bodySmall" style={styles.supportText}>
+                  Dữ liệu đánh giá mới nhất
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <Card mode="contained" style={styles.formCard}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.formTitle}>
+                {editingReviewId ? "Sửa đánh giá" : "Viết đánh giá"}
+              </Text>
+
+              <PressableStarRating rating={rating} onChange={setRating} />
+
+              <TextInput
                 mode="outlined"
-                onPress={handleCancelEdit}
-                disabled={submitting}
-                style={styles.cancelButton}
-              >
-                Hủy
-              </Button>
-            ) : null}
-            <Button
-              mode="contained"
-              icon={editingReviewId ? "content-save" : "send"}
-              loading={submitting}
-              disabled={submitting}
-              onPress={handleSubmitReview}
-              style={styles.submitButton}
-            >
-              {editingReviewId ? "Cập nhật" : "Gửi đánh giá"}
-            </Button>
-          </View>
-        </Card.Content>
-      </Card>
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Chia sẻ trải nghiệm của bạn..."
+                multiline
+                numberOfLines={4}
+                style={styles.commentInput}
+              />
 
-      {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      ) : null}
+              <View style={styles.formActions}>
+                {editingReviewId ? (
+                  <Button
+                    mode="outlined"
+                    onPress={handleCancelEdit}
+                    disabled={submitting}
+                    style={styles.cancelButton}
+                  >
+                    Hủy
+                  </Button>
+                ) : null}
+                <Button
+                  mode="contained"
+                  icon={editingReviewId ? "content-save" : "send"}
+                  loading={submitting}
+                  disabled={submitting}
+                  onPress={handleSubmitReview}
+                  style={styles.submitButton}
+                >
+                  {editingReviewId ? "Cập nhật" : "Gửi đánh giá"}
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
 
-      {reviews.length === 0 ? (
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+        </>
+      }
+      ListEmptyComponent={
         <Card mode="contained" style={styles.emptyCard}>
           <Card.Content>
             <Text variant="titleMedium" style={styles.emptyTitle}>
@@ -280,27 +297,26 @@ export default function ReviewTab({
             </Text>
           </Card.Content>
         </Card>
-      ) : (
-        reviews.map((review) => (
-          <ReviewCard
-            key={review.id}
-            review={review}
-            canEdit={Boolean(currentUserId && review.user?.id === currentUserId)}
-            onEdit={handleStartEdit}
-            onDelete={handleDeleteReview}
-            deleting={deletingReviewId === review.id}
-          />
-        ))
+      }
+      renderItem={({ item }) => (
+        <ReviewCard
+          review={item}
+          canEdit={Boolean(currentUserId && item.user?.id === currentUserId)}
+          onEdit={handleStartEdit}
+          onDelete={handleDeleteReview}
+          deleting={deletingReviewId === item.id}
+        />
       )}
-
-      <Snackbar
-        visible={Boolean(notice)}
-        onDismiss={() => setNotice("")}
-        duration={3000}
-      >
-        {notice}
-      </Snackbar>
-    </View>
+      ListFooterComponent={
+        <Snackbar
+          visible={Boolean(notice)}
+          onDismiss={() => setNotice("")}
+          duration={3000}
+        >
+          {notice}
+        </Snackbar>
+      }
+    />
   );
 }
 
