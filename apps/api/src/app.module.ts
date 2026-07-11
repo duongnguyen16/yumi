@@ -18,6 +18,7 @@ import { LocationContributionsModule } from './modules/location-contributions/lo
 import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
 import { LocationReportsModule } from './modules/location-reports/location-reports.module';
 import { ClaimModule } from './modules/claims/claim.module';
+import { AdminClaimModule } from './modules/admin-claims/admin-claim.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ClaimModule } from './modules/claims/claim.module';
     VendorLocationsModule,
     LocationReportsModule,
     ClaimModule,
+    AdminClaimModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
