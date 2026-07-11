@@ -23,6 +23,9 @@ import { AdminReportsModule } from './modules/admin-reports/admin-reports.module
 import { AdminDashboardModule } from './modules/admin-dashboard/admin-dashboard.module';
 import { VendorDashboardModule } from './modules/vendor-dashboard/vendor-dashboard.module';
 import { EditSuggestionsModule } from './modules/edit-suggestions/edit-suggestions.module';
+import { ClaimModule } from './modules/claims/claim.module';
+import { AdminClaimModule } from './modules/admin-claims/admin-claim.module';
+import { RequestAccessModule } from './modules/request-access/request-access.module';
 
 @Module({
   imports: [
@@ -60,6 +63,9 @@ import { EditSuggestionsModule } from './modules/edit-suggestions/edit-suggestio
     AdminDashboardModule,
     VendorDashboardModule,
     EditSuggestionsModule,
+    ClaimModule,
+    AdminClaimModule,
+    RequestAccessModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
