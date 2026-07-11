@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AtStrategy } from 'src/common/guard/at.strategy';
-import { RtStrategy } from 'src/common/guard/rt.strategy';
-import { ProductsService } from './products.service';
-import { ProductsController } from './products.controller';
+import { VendorGuard } from 'src/common/guard/vendor.guard';
 import { SchemaModule } from 'src/common/schemas/schema.module';
+import { ProductsController } from './products.controller';
+import { ProductsService } from './products.service';
 
 @Module({
-  providers: [AtStrategy, RtStrategy, ProductsService],
-  controllers: [ProductsController],
   imports: [SchemaModule],
+  controllers: [ProductsController],
+  providers: [AtStrategy, VendorGuard, ProductsService],
 })
 export class ProductsModule {}
