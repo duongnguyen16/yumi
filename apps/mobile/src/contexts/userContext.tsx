@@ -6,16 +6,41 @@ import {
   setAccessToken,
 } from "@/service/tokenStorage";
 import { useRouter } from "expo-router";
-import { createContext, ReactNode, useEffect, useState } from "react";
+import {
+  createContext,
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
 
-export const userContext = createContext(null);
+type AuthenticatedUser = Record<string, unknown>;
+
+type UserContextValue = {
+  user: AuthenticatedUser | null;
+  loading: boolean;
+  setUser: Dispatch<SetStateAction<AuthenticatedUser | null>>;
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
+  handleLogout: () => Promise<void>;
+};
+
+export const userContext = createContext<UserContextValue>({
+  user: null,
+  loading: true,
+  setUser: () => undefined,
+  accessToken: null,
+  setAccessToken: () => undefined,
+  handleLogout: async () => undefined,
+});
 
 export default function UserContextProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState(true);
   const accessToken = getAccessToken();
   const router = useRouter();
@@ -30,6 +55,7 @@ export default function UserContextProvider({
       console.error("Error logging out:", error);
     }
   };
+
   useEffect(() => {
     const restoreUserSession = async () => {
       try {
@@ -64,7 +90,7 @@ export default function UserContextProvider({
       }
     };
     restoreUserSession();
-  }, []);
+  }, [router]);
 
   return (
     <userContext.Provider
