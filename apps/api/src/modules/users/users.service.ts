@@ -5,12 +5,20 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
+import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserDocument } from 'src/common/schemas/user.schema';
+import {
+  OtpChannel,
+  OtpDocument,
+  OtpPurpose,
+  OtpStatus,
+} from 'src/common/schemas/otp.schema';
+import { SmsService } from '../auth/services/sms.service';
 
 type AvatarUploadFile = {
   buffer: Buffer;
@@ -25,13 +33,15 @@ export class UsersService {
 
   constructor(
     @InjectModel('User') private readonly userModel: Model<UserDocument>,
+    @InjectModel('Otp') private readonly otpModel: Model<OtpDocument>,
     private readonly configService: ConfigService,
+    private readonly smsService: SmsService,
   ) {}
 
   async getProfile(userId: string) {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('Khong tim thay nguoi dung');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     return {
@@ -56,7 +66,7 @@ export class UsersService {
 
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('Khong tim thay nguoi dung');
+      throw new NotFoundException('Không tìm thấy người dùng');
     }
 
     if (dto.name !== undefined) {
@@ -87,7 +97,111 @@ export class UsersService {
 
     return {
       success: true,
-      message: 'Cap nhat thong tin thanh cong',
+      message: 'Cập nhật thông tin thành công',
+      user: this.toProfileResponse(user),
+    };
+  }
+
+  async sendPhoneVerificationOtp(userId: string, phone: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    const twoMinuteAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const recentOtp = await this.otpModel.findOne({
+      userId: new Types.ObjectId(userId),
+      purpose: OtpPurpose.VERIFY_PHONE,
+      createdAt: { $gte: twoMinuteAgo, $lte: new Date() },
+    });
+
+    if (recentOtp) {
+      return {
+        success: false,
+        message: 'Vui lòng thử lại sau 2 phút',
+      };
+    }
+
+    await this.otpModel.updateMany(
+      {
+        userId: new Types.ObjectId(userId),
+        purpose: OtpPurpose.VERIFY_PHONE,
+        status: OtpStatus.PENDING,
+      },
+      { status: OtpStatus.CANCELLED },
+    );
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otp, 10);
+    await this.otpModel.create({
+      userId: new Types.ObjectId(userId),
+      purpose: OtpPurpose.VERIFY_PHONE,
+      channel: OtpChannel.SMS,
+      recipient: phone,
+      otpHash,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    await this.smsService.sendOtp(phone, otp);
+
+    return {
+      success: true,
+      message: 'OTP đã được gửi thành công',
+    };
+  }
+
+  async verifyPhoneVerificationOtp(userId: string, otp: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    const otpRecord = await this.otpModel
+      .findOne({
+        userId: new Types.ObjectId(userId),
+        purpose: OtpPurpose.VERIFY_PHONE,
+        status: OtpStatus.PENDING,
+      })
+      .sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+      return {
+        success: false,
+        message: 'Không tìm thấy OTP',
+      };
+    }
+
+    if (otpRecord.expiresAt < new Date()) {
+      await this.otpModel.updateOne(
+        { _id: otpRecord._id },
+        { status: OtpStatus.EXPIRED },
+      );
+      return {
+        success: false,
+        message: 'OTP đã hết hạn',
+      };
+    }
+
+    const isMatch = await bcrypt.compare(otp, otpRecord.otpHash);
+    if (!isMatch) {
+      return {
+        success: false,
+        message: 'OTP không hợp lệ',
+      };
+    }
+
+    await this.otpModel.updateOne(
+      { _id: otpRecord._id },
+      { verifiedAt: new Date(), status: OtpStatus.VERIFIED },
+    );
+
+    user.phone = otpRecord.recipient;
+    user.phoneVerified = true;
+    await user.save();
+
+    return {
+      success: true,
+      message: 'Xác minh số điện thoại thành công',
       user: this.toProfileResponse(user),
     };
   }
@@ -98,6 +212,7 @@ export class UsersService {
       display_name: user.fullName ?? null,
       avatar_url: user.avatarUrl ?? null,
       phone: user.phone ?? null,
+      phoneVerified: user.phoneVerified === true,
       email: user.email,
       role: user.role,
       joined_at: user.createdAt ?? null,
@@ -131,7 +246,7 @@ export class UsersService {
 
     if (error) {
       throw new InternalServerErrorException(
-        `Upload avatar len Supabase that bai: ${error.message}`,
+        `Upload avatar lên Supabase thất bại: ${error.message}`,
       );
     }
 
@@ -163,7 +278,7 @@ export class UsersService {
 
     if (error) {
       throw new InternalServerErrorException(
-        `Xoa avatar cu tren Supabase that bai: ${error.message}`,
+        `Xóa avatar cũ trên Supabase thất bại: ${error.message}`,
       );
     }
   }
