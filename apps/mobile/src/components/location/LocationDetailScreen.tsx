@@ -11,15 +11,16 @@ import { viewCount } from "@/service/locationService";
 
 const HEADER_HEIGHT = 310;
 
-export default function LocationDetailScreen({ data, productData }) {
+export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const { width } = useWindowDimensions();
   const theme = useTheme();
-  const locationId = data?._id;
+  const location = data?.location;
+  const locationId = location?._id;
 
   const coverImage =
-    data?.imagesUrls?.find?.((image) => image?.isCover)?.url ||
-    data?.imagesUrls?.[0]?.url ||
-    data?.imageUrls?.[0] ||
+    location?.imagesUrls?.find?.((image) => image?.isCover)?.url ||
+    location?.imagesUrls?.[0]?.url ||
+    location?.imageUrls?.[0] ||
     null;
 
   const handleShare = async () => {
@@ -52,7 +53,7 @@ export default function LocationDetailScreen({ data, productData }) {
       <View style={{ backgroundColor: theme.colors.background }}>
         <Image
           style={{ width: "100%", height: 200, resizeMode: "cover" }}
-          alt={data?.name || "Location Image"}
+          alt={location?.name || "Location Image"}
           source={{
             uri:
               coverImage ||
@@ -62,7 +63,7 @@ export default function LocationDetailScreen({ data, productData }) {
 
         <View style={{ padding: 16 }}>
           <Text variant="headlineMedium">
-            {data?.name || "Có lỗi khi hiển thị tên vị trí"}
+            {location?.name || "Có lỗi khi hiển thị tên vị trí"}
           </Text>
 
           <View
@@ -79,7 +80,7 @@ export default function LocationDetailScreen({ data, productData }) {
                 alignItems: "center",
               }}
             >
-              <Text>{data?.rating?.avgRating || 0}</Text>
+              <Text>{location?.rating?.avgRating || 0}</Text>
               <Icon source="star" size={20} color="#FFD700" />
             </View>
 
@@ -126,12 +127,12 @@ export default function LocationDetailScreen({ data, productData }) {
       >
         <Tabs.Tab name="general" label="Tổng quan">
           <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <GeneralTab data={data} productData={productData} />
+            <GeneralTab data={location} productData={productData} onRefresh={onRefresh} />
           </Tabs.ScrollView>
         </Tabs.Tab>
 
         <Tabs.Tab name="review" label="Đánh giá">
-          <ReviewTab locationData={data} initialRating={data?.rating} />
+          <ReviewTab locationData={location} initialRating={location?.rating} />
         </Tabs.Tab>
 
         <Tabs.Tab name="picture" label="Hình ảnh">
