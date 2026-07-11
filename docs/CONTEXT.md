@@ -372,7 +372,7 @@ owned --Vendor release / Admin revoke--> no-owner
 - **Tìm kiếm & xem (C2/C3):** map (viewport + clustering — BR-41) + list + filter; chỉ PUBLISHED (BR-11). Xem chi tiết → +view (BR-12); badge xác minh nếu claimed. Không lấy được vị trí → mặc định trung tâm Hòa Lạc; lỗi Goong → list-only.
 - **Bookmark (C7):** lưu/bỏ; 1 cặp/người (BR-23); Guest → login (BR-21).
 - **Share (C8):** deeplink + copy; chỉ PUBLISHED.
-- **Review (C6):** rating(1–5) + nội dung ≥20 ký tự + ảnh ≤3; **tạo mới review chỉ khi user đang ở tại địa điểm hoặc cung cấp ảnh tại chỗ hợp lệ** (BR-68); hiển thị ngay; 1/user/địa điểm (BR-17); Vendor không review địa điểm mình (BR-18); địa điểm claimed → báo Vendor (mở reply V8); review giữ → +2 trust (BR-19). Customer toàn quyền **sửa/xóa review cũ từ xa**; edit không được tạo review mới hoặc đổi địa điểm gốc (BR-69). Vendor không xóa được (BR-48).
+- **Review (C6):** rating(1–5) + nội dung + ảnh ≤3; **tạo mới review chỉ khi user đang ở tại địa điểm hoặc cung cấp ảnh tại chỗ hợp lệ** (BR-68); hiển thị ngay; 1/user/địa điểm (BR-17); Vendor không review địa điểm mình (BR-18); địa điểm claimed → báo Vendor (mở reply V8); review giữ → +2 trust (BR-19). Customer toàn quyền **sửa/xóa review cũ từ xa**; edit không được tạo review mới hoặc đổi địa điểm gốc (BR-69). Vendor không xóa được (BR-48).
 - **Report (C9):** chọn loại (sai info/spam/đóng cửa/**chủ sai**/khác) + mô tả/evidence; 1 PENDING/đối tượng/loại (BR-24); "chủ sai" → vào Report queue để Admin xử, không tự mở Dispute; nếu Admin thông qua report, vendor bị ảnh hưởng có quyền kháng cáo theo HF-6; vu cáo → −10 trust (BR-27).
 - **Top trending (C10):** sort view + review + recency; chỉ PUBLISHED.
 - **Vendor — info (V6):** sửa giờ/SĐT/mô tả/ảnh; đổi tên/địa chỉ → PENDING_RE_APPROVAL, public giữ info cũ (BR-30); không hard delete, chỉ ẩn (BR-35).
@@ -430,7 +430,7 @@ Khởi tạo 0. +15 submit duyệt · +5 report đúng · +2 review giữ · −
 | tag                      | ≥ 1                                             |
 | ảnh địa điểm             | 1–5; định dạng ảnh; ≤ 5MB/ảnh                   |
 | Review.rating            | bắt buộc 1–5                                    |
-| Review.nội dung          | ≥ 20 ký tự                                      |
+| Review.nội dung          | bắt buộc, không giới hạn tối thiểu              |
 | Review.ảnh               | 0–3                                             |
 | Review.tạo mới           | bắt buộc proof tại chỗ: GPS/fused location cách Location ≤50m và accuracy ≤50m, không cho kéo pin tay; nếu GPS không đạt thì dùng ảnh tại chỗ hợp lệ; edit review cũ không yêu cầu proof mới |
 | Product.giá              | optional; ≥ 0; luôn kèm disclaimer              |

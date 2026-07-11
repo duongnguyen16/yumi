@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { LocationStatus, ReviewStatus } from 'src/common/schemas/common.enums';
-import {
-  Location,
-  LocationDocument,
-} from 'src/common/schemas/location.schema';
+import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
   LocationView,
   LocationViewDocument,
