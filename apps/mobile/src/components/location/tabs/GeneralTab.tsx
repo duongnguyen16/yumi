@@ -68,7 +68,7 @@ export default function GeneralTab({ data, productData }) {
             </Text>
           </View>
         </Card.Content>
-        {user?._id === data?.ownerId ? (
+        {user?._id ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
@@ -76,6 +76,24 @@ export default function GeneralTab({ data, productData }) {
               }}
             >
               Chỉnh sửa thông tin
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?._id && user?._id !== data?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              icon="flag-outline"
+              onPress={() => {
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "flag",
+                  },
+                });
+              }}
+            >
+              Bao co trang thai
             </Button>
           </Card.Actions>
         ) : null}

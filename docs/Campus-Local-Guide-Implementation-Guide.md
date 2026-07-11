@@ -262,7 +262,7 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **DoD:** Duyệt đổi status đúng; gửi notify cho người submit; ghi audit; trust cập nhật.
 
 #### WDP-23 · F19 — Đánh giá (review)  `Cần làm` · owner: Long · **Cốt lõi**
-- **Mục tiêu:** Tạo/sửa/xóa; rating 1–5 + nội dung ≥ 20 ký tự + ảnh ≤ 3; **tạo mới chỉ khi có proof tại chỗ**; **1 review/user/địa điểm**; chặn tự đánh giá địa điểm mình; tính lại rating TB.
+- **Mục tiêu:** Tạo/sửa/xóa; rating 1–5 + nội dung + ảnh ≤ 3; **tạo mới chỉ khi có proof tại chỗ**; **1 review/user/địa điểm**; chặn tự đánh giá địa điểm mình; tính lại rating TB.
 - **Phụ thuộc:** F10 (detail), F08/M4 (GPS/fused location + accuracy), F29 (trust +2), F04.
 - **Rule:** BR-17 (1/user/địa điểm, cập nhật không tạo thêm), BR-18 (Vendor không review địa điểm mình — **I10**), BR-19 (review giữ → M2 +2), BR-48 (Vendor không xóa review khách), **BR-68** (tạo mới cần GPS/fused ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ; không pin tay), **BR-69** (edit review cũ từ xa được, nhưng không đổi `locationId`/không tạo mới).
 - **Ghi chú:** Create review kiểm tra hiện diện trước khi lưu; GPS không đạt thì yêu cầu ảnh tại chỗ hợp lệ. Edit/delete review cũ không cần proof mới. Xóa review (tác giả) → `DELETED` + tính lại rating; Admin gỡ → `REMOVED_BY_ADMIN`.
