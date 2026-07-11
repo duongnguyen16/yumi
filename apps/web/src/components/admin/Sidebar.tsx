@@ -38,7 +38,11 @@ const NAV: NavItem[] = [
     label: 'Duyệt địa điểm',
     href: '/admin/location-requests',
   },
-  { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
+  {
+    icon: <HowToRegOutlinedIcon />,
+    label: 'Duyệt Claim',
+    href: '/admin/claims',
+  },
   { icon: <FlagOutlinedIcon />, label: 'Xử lý Report' },
   { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User' },
   {
@@ -144,6 +148,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             href={item.href}
             active={!!item.href && pathname === item.href}
             disabled={!item.href}
+            onClick={item.href ? onMobileClose : undefined}
           />
         ))}
       </List>
