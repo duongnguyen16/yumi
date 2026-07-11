@@ -46,3 +46,6 @@ coverage/
 
 # Local implementation guides (not shared)
 /guideline/
+
+# Android build output
+android/
