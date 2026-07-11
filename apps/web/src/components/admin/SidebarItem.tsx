@@ -18,7 +18,6 @@ interface SidebarItemProps {
   active?: boolean;
   disabled?: boolean;
   count?: number;
-  onClick?: () => void;
 }
 
 export function SidebarItem({
@@ -28,7 +27,6 @@ export function SidebarItem({
   active,
   disabled,
   count,
-  onClick,
 }: SidebarItemProps) {
   const c = tokens.color;
   const linkProps = !disabled && href ? { component: Link, href } : {};
@@ -38,7 +36,6 @@ export function SidebarItem({
       {...linkProps}
       disabled={disabled}
       selected={active}
-      onClick={onClick}
       sx={{
         height: 44,
         borderRadius: 0,
