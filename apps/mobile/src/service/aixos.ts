@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import {
   deleteAllTokens,
@@ -15,17 +15,15 @@ const BASE_URL_ENV =
     ? "http://10.0.2.2:9999/api"
     : "http://localhost:9999/api");
 
-const getBaseUrl = () => {
-  return BASE_URL_ENV;
-};
-console.log(getBaseUrl());
+const getBaseUrl = () => BASE_URL_ENV.trim().replace(/\/+$/, "");
+
 const BASE_URL = getBaseUrl();
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 5000,
+  timeout: 10000,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -39,48 +37,50 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const originalReq = error.config;
-    const originalRequest = error.config;
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
     if (!error.response || !originalRequest) {
       return Promise.reject(error);
     }
+
+    const authUrl = originalRequest.url ?? "";
+    const isAuthRequest =
+      authUrl.includes("/auth/login") ||
+      authUrl.includes("/auth/register") ||
+      authUrl.includes("/auth/refresh") ||
+      authUrl.includes("/auth/forgot-password") ||
+      authUrl.includes("/auth/reset-password");
+
     if (
-      originalRequest.url?.includes("/auth/login") ||
-      originalRequest.url?.includes("/auth/register") ||
-      originalRequest.url?.includes("/auth/refresh")
+      error.response.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthRequest
     ) {
-      return Promise.reject(error);
-    }
-    if (error?.response?.status === 401 && !originalReq._retry) {
-      originalReq._retry = true;
+      originalRequest._retry = true;
       try {
         const refreshToken = await getRefreshTokens();
-        console.log(
-          "Attempting to refresh token with refresh token:",
-          refreshToken,
-        );
         if (!refreshToken) {
           return Promise.reject(error);
         }
         const res = await axios.post(`${BASE_URL}/auth/refresh`, {
-          refreshToken: refreshToken,
+          refreshToken,
         });
         if (res.data?.success) {
           setAccessToken(res.data.accessToken);
           await saveAccessTokens(res.data.accessToken);
           await saveRefreshTokens(res.data.refreshToken);
-          originalRequest.headers["Authorization"] =
-            `Bearer ${res.data.accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
           return api(originalRequest);
         }
+        await deleteAllTokens();
+        setAccessToken(null);
       } catch (err) {
-        console.error("Error refreshing token:", err);
         await deleteAllTokens();
         setAccessToken(null);
         return Promise.reject(err);
       }
     }
-
     return Promise.reject(error);
   },
 );
