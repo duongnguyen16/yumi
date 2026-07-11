@@ -1,60 +1,71 @@
-import React, { useEffect, useState } from "react";
-import { Image, ScrollView, View, Share } from "react-native";
-import { Icon, IconButton, SegmentedButtons, Text } from "react-native-paper";
+import React, { useEffect } from "react";
+import { Image, View, Share, useWindowDimensions } from "react-native";
+import { Icon, IconButton, Text, useTheme } from "react-native-paper";
 import * as Linking from "expo-linking";
+import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
+
 import GeneralTab from "./tabs/GeneralTab";
 import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
 
-export default function LocationDetailScreen({ data, onRefresh }) {
-  const [tab, setTab] = useState("general");
-  const locationId = data?.location?._id;
+const HEADER_HEIGHT = 310;
+
+export default function LocationDetailScreen({ data, productData, onRefresh }) {
+  const { width } = useWindowDimensions();
+  const theme = useTheme();
+  const location = data?.location;
+  const locationId = location?._id;
+
+  const coverImage =
+    location?.imagesUrls?.find?.((image) => image?.isCover)?.url ||
+    location?.imagesUrls?.[0]?.url ||
+    location?.imageUrls?.[0] ||
+    null;
 
   const handleShare = async () => {
-    if (!locationId) {
-      return;
-    }
+    if (!locationId) return;
 
     try {
       const url = Linking.createURL(`location/${locationId}`);
       await Share.share({
         title: "Chia sẻ địa điểm",
         message: url,
-        url: url,
+        url,
       });
     } catch (error) {
       console.log("Error sharing location:", error);
     }
   };
+
   useEffect(() => {
-    if (!locationId) {
-      return;
-    }
+    if (!locationId) return;
 
     const timer = setTimeout(() => {
       viewCount(locationId);
     }, 3000);
+
     return () => clearTimeout(timer);
   }, [locationId]);
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "white" }}
-      stickyHeaderIndices={[1]}
-    >
-      <View>
+
+  const renderHeader = () => {
+    return (
+      <View style={{ backgroundColor: theme.colors.background }}>
         <Image
           style={{ width: "100%", height: 200, resizeMode: "cover" }}
-          alt="Location Image"
+          alt={location?.name || "Location Image"}
           source={{
-            uri: "https://lh3.googleusercontent.com/gps-cs-s/APNQkAFwLdUiO4AMZUkKhCcZQJduHyXsEGUYggQ5etGbL2YR2zH8NBGrEuLJDAuk8vaxZCnMayLsM1ivTGMpFWECWRMJpv5CrDQvW8sYFu7k3XWlNFb2augqPzIg7VJouqfmGx98dLtElg=w408-h306-k-no",
+            uri:
+              coverImage ||
+              "https://placehold.co/800x450/F4EFE8/5F574F?text=No+image",
           }}
         />
 
         <View style={{ padding: 16 }}>
           <Text variant="headlineMedium">
-            {data?.location?.name || "Có lỗi khi hiển thị tên vị trí"}
+            {location?.name || "Có lỗi khi hiển thị tên vị trí"}
           </Text>
+
           <View
             style={{
               flexDirection: "row",
@@ -69,41 +80,67 @@ export default function LocationDetailScreen({ data, onRefresh }) {
                 alignItems: "center",
               }}
             >
-              <Text>{data?.location?.rating?.avgRating || 0}</Text>
+              <Text>{location?.rating?.avgRating || 0}</Text>
               <Icon source="star" size={20} color="#FFD700" />
             </View>
-            <IconButton icon={"share"} onPress={handleShare} mode="outlined" />
+
+            <IconButton icon="share" onPress={handleShare} mode="outlined" />
           </View>
         </View>
       </View>
-      <View
-        style={{
-          backgroundColor: "white",
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderBottomWidth: 1,
-          borderBottomColor: "#eee",
-        }}
-      >
-        <SegmentedButtons
-          value={tab}
-          onValueChange={setTab}
-          buttons={[
-            { value: "general", label: "Tổng quan" },
-            { value: "review", label: "Đánh giá" },
-            { value: "picture", label: "Hình ảnh" },
-          ]}
-        />
-      </View>
+    );
+  };
 
-      {/* Nội dung tab */}
-      <View style={{ padding: 16 }}>
-        {tab === "general" && (
-          <GeneralTab data={data} onProductsChanged={onRefresh} />
+  return (
+    <View style={{ flex: 1 }}>
+      <Tabs.Container
+        renderHeader={renderHeader}
+        revealHeaderOnScroll
+        lazy
+        renderTabBar={(props) => (
+          <MaterialTabBar
+            {...props}
+            activeColor={theme.colors.primary}
+            inactiveColor={theme.colors.onSurfaceVariant}
+            contentContainerStyle={{
+              alignItems: "center",
+            }}
+            indicatorStyle={{
+              backgroundColor: theme.colors.primary,
+            }}
+            scrollEnabled={false}
+            style={{
+              backgroundColor: theme.colors.surface,
+              height: 48,
+            }}
+            tabStyle={{
+              width: width / 3,
+            }}
+            labelStyle={{
+              fontWeight: "600",
+              width: width / 3,
+              textAlign: "center",
+              margin: 0,
+            }}
+          />
         )}
-        {tab === "review" && <ReviewTab />}
-        {tab === "picture" && <PictureTab />}
-      </View>
-    </ScrollView>
+      >
+        <Tabs.Tab name="general" label="Tổng quan">
+          <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+            <GeneralTab data={location} productData={productData} onRefresh={onRefresh} />
+          </Tabs.ScrollView>
+        </Tabs.Tab>
+
+        <Tabs.Tab name="review" label="Đánh giá">
+          <ReviewTab locationData={location} initialRating={location?.rating} />
+        </Tabs.Tab>
+
+        <Tabs.Tab name="picture" label="Hình ảnh">
+          <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+            <PictureTab />
+          </Tabs.ScrollView>
+        </Tabs.Tab>
+      </Tabs.Container>
+    </View>
   );
 }

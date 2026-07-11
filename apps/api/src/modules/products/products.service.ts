@@ -26,6 +26,29 @@ export class ProductsService {
     @InjectModel(Location.name) private locationModel: Model<LocationDocument>,
   ) {}
 
+  async getAllProductsByLocation(locationId: string) {
+    this.assertObjectId(locationId, 'Dia diem khong hop le');
+
+    const locationExists = await this.locationModel.exists({
+      _id: new Types.ObjectId(locationId),
+      status: LocationStatus.PUBLISHED,
+    });
+    if (!locationExists) {
+      throw new NotFoundException('Khong tim thay dia diem');
+    }
+
+    const products = await this.productModel
+      .find({ locationId: new Types.ObjectId(locationId) })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return {
+      success: true,
+      data: products.map((product) => this.toResponse(product)),
+      priceDisclaimer: PRICE_DISCLAIMER,
+    };
+  }
+
   async findByLocation(locationId: string) {
     this.assertObjectId(locationId, 'Dia diem khong hop le');
 

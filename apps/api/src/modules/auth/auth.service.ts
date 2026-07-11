@@ -1,40 +1,68 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { randomInt } from 'crypto';
-import * as bcrypt from 'bcryptjs';
-import { JwtService } from '@nestjs/jwt';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { VendorProfileDocument } from '../vendors/schemas/vendor-profile.schema';
+import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import * as bcrypt from 'bcryptjs';
+import { randomInt } from 'crypto';
+import { Model } from 'mongoose';
+import { UserRole, UserStatus } from 'src/common/schemas/common.enums';
+import { UserDocument } from 'src/common/schemas/user.schema';
+import { JwtPayLoad } from '../../types/jwt.types';
 import { PendingVendorRegistrationDocument } from '../vendors/schemas/pending-vendor-registration.schema';
+import { VendorProfileDocument } from '../vendors/schemas/vendor-profile.schema';
 import { RegisterDTO } from './dto/register.dto';
 import { RequestVendorOtpDTO } from './dto/request-vendor-otp.dto';
 import { VerifyVendorOtpDTO } from './dto/verify-vendor-otp.dto';
+import { PasswordResetEmailService } from './password-reset-email.service';
+import {
+  digestPasswordResetCode,
+  generatePasswordResetCode,
+  isBcryptHash,
+  verifyPasswordResetCodeDigest,
+} from './password-reset.util';
+import { PasswordResetCodeDocument } from './schemas/password-reset-code.schema';
 import { SmsService } from './services/sms.service';
-import { JwtPayLoad } from '../../types/jwt.types';
-import { UserDocument } from 'src/common/schemas/user.schema';
-import { UserRole, UserStatus } from 'src/common/schemas/common.enums';
 
 const OTP_TTL_MINUTES = 5;
 const MAX_OTP_ATTEMPTS = 5;
+const RESET_CODE_TTL_MS = 10 * 60 * 1000;
+const RESET_CODE_RESEND_COOLDOWN_MS = 60 * 1000;
+const MAX_RESET_ATTEMPTS = 5;
+const BCRYPT_COST = 12;
+const GENERIC_FORGOT_MESSAGE =
+  'Nếu email tồn tại trong hệ thống, mã đặt lại mật khẩu đã được gửi.';
+const INVALID_RESET_CODE_MESSAGE = 'Mã xác nhận không hợp lệ hoặc đã hết hạn.';
+
+type UserWithLegacyPassword = UserDocument & { password_hash?: string };
 
 @Injectable()
 export default class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
-    @InjectModel('User') private userModel: Model<UserDocument>,
+    @InjectModel('User') private readonly userModel: Model<UserDocument>,
     @InjectModel('VendorProfile')
-    private vendorProfileModel: Model<VendorProfileDocument>,
+    private readonly vendorProfileModel: Model<VendorProfileDocument>,
     @InjectModel('PendingVendorRegistration')
-    private pendingVendorModel: Model<PendingVendorRegistrationDocument>,
-    private jwtService: JwtService,
-    private configService: ConfigService,
-    private smsService: SmsService,
+    private readonly pendingVendorModel: Model<PendingVendorRegistrationDocument>,
+    @InjectModel('PasswordResetCode')
+    private readonly passwordResetCodeModel: Model<PasswordResetCodeDocument>,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly smsService: SmsService,
+    private readonly passwordResetEmailService: PasswordResetEmailService,
   ) {}
 
   async login(email: string, password: string) {
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const user = await this.userModel
-        .findOne({ email })
+        .findOne({ email: normalizedEmail })
         .select('+passwordHash');
       if (!user) {
         return {
@@ -43,8 +71,20 @@ export default class AuthService {
           statusCode: 401,
         };
       }
-      // const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-      const isPasswordValid = password === user.passwordHash;
+      const storedPassword =
+        user.passwordHash ?? (user as UserWithLegacyPassword).password_hash;
+      if (!storedPassword) {
+        return {
+          success: false,
+          message: 'Sai mật khẩu hoặc email',
+          statusCode: 401,
+        };
+      }
+
+      const passwordIsHashed = isBcryptHash(storedPassword);
+      const isPasswordValid = passwordIsHashed
+        ? await bcrypt.compare(password, storedPassword)
+        : password === storedPassword;
       if (!isPasswordValid) {
         return {
           success: false,
@@ -61,10 +101,20 @@ export default class AuthService {
         };
       }
 
+      if (!passwordIsHashed) {
+        const upgradedHash = await bcrypt.hash(password, BCRYPT_COST);
+        await this.userModel.updateOne(
+          { _id: user._id },
+          { $set: { passwordHash: upgradedHash } },
+        );
+        user.passwordHash = upgradedHash;
+      }
+
       const { accessToken, refreshToken } = this.generateTokens(
         String(user._id),
       );
-      return { success: true, user, accessToken, refreshToken };
+      const safeUser = this.toSafeUser(user);
+      return { success: true, user: safeUser, accessToken, refreshToken };
     } catch (error) {
       console.error('Login error:', error);
       return {
@@ -77,7 +127,10 @@ export default class AuthService {
 
   async register(dto: RegisterDTO) {
     try {
-      const existingUser = await this.userModel.findOne({ email: dto.email });
+      const normalizedEmail = dto.email.trim().toLowerCase();
+      const existingUser = await this.userModel.findOne({
+        email: normalizedEmail,
+      });
       if (existingUser) {
         return {
           success: false,
@@ -86,10 +139,10 @@ export default class AuthService {
         };
       }
 
-      const passwordHash = await bcrypt.hash(dto.password, 10);
+      const passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
       const newUser = await this.userModel.create({
-        email: dto.email,
-        passwordHash: passwordHash,
+        email: normalizedEmail,
+        passwordHash,
         fullName: dto.name,
         role: UserRole.CUSTOMER,
         status: UserStatus.ACTIVE,
@@ -101,7 +154,7 @@ export default class AuthService {
       return {
         success: true,
         message: 'Đăng ký thành công',
-        user: newUser,
+        user: this.toSafeUser(newUser),
         accessToken,
         refreshToken,
       };
@@ -123,7 +176,7 @@ export default class AuthService {
           secret: this.configService.get('REFRESH_TOKEN_SECRET'),
         });
       } catch (error) {
-        console.error('Register error:', error);
+        console.error('Refresh token verify error:', error);
         return {
           success: false,
           message: 'Refresh token không hợp lệ hoặc đã hết hạn',
@@ -160,13 +213,12 @@ export default class AuthService {
     }
   }
 
-  /**
-   * Bước 1 của đăng ký vendor: validate thông tin, sinh OTP, lưu tạm,
-   * KHÔNG tạo User ở bước này.
-   */
   async requestVendorOtp(dto: RequestVendorOtpDTO) {
     try {
-      const existingUser = await this.userModel.findOne({ email: dto.email });
+      const normalizedEmail = dto.email.trim().toLowerCase();
+      const existingUser = await this.userModel.findOne({
+        email: normalizedEmail,
+      });
       if (existingUser) {
         return {
           success: false,
@@ -175,17 +227,15 @@ export default class AuthService {
         };
       }
 
-      const passwordHash = await bcrypt.hash(dto.password, 10);
+      const passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
       const otp = this.generateOtp();
-      const otpHash = await bcrypt.hash(otp, 10);
+      const otpHash = await bcrypt.hash(otp, BCRYPT_COST);
       const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
 
-      // upsert theo email: nếu vendor bấm "gửi lại OTP", ghi đè bản ghi cũ
-      // thay vì tạo mới (tránh lỗi duplicate key vì email/phone đang unique)
       await this.pendingVendorModel.findOneAndUpdate(
-        { email: dto.email },
+        { email: normalizedEmail },
         {
-          email: dto.email,
+          email: normalizedEmail,
           phone: dto.phone,
           password_hash: passwordHash,
           name: dto.name,
@@ -215,14 +265,11 @@ export default class AuthService {
     }
   }
 
-  /**
-   * Bước 2: verify OTP. Nếu đúng -> tạo User (role: vendor) + VendorProfile,
-   * xoá bản ghi tạm, trả token để đăng nhập luôn.
-   */
   async verifyVendorOtp(dto: VerifyVendorOtpDTO) {
     try {
+      const normalizedEmail = dto.email.trim().toLowerCase();
       const pending = await this.pendingVendorModel.findOne({
-        email: dto.email,
+        email: normalizedEmail,
       });
       if (!pending) {
         return {
@@ -253,8 +300,6 @@ export default class AuthService {
         };
       }
 
-      // Email đã được check trùng ở bước request-otp, nhưng check lại
-      // để tránh race condition nếu user đăng ký bằng email khác trong lúc chờ OTP
       const existingUser = await this.userModel.findOne({
         email: pending.email,
       });
@@ -294,7 +339,7 @@ export default class AuthService {
       return {
         success: true,
         message: 'Xác minh thành công',
-        user: newUser,
+        user: this.toSafeUser(newUser),
         accessToken,
         refreshToken,
       };
@@ -308,13 +353,160 @@ export default class AuthService {
     }
   }
 
+  async forgotPassword(email: string) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.userModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return { success: true, message: GENERIC_FORGOT_MESSAGE };
+    }
+
+    const cooldownStart = new Date(Date.now() - RESET_CODE_RESEND_COOLDOWN_MS);
+    const recentCode = await this.passwordResetCodeModel.findOne({
+      user_id: user._id,
+      created_at: { $gt: cooldownStart },
+      consumed_at: null,
+    });
+
+    if (recentCode) {
+      return { success: true, message: GENERIC_FORGOT_MESSAGE };
+    }
+
+    const secret = this.getResetCodeSecret();
+    const code = generatePasswordResetCode();
+    const now = new Date();
+
+    await this.passwordResetCodeModel.updateMany(
+      { user_id: user._id, consumed_at: null },
+      { $set: { consumed_at: now } },
+    );
+
+    const resetCode = await this.passwordResetCodeModel.create({
+      user_id: user._id,
+      email: normalizedEmail,
+      code_digest: digestPasswordResetCode(normalizedEmail, code, secret),
+      expires_at: new Date(now.getTime() + RESET_CODE_TTL_MS),
+      attempts: 0,
+      consumed_at: null,
+    });
+
+    try {
+      await this.passwordResetEmailService.sendCode(normalizedEmail, code);
+    } catch (error) {
+      await this.passwordResetCodeModel.deleteOne({ _id: resetCode._id });
+      this.logger.error(
+        `Failed to send password reset email for user ${String(user._id)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return { success: true, message: GENERIC_FORGOT_MESSAGE };
+  }
+
+  async resetPassword(email: string, code: string, newPassword: string) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const now = new Date();
+    const resetCode = await this.passwordResetCodeModel
+      .findOne({
+        email: normalizedEmail,
+        consumed_at: null,
+      })
+      .sort({ created_at: -1 });
+
+    if (
+      !resetCode ||
+      resetCode.expires_at <= now ||
+      resetCode.attempts >= MAX_RESET_ATTEMPTS
+    ) {
+      throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
+    }
+
+    const actualDigest = digestPasswordResetCode(
+      normalizedEmail,
+      code,
+      this.getResetCodeSecret(),
+    );
+    const codeMatches = verifyPasswordResetCodeDigest(
+      resetCode.code_digest,
+      actualDigest,
+    );
+
+    if (!codeMatches) {
+      const failedCode = await this.passwordResetCodeModel.findOneAndUpdate(
+        {
+          _id: resetCode._id,
+          consumed_at: null,
+          attempts: { $lt: MAX_RESET_ATTEMPTS },
+        },
+        { $inc: { attempts: 1 } },
+        { new: true },
+      );
+      if (failedCode && failedCode.attempts >= MAX_RESET_ATTEMPTS) {
+        await this.passwordResetCodeModel.updateOne(
+          { _id: failedCode._id, consumed_at: null },
+          { $set: { consumed_at: now } },
+        );
+      }
+      throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
+    }
+
+    const consumedCode = await this.passwordResetCodeModel.findOneAndUpdate(
+      {
+        _id: resetCode._id,
+        code_digest: resetCode.code_digest,
+        consumed_at: null,
+        expires_at: { $gt: now },
+        attempts: { $lt: MAX_RESET_ATTEMPTS },
+      },
+      { $set: { consumed_at: now } },
+      { new: true },
+    );
+    if (!consumedCode) {
+      throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
+    }
+
+    try {
+      const passwordHash = await bcrypt.hash(newPassword, BCRYPT_COST);
+      const updateResult = await this.userModel.updateOne(
+        { _id: consumedCode.user_id, email: normalizedEmail },
+        { $set: { passwordHash } },
+      );
+      if (updateResult.matchedCount !== 1) {
+        throw new BadRequestException(INVALID_RESET_CODE_MESSAGE);
+      }
+    } catch (error) {
+      await this.passwordResetCodeModel.updateOne(
+        {
+          _id: consumedCode._id,
+          consumed_at: now,
+          expires_at: { $gt: new Date() },
+        },
+        { $set: { consumed_at: null } },
+      );
+      throw error;
+    }
+
+    await this.passwordResetCodeModel.updateMany(
+      {
+        user_id: consumedCode.user_id,
+        consumed_at: null,
+      },
+      { $set: { consumed_at: now } },
+    );
+
+    return {
+      success: true,
+      message: 'Đặt lại mật khẩu thành công.',
+    };
+  }
+
   async authMe(userId: string) {
     try {
-      const user = await this.userModel.findById(userId, '-password_hash');
+      const user = await this.userModel.findById(userId);
       if (!user) {
         return { success: false, message: 'User not found' };
       }
-      return { success: true, user };
+      return { success: true, user: this.toSafeUser(user) };
     } catch (error) {
       console.error('AuthMe error:', error);
       return {
@@ -324,8 +516,17 @@ export default class AuthService {
     }
   }
 
+  private getResetCodeSecret(): string {
+    const secret = this.configService.get<string>('PASSWORD_RESET_CODE_SECRET');
+    if (!secret) {
+      throw new InternalServerErrorException(
+        'Dịch vụ đặt lại mật khẩu chưa được cấu hình',
+      );
+    }
+    return secret;
+  }
+
   private generateOtp(): string {
-    // 6 số, dùng crypto.randomInt (an toàn hơn Math.random) — luôn đủ 6 ký tự kể cả khi có số 0 đứng đầu
     return randomInt(0, 1000000).toString().padStart(6, '0');
   }
 
@@ -345,5 +546,14 @@ export default class AuthService {
       },
     );
     return { accessToken, refreshToken };
+  }
+
+  private toSafeUser(user: UserDocument) {
+    const rawUser = user.toObject ? user.toObject() : user;
+    const { passwordHash, password_hash, ...safeUser } = rawUser as unknown as
+      Record<string, unknown>;
+    void passwordHash;
+    void password_hash;
+    return safeUser;
   }
 }
