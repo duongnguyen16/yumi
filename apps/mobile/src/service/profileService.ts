@@ -72,6 +72,37 @@ const updateProfile = async ({ name, avatar }: ProfileUpdate) => {
   }
 };
 
+const sendProfilePhoneOtp = async (phone: string) => {
+  try {
+    const response = await api.post("/users/profile/phone/send-otp", {
+      phone,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("Error sending profile phone OTP:", error);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Không thể gửi mã OTP.",
+    };
+  }
+};
+
+const verifyProfilePhoneOtp = async (otp: string) => {
+  try {
+    const response = await api.post("/users/profile/phone/verify-otp", {
+      otp,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("Error verifying profile phone OTP:", error);
+    return {
+      success: false,
+      message:
+        error?.response?.data?.message || "Không thể xác minh mã OTP.",
+    };
+  }
+};
+
 const toAbsoluteUrl = (url?: string | null) => {
   if (!url) return null;
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
@@ -79,4 +110,10 @@ const toAbsoluteUrl = (url?: string | null) => {
   return `${baseUrl}${url}`;
 };
 
-export { getProfile, updateProfile, toAbsoluteUrl };
+export {
+  getProfile,
+  updateProfile,
+  sendProfilePhoneOtp,
+  verifyProfilePhoneOtp,
+  toAbsoluteUrl,
+};
