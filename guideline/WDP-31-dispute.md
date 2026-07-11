@@ -165,7 +165,7 @@ apps/api/src/
 │  ├─ guard/
 │  │  └─ admin.guard.ts              (ĐÃ CÓ)  AdminGuard — chỉ ADMIN qua được
 │  └─ contracts/
-│     └─ notification.port.ts        (TẠO)    NOTIFICATION_PORT + NotificationStub — TODO swap WDP-7
+│     └─ notification.port.ts        (ĐÃ CÓ)  tái dùng từ WDP-19
 ├─ modules/disputes/
 │  ├─ dto/
 │  │  ├─ list-disputes.dto.ts        (TẠO)
@@ -176,51 +176,15 @@ apps/api/src/
 └─ app.module.ts                     (SỬA: thêm DisputeModule)
 ```
 
-> **Không cần** tạo `roles.guard.ts`/`roles.decorator.ts` (dùng `AdminGuard` có sẵn) và **không cần** `trust.port.ts` (Trust Engine đã thật, gọi trực tiếp). Chỉ còn Notification là stub.
-> Khi WDP-7 (Notification) xong: xoá `notification.port.ts`, import module thật, đổi `useClass`. Interface port giữ nguyên nên `dispute.service.ts` **không phải sửa**.
+> **Không cần** tạo `roles.guard.ts`/`roles.decorator.ts`, `trust.port.ts` hay `notification.port.ts`. `NotificationPort`/`NotificationStub` đã có từ WDP-19; import lại và khai báo provider `NOTIFICATION_PORT` trong `DisputeModule`. Khi WDP-7 xong, chỉ đổi provider sang service thật; interface giữ nguyên.
 
 ---
 
 ## 5. Triển khai
 
-### Bước 1 — Notification stub (M3 chưa xong)
+### Bước 1 — Tái sử dụng NotificationPort (M3 chưa xong)
 
-> Mục đích: code của bạn gọi qua **1 interface ổn định**; khi M3 thật (WDP-7) xong chỉ thay provider. Schema `notifications` đã ổn định nên stub ghi được doc thật để test DoD "đã notify". (Nếu bạn cũng làm WDP-19 và file này đã tồn tại → **dùng lại**, không tạo trùng.)
-
-**`common/contracts/notification.port.ts`**
-```ts
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Notification } from 'src/common/schemas/notification.schema';
-
-export interface NotificationPort {
-  // Khớp WDP-7 (sync với Đăng)
-  notify(params: {
-    userId: string;
-    type: string;
-    title: string;
-    body: string;
-    refCollection?: string;
-    refId?: string;
-  }): Promise<void>;
-}
-
-export const NOTIFICATION_PORT = Symbol('NOTIFICATION_PORT');
-
-/** STUB TẠM — chỉ tạo in-app notification. Email/SMS + template là việc M3/WDP-7. */
-@Injectable()
-export class NotificationStub implements NotificationPort {
-  constructor(@InjectModel(Notification.name) private model: Model<Notification>) {}
-  async notify(p: {
-    userId: string; type: string; title: string; body: string;
-    refCollection?: string; refId?: string;
-  }): Promise<void> {
-    // TODO: depends on WDP-7 — thay bằng M3 service thật (email/SMS/template)
-    await this.model.create({ ...p, isRead: false });
-  }
-}
-```
+`common/contracts/notification.port.ts` đã tồn tại. Không copy lại interface hoặc `NotificationStub`; import `NOTIFICATION_PORT`, `NotificationPort`, `NotificationStub` từ file đó.
 
 > **Trust KHÔNG cần stub** — Trust Engine (WDP-33) đã xong, gọi trực tiếp `TrustEngineService.recordEvent(...)` (xem Bước 3).
 
