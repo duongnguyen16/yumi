@@ -7,8 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build:shared": "npm run build --workspace=@wdp301/shared",
-    "dev": "npm run build:shared && concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\"",
     "dev:api": "npm run start:dev --workspace=api",
     "dev:web": "npm run dev --workspace=web",
     "dev:mobile": "npm run start --workspace=mobile"
