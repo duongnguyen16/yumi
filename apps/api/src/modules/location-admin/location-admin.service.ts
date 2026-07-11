@@ -14,6 +14,7 @@ import {
   LocationRequest,
   LocationRequestDocument,
   LocationRequestStatus,
+  LocationRequestType,
 } from 'src/common/schemas/location-request';
 import {
   Notification,
@@ -80,10 +81,24 @@ export class LocationAdminService {
       throw new NotFoundException('Không tìm thấy địa điểm liên kết');
     }
 
+    const previousLocationStatus = location.status;
+
     request.status = LocationRequestStatus.APPROVED;
     request.reviewerId = new Types.ObjectId(reviewerId);
     request.reviewedAt = new Date();
     request.reviewNote = null;
+
+    if (request.type === LocationRequestType.UPDATE) {
+      const cleanNewData = Object.fromEntries(
+        Object.entries(request.newData ?? {}).filter(
+          ([key, value]) =>
+            key !== 'sourceEditSuggestionId' &&
+            value !== null &&
+            value !== undefined,
+        ),
+      );
+      location.set(cleanNewData);
+    }
 
     location.status = LocationStatus.PUBLISHED;
     request.reviewNote = undefined;
@@ -105,9 +120,11 @@ export class LocationAdminService {
         diff: {
           locationId: request.locationId,
           status: {
-            from: LocationStatus.SUBMITTED,
+            from: previousLocationStatus,
             to: LocationStatus.PUBLISHED,
           },
+          changedFields: request.changedFields,
+          newData: request.newData,
         },
       }),
       this.notificationModel.create({
