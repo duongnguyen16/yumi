@@ -5,7 +5,6 @@ import { View } from "react-native";
 import { Button, Card, Icon, Text } from "react-native-paper";
 import EditLocationModal from "../modals/EditLocationModal";
 import ProductSection from "../ProductSection";
-import ProductCard from "../ui/ProductCard";
 
 type Product = {
   _id?: string;
@@ -98,30 +97,6 @@ export default function GeneralTab({
         onChanged={onRefresh}
       />
 
-      <View
-        style={{
-          marginTop: 16,
-          flexDirection: "column",
-          gap: 16,
-          borderRadius: 8,
-          padding: 10,
-        }}
-      >
-        <Text variant="headlineSmall">Sản phẩm</Text>
-        {(productData || data?.products || []).map((product) => (
-          <ProductCard key={product._id} data={product} />
-        ))}
-        {user?._id === data?.ownerId ? (
-          <Button
-            mode="outlined"
-            onPress={() => {
-              // Handle button press
-            }}
-          >
-            Chỉnh sửa sản phẩm
-          </Button>
-        ) : null}
-      </View>
       <EditLocationModal
         setVisible={setVisible}
         visible={visible}
