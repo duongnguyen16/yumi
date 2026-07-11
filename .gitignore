@@ -43,3 +43,6 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Local implementation guides (not shared)
+/guideline/

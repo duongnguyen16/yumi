@@ -2,11 +2,15 @@
   "name": "wdp301",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:web\" \"pnpm dev:mobile\"",
-    "dev:api": "pnpm --filter api start:dev",
-    "dev:web": "pnpm --filter web dev",
-    "dev:mobile": "pnpm --filter mobile start"
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev:api": "npm run start:dev --workspace=api",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:mobile": "npm run start --workspace=mobile"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
