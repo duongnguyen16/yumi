@@ -186,13 +186,13 @@ export function LocationRequestDetailDrawer({
         )}
 
         {flags?.suspectedDuplicate &&
-          flags.suspectedDuplicateLocationIds.length > 0 && (
+          (flags.suspectedDuplicateLocationIds?.length ?? 0) > 0 && (
             <Box>
               <Typography variant="overline" sx={{ display: 'block', mb: 0.75 }}>
                 Địa điểm nghi trùng
               </Typography>
               <Stack spacing={0.5}>
-                {flags.suspectedDuplicateLocationIds.map((locationId) => (
+                {flags.suspectedDuplicateLocationIds?.map((locationId) => (
                   <Typography
                     key={locationId}
                     sx={{ color: tokens.color.textSecondary, fontFamily: tokens.font.mono, fontSize: 12 }}
