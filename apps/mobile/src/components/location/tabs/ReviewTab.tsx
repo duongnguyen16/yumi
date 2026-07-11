@@ -1,9 +1,11 @@
 import { userContext } from "@/contexts/userContext";
 import {
   createReview,
+  deleteReview,
   getReviewsByLocation,
   LocationReview,
   ReviewSummary,
+  updateReview,
 } from "@/service/reviewService";
 import * as Location from "expo-location";
 import React, {
@@ -13,8 +15,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
-import { FlatList, Tabs } from "react-native-collapsible-tab-view";
+import { Alert, Image, Pressable, StyleSheet, View } from "react-native";
+import { Tabs } from "react-native-collapsible-tab-view";
 import {
   ActivityIndicator,
   Button,
@@ -46,8 +48,14 @@ export default function ReviewTab({
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
-  const { user } = useContext(userContext);
-  const locationId = locationData?._id;
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const userState = useContext(userContext) as {
+    user?: { _id?: string; id?: string } | null;
+  } | null;
+  const currentUserId = userState?.user?._id ?? userState?.user?.id;
+  const locationId = locationData?._id ?? locationData?.id;
+
   const loadReviews = useCallback(
     async (options?: { showLoading?: boolean }) => {
       if (!locationId) {
@@ -55,7 +63,6 @@ export default function ReviewTab({
         setLoading(false);
         return;
       }
-
       if (options?.showLoading !== false) {
         setLoading(true);
       }
@@ -84,19 +91,33 @@ export default function ReviewTab({
   );
 
   const handleSubmitReview = async () => {
-    const locationId = locationData?.id;
     if (!locationId || submitting) {
       return;
     }
 
     const trimmedComment = comment.trim();
-    if (trimmedComment.length < 20) {
-      setNotice("Nội dung đánh giá cần ít nhất 20 ký tự.");
-      return;
-    }
 
     setSubmitting(true);
     try {
+      if (editingReviewId) {
+        const response = await updateReview(editingReviewId, {
+          rating,
+          comment: trimmedComment,
+        });
+
+        if (!response.success) {
+          setNotice(response.message);
+          return;
+        }
+
+        setComment("");
+        setRating(5);
+        setEditingReviewId(null);
+        setNotice("Đã cập nhật đánh giá.");
+        await loadReviews({ showLoading: false });
+        return;
+      }
+
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== "granted") {
         setNotice("Bạn cần bật quyền vị trí để gửi đánh giá mới.");
@@ -127,6 +148,59 @@ export default function ReviewTab({
       await loadReviews({ showLoading: false });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStartEdit = (review: LocationReview) => {
+    setEditingReviewId(review.id);
+    setRating(review.rating);
+    setComment(review.comment);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+    setRating(5);
+    setComment("");
+  };
+
+  const handleDeleteReview = (review: LocationReview) => {
+    Alert.alert(
+      "Xóa đánh giá",
+      "Bạn có chắc muốn xóa đánh giá này không?",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: () => {
+            void confirmDeleteReview(review.id);
+          },
+        },
+      ],
+    );
+  };
+
+  const confirmDeleteReview = async (reviewId: string) => {
+    if (deletingReviewId) {
+      return;
+    }
+
+    setDeletingReviewId(reviewId);
+    try {
+      const response = await deleteReview(reviewId);
+      if (!response.success) {
+        setNotice(response.message);
+        return;
+      }
+
+      if (editingReviewId === reviewId) {
+        handleCancelEdit();
+      }
+
+      setNotice("Đã xóa đánh giá.");
+      await loadReviews({ showLoading: false });
+    } finally {
+      setDeletingReviewId(null);
     }
   };
 
@@ -166,11 +240,11 @@ export default function ReviewTab({
               </View>
             </Card.Content>
           </Card>
-          {}
+
           <Card mode="contained" style={styles.formCard}>
             <Card.Content>
               <Text variant="titleMedium" style={styles.formTitle}>
-                Viết đánh giá
+                {editingReviewId ? "Sửa đánh giá" : "Viết đánh giá"}
               </Text>
 
               <PressableStarRating rating={rating} onChange={setRating} />
@@ -185,16 +259,28 @@ export default function ReviewTab({
                 style={styles.commentInput}
               />
 
-              <Button
-                mode="contained"
-                icon="send"
-                loading={submitting}
-                disabled={submitting}
-                onPress={handleSubmitReview}
-                style={styles.submitButton}
-              >
-                Gửi đánh giá
-              </Button>
+              <View style={styles.formActions}>
+                {editingReviewId ? (
+                  <Button
+                    mode="outlined"
+                    onPress={handleCancelEdit}
+                    disabled={submitting}
+                    style={styles.cancelButton}
+                  >
+                    Hủy
+                  </Button>
+                ) : null}
+                <Button
+                  mode="contained"
+                  icon={editingReviewId ? "content-save" : "send"}
+                  loading={submitting}
+                  disabled={submitting}
+                  onPress={handleSubmitReview}
+                  style={styles.submitButton}
+                >
+                  {editingReviewId ? "Cập nhật" : "Gửi đánh giá"}
+                </Button>
+              </View>
             </Card.Content>
           </Card>
 
@@ -212,7 +298,15 @@ export default function ReviewTab({
           </Card.Content>
         </Card>
       }
-      renderItem={({ item }) => <ReviewCard review={item} />}
+      renderItem={({ item }) => (
+        <ReviewCard
+          review={item}
+          canEdit={Boolean(currentUserId && item.user?.id === currentUserId)}
+          onEdit={handleStartEdit}
+          onDelete={handleDeleteReview}
+          deleting={deletingReviewId === item.id}
+        />
+      )}
       ListFooterComponent={
         <Snackbar
           visible={Boolean(notice)}
@@ -226,7 +320,19 @@ export default function ReviewTab({
   );
 }
 
-function ReviewCard({ review }: { review: LocationReview }) {
+function ReviewCard({
+  review,
+  canEdit,
+  onEdit,
+  onDelete,
+  deleting,
+}: {
+  review: LocationReview;
+  canEdit: boolean;
+  onEdit: (review: LocationReview) => void;
+  onDelete: (review: LocationReview) => void;
+  deleting: boolean;
+}) {
   const initials = getInitials(review.user?.fullName);
   const hasReply = Boolean(review.reply?.content);
 
@@ -260,6 +366,31 @@ function ReviewCard({ review }: { review: LocationReview }) {
             <Chip compact icon="check" style={styles.repliedChip}>
               Đã trả lời
             </Chip>
+          ) : null}
+          {canEdit ? (
+            <View style={styles.reviewActions}>
+              <Button
+                compact
+                mode="text"
+                icon="pencil"
+                onPress={() => onEdit(review)}
+                style={styles.reviewActionButton}
+              >
+                Sửa
+              </Button>
+              <Button
+                compact
+                mode="text"
+                icon="delete-outline"
+                loading={deleting}
+                disabled={deleting}
+                onPress={() => onDelete(review)}
+                textColor="#B3261E"
+                style={styles.reviewActionButton}
+              >
+                Xóa
+              </Button>
+            </View>
           ) : null}
         </View>
 
@@ -445,9 +576,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: "#FFFFFF",
   },
-  submitButton: {
-    alignSelf: "flex-end",
+  formActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 8,
     marginTop: 12,
+  },
+  cancelButton: {
+    borderRadius: 8,
+  },
+  submitButton: {
     borderRadius: 8,
   },
   emptyCard: {
@@ -503,6 +642,16 @@ const styles = StyleSheet.create({
   repliedChip: {
     height: 30,
     backgroundColor: "#D9F3DF",
+  },
+  reviewActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    maxWidth: 140,
+  },
+  reviewActionButton: {
+    marginLeft: -4,
   },
   commentText: {
     marginTop: 12,
