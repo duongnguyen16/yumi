@@ -3,7 +3,7 @@
 > **Audience:** (1) a developer picking up one ticket, (2) an AI coding agent (Claude Code / Cursor) executing one ticket.
 > **How to use:** 1 ticket = 1 feature `Fxx` = 1 Jira issue `WDP-xx`. Find your ticket in **§4**, read the block top to bottom, build, verify against **Definition of Done (DoD)**.
 > **Read before touching any ticket:** §1 (global context) + §2 (invariants). These are non-negotiable.
-> **References:** `BR-xx` -> see `Campus-Local-Guide-SPECS-EN.md` §9 · `UC` -> SPECS · `HF-x` -> the detailed flow in SPECS §6 (ownership/verification) · `M1-M5` -> §1.3 below.
+> **Canonical reference:** `BR-xx`, `HF-x`, `UC`, state machines, and rule catalogs all come from `CONTEXT.md` (the single source of truth). `M1-M5` -> §1.3 below.
 > **Task source:** Jira project **WDP** (site `fptp.atlassian.net`), 35 tasks `WDP-5 -> WDP-39`.
 > **Jira status mapping (board is in Vietnamese):** `Đã xong! = Done` · `Đang làm = In Progress` · `Đang test = In Testing` · `Cần làm = To Do`. Owner names and the importance label (`Core / High / Medium`) are kept as the author wrote them.
 
@@ -60,7 +60,7 @@ These are **not** standalone features; they are **shared services**. Do not reim
 | ID | Service | Built in ticket | Callers |
 |---|---|---|---|
 | **M1** | Duplicate detection (string similarity + Haversine < 50m) | **F14 / WDP-18** | F13 (submit), F25 (vendor register) |
-| **M2** | Trust engine (TrustEvent + scoring + level + gating) | **F29 / WDP-33** | F15, F22, F27 (everywhere content is resolved) |
+| **M2** | Trust engine (TrustEvent + scoring + level + gating) | **F29 / WDP-33** | F15, F19, F22, F27, F31 (everywhere content/ownership is resolved) |
 | **M3** | Notification (email + SMS/OTP + in-app) | **F03 / WDP-7** | F04, F06, F15, F22, F23, F24, F26, F27, F28, F31 |
 | **M4** | Location handling (fused location + accuracy + manual pin + reverse geocode) | shared inside **F08/F13** | F13, F25 (record pin<->device distance) |
 | **M5** | Geographic scoping (reject outside the Hòa Lạc radius) | shared validation | F13, F25 (at location creation) |
@@ -68,17 +68,17 @@ These are **not** standalone features; they are **shared services**. Do not reim
 > **Audit log** (BR-43) should also be a **shared utility from S1** (every Admin action logged), even though the *dashboard* to view logs is only built in F35/S4. Do not defer audit to S4 — you'd miss logs for S2/S3 actions.
 
 ### 1.4 Domain objects & status — quick reference
-Full detail in SPECS §7-8. Condensed so the agent doesn't have to look it up:
+Full detail in `CONTEXT.md` §5-6. Condensed so the agent doesn't have to look it up:
 
 - **Location.status:** `SUBMITTED -> PUBLISHED -> HIDDEN/PENDING_RE_APPROVAL -> ...`; `REJECTED`; `DELETED` (soft).
 - **Ownership:** `no-owner` (tier B) <-> `owned` (tier C). Set via claim/register/transfer; removed via release/revoke.
 - **Review.status:** `PUBLISHED / DELETED / REMOVED_BY_ADMIN`.
 - **Claim.status:** `PENDING / APPROVED / REJECTED / REVOKED / RELEASED`.
-- **Report.status:** `PENDING / RESOLVED / DISMISSED`.
+- **Report.status:** `PENDING / UNDER_REVIEW / APPROVED / REJECTED / APPEALED / RESOLVED`.
 - **Dispute.status:** `OPEN / RESOLVED_KEEP / RESOLVED_TRANSFER / RESOLVED_REVOKE`.
 - **User:** `ACTIVE / WARNED / BANNED`; `trust_level: RESTRICTED / NEW / TRUSTED` (T=30).
 - **RequestAccess:** `PENDING / GRANTED / REJECTED / EXPIRED->AUTO_GRANTED / ESCALATED`.
-- **EditSuggestion:** `PENDING / APPLIED / DISCARDED / VOIDED`.
+- **EditSuggestion:** `PENDING / APPLIED / DISCARDED`.
 - **OwnershipHold:** `ACTIVE / EXPIRED`.
 
 ---
@@ -99,6 +99,7 @@ This is the section **agents violate most often**. Read carefully. One violation
 | I8 | **All ownership/content changes emit a TrustEvent via M2**; never add/subtract points ad hoc. | §10 | `user.trust_score += 5` in a controller |
 | I9 | **Locations outside the Hòa Lạc radius are rejected.** | BR-40 (M5) | creating a location without validating coordinates |
 | I10 | **Vendors cannot delete customer reviews**; only Admin removes. Vendors **cannot** review their own location. | BR-18, BR-48 | an endpoint letting a vendor delete a review |
+| I11 | **Creating a new review requires on-site proof**: GPS/fused location ≤50m with accuracy ≤50m, or valid on-site photo proof; no manual pin. | BR-68, BR-69 | creating a remote review or changing `locationId` on edit |
 
 > **Reversibility (founding principle #4):** every destructive action must be reversible + leave a trace. When unsure "delete or hide?" -> **always hide (soft)**.
 
@@ -119,16 +120,16 @@ This is the section **agents violate most often**. Read carefully. One violation
 F01 (repo/contract/schema, WDP-5) ─── blocks EVERYTHING
 F03 (notification, WDP-7) ─── blocks every flow that notifies: F04,F06,F15,F22,F23,F24,F26,F27,F28,F31
 F04+F05 (auth) ─── block every feature that needs login
-F29 (trust M2, WDP-33) ─── shared service, build early in S2 -> called by F15,F22,F27
+F29 (trust M2, WDP-33) ─── shared service, build early in S2 -> called by F15,F19,F22,F27,F31
 F14 (dedup M1, WDP-18) ─── shared service -> called by F13,F25
 
 F13 (submit) -> needs F14 (M1) + F08 (pin/map) -> creates SUBMITTED -> F15 (admin approve)
-F19 (review) -> needs location/detail + F29 (trust +2)
+F19 (review) -> needs location/detail + F08/M4 on-site proof + F29 (trust +2)
 F23 (claim) -> needs F03 (OTP) + code issuance -> F24 (admin review claim)
 F25 (vendor register) -> needs F13(form) + F23 proof mechanism + F15(approve)
 F26 (request-access) -> needs ownership to exist (F24/F25) + F03
-F27 (dispute) -> needs F21/F22 (report routing) + F26 + F03
-F28 (appeal) -> needs the decisions it can appeal: F16,F24,F15,F27,F22,F31  (build last)
+F27 (dispute) -> only needs F26 (RequestAccess rejected/refused + B appeal) + F03
+F28 (appeal) -> needs the decisions it can appeal: F26,F16,F24,F15,F27,F22,F31  (build last)
 F16 (confirm duplicate) -> needs F14 (suspected flag) + F28 (appeal hook)
 F17+F18 (suggest-edit) -> needs F10(detail) + F24(ownership for routing) + F15(re-approval mechanism)
 F32 (vendor manage) -> needs ownership + F15 (re-approval)
@@ -167,7 +168,7 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **DoD:** screens switch by role; login-required screens blocked for guests.
 
 #### WDP-7 · F03 — Notification service (Email + SMS/OTP + in-app)  `In Progress` · owner: Đăng · **High**
-- **Goal:** Adapter to send email, **send OTP via SMS**, in-app inbox + mark-as-read; templates per the notification catalog (SPECS §14).
+- **Goal:** Adapter to send email, **send OTP via SMS**, in-app inbox + mark-as-read; templates per the notification catalog (`CONTEXT.md` §12).
 - **Depends:** F01.
 - **Touches:** `api` (Notification module = **M3**), `mobile`/`web` (inbox UI).
 - **Rules:** this is **M3** — every other flow **calls this service**, never sends directly.
@@ -262,12 +263,12 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **DoD:** approval changes status correctly; submitter notified; audit written; trust updated.
 
 #### WDP-23 · F19 — Review  `To Do` · owner: Long · **Core**
-- **Goal:** Create/edit/delete; rating 1-5 + content >= 20 chars + <= 3 photos; **1 review/user/location**; block reviewing your own location; recompute avg rating.
-- **Depends:** F10 (detail), F29 (trust +2), F04.
-- **Rules:** BR-17 (1/user/location, update not duplicate), BR-18 (Vendor can't review own location — **I10**), BR-19 (surviving review -> M2 +2), BR-48 (Vendor can't delete customer reviews).
-- **Notes:** banned words -> still display + flag for UC22. Author delete -> `DELETED` + recompute rating; Admin remove -> `REMOVED_BY_ADMIN`.
-- **DoD:** constraints hold; avg rating updates on add/edit/delete.
-- **Avoid:** letting a Vendor delete customer reviews; reviewing your own location.
+- **Goal:** Create/edit/delete; rating 1-5 + content + <= 3 photos; **new reviews require on-site proof**; **1 review/user/location**; block reviewing your own location; recompute avg rating.
+- **Depends:** F10 (detail), F08/M4 (GPS/fused location + accuracy), F29 (trust +2), F04.
+- **Rules:** BR-17 (1/user/location, update not duplicate), BR-18 (Vendor can't review own location — **I10**), BR-19 (surviving review -> M2 +2), BR-48 (Vendor can't delete customer reviews), **BR-68** (new review needs GPS/fused ≤50m with accuracy ≤50m or valid on-site photo proof; no manual pin), **BR-69** (remote edit of an old review is allowed, but cannot change `locationId` or create a new review).
+- **Notes:** check presence before creating a review; if GPS fails, require valid on-site photo proof. Editing/deleting an old review does not require new proof. Author delete -> `DELETED` + recompute rating; Admin remove -> `REMOVED_BY_ADMIN`.
+- **DoD:** creating is blocked without valid GPS and without photo proof; remote edit of an old review still works; avg rating updates on add/edit/delete.
+- **Avoid:** creating remote reviews via manual pin; letting a Vendor delete customer reviews; reviewing your own location; changing `locationId` on edit.
 
 #### WDP-33 · F29 — Trust engine (M2)  `In Progress` · owner: Trung · **Core**
 - **Goal:** `TrustEvent` + scoring (**+15 / +5 / +2, -10 / -10**); levels `RESTRICTED/NEW/TRUSTED` (T=30); gating: block submit when RESTRICTED, fast-track when TRUSTED. *(HF-9)*
@@ -296,33 +297,33 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **DoD:** leaderboard updates from real data; missing data -> newest.
 
 #### WDP-25 · F21 — Report location / review  `To Do` · owner: Long · **High**
-- **Goal:** Report by type (wrong info/spam/closed/**wrong owner**/other); 1 PENDING per target per type; "wrong owner" routes to a dispute.
+- **Goal:** Report by type (wrong info/spam/closed/**wrong owner**/other); store evidence; 1 PENDING per target per type; "wrong owner" goes to the Admin report queue and **does not open a Dispute directly**.
 - **Depends:** F10, F04.
-- **Rules:** BR-24 (1 PENDING per target per type), I3 (guest -> login).
-- **Notes:** the "wrong owner" type creates a path to **F27 (Dispute)** (AF11.1).
-- **DoD:** report works; duplicate reports blocked; "wrong owner" routes correctly.
+- **Rules:** BR-24 (1 PENDING per target per type and evidence stored; "wrong owner" requires evidence), I3 (guest -> login).
+- **Notes:** "wrong owner" goes to **F22 ownership review/report handling**. If Admin approves the report or revokes ownership, the affected vendor can appeal in F28; a Dispute only opens when the source is RequestAccess rejected/refused by A and B appeals.
+- **DoD:** report works; duplicate reports blocked; "wrong owner" enters the report queue and does not create a Dispute directly.
 
 #### WDP-26 · F22 — Admin handle reports  `To Do` · owner: Trung · **High**
-- **Goal:** Queue -> resolve/dismiss; remove review (recompute rating); **trust hook** (+5 correct / -10 malicious); escalate to user ban when severe.
+- **Goal:** Report queue `PENDING` -> `UNDER_REVIEW` -> `APPROVED`/`REJECTED`/`RESOLVED`; remove review (recompute rating); handle "wrong owner" through ownership review; **trust hook** (+5 correct / -10 malicious); escalate to user ban when severe.
 - **Depends:** F21, **F03**, **F29 (M2)**, F31 (ban).
-- **Rules:** BR-27 (malicious -> -10 reporter), BR-48 (only Admin removes reviews), BR-43 (I4 audit).
-- **Notes:** remove review -> `REMOVED_BY_ADMIN` + recompute rating. Correct report -> +5 reporter; malicious -> -10. Severe violation -> F31.
-- **DoD:** handling changes status; trust updates; audit written.
+- **Rules:** BR-24 (status/evidence), BR-27 (malicious -> -10 reporter), BR-48 (only Admin removes reviews), BR-54 (revoke owner -> no-owner, reopen claim), BR-63 (adverse decisions can be appealed), BR-43 (I4 audit).
+- **Notes:** remove review -> `REMOVED_BY_ADMIN` + recompute rating. Correct report -> +5 reporter; malicious -> -10. A "wrong owner" report can **REJECT_REPORT**, **APPROVE_REPORT_NO_REVOKE**, or **REVOKE_OWNER**; if approved/revoked, notify the affected vendor with an appeal button. Do not create F27 Dispute from a report.
+- **DoD:** status changes correctly; "wrong owner" reports do not open Dispute; trust updates; audit written.
 
 #### WDP-27 · F23 — Claim location + verification  `To Do` · owner: Dương · **Core**
 - **Goal:** **OTP to listing phone** + system-**issued one-time code** + upload **geotagged on-site proof** (signboard + code + timestamp) + optional license; block when a PENDING request already exists. *(HF-3)*
 - **Depends:** **F03 (OTP)**, F10, F04.
 - **Touches:** `api` (Claim), `mobile`.
-- **Rules:** BR-14 (OTP + on-site proof **mandatory**), BR-15 (license optional, verification = physical control), **BR-61/I6 (1 PENDING slot)**, BR-02 (Vendor verified).
-- **Notes:** 3 independent factors: **geotag + timestamp + one-time code**. Listing with no phone yet -> skip OTP, rely on on-site proof + closer Admin scrutiny. Already owned -> block, suggest a report if owner looks wrong (-> UC25).
-- **DoD:** the claim can only be sent with **all 3 factors**; a duplicate PENDING slot is blocked.
-- **Avoid:** allowing a claim missing OTP/proof. Assigning owner at this step (owner is set in F24).
+- **Rules:** BR-14 (OTP to listing phone when one exists + on-site proof **mandatory**), BR-15 (license optional, verification = physical control), **BR-61/I6 (1 PENDING slot)**, BR-02 (Vendor verified).
+- **Notes:** the main proof factors are **geotag + timestamp + one-time code**; OTP is mandatory when the listing has a phone. Listing with no phone yet -> skip OTP, rely on on-site proof + closer Admin scrutiny. Already owned -> block claim and send the Vendor to **RequestAccess F26**; if the owner looks fraudulent, they can file a "wrong owner" report via F21.
+- **DoD:** a listing with a phone requires OTP + on-site proof; a listing without a phone requires strong proof; a duplicate PENDING slot is blocked.
+- **Avoid:** allowing a claim missing proof. Assigning owner at this step (owner is set in F24). Opening Dispute from a claim on an already-owned location.
 
 #### WDP-28 · F24 — Admin review claim  `To Do` · owner: Dương · **High**
 - **Goal:** Cross-check OTP + on-site proof; **approve -> assign owner + badge**; reject -> new claim without overwrite; allow requesting more evidence.
 - **Depends:** F23, **F03**.
 - **Rules:** BR-45 (approve only when OTP verified + proof matches), BR-46 (reject -> new claim, **no overwrite**), BR-29 (assign owner), BR-43 (I4).
-- **Notes:** approve -> set `owner` + "Verified" badge + M3. If a different owner exists at review time -> route to **F27 (Dispute)** (EF20.1). License -> fast-track.
+- **Notes:** approve -> set `owner` + "Verified" badge + M3. If a different owner exists at review time, do not approve an overlapping claim; stop/reject with a reason and direct the Vendor to **RequestAccess F26**. A Dispute only opens after RequestAccess is rejected/refused by the owner and B appeals. License -> fast-track.
 - **DoD:** approve sets the owner; reject opens a new claim (old record preserved).
 
 #### WDP-29 · F25 — Vendor register new location (auto-own)  `To Do` · owner: Minh · **High**
@@ -337,7 +338,7 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **Goal:** **1 PENDING slot per location** (others blocked); notify owner, **3-day deadline (lazy-check)**; grant / reject->appeal / silence->verify-to-claim; **7-day hold** when granted without Admin. *(HF-4)*
 - **Depends:** ownership exists (F24/F25), **F03**, F23 (proof).
 - **Touches:** `api` (RequestAccess + OwnershipHold), `mobile`.
-- **Rules:** BR-61/I6 (1 PENDING slot), BR-56 (7-day hold on auto-transfer / still-appealable), BR-55 (MVP uses **lazy-timeout**, no cron).
+- **Rules:** BR-61/I6 (1 PENDING slot), BR-56 (7-day hold after transfer **without Admin vetting**: A grant or timeout auto-transfer; not for Admin-decided transfer), BR-55 (MVP uses **lazy-timeout**, no cron).
 - **Notes:** **3-day lazy-check:** compute the deadline on access / when B taps "verify to take ownership" — **no cron job**. Three branches: (a) owner Grants -> transfer + hold; (b) owner Rejects -> B appeals -> open Dispute (F27); (c) owner stays silent past deadline -> B verifies -> auto-transfer + **mandatory hold**. The hold blocks: hiding the location / mass-deleting products / changing core info; benign edits still allowed.
 - **DoD:** all 3 response branches work; the hold blocks the right destructive actions; only 1 PENDING slot.
 - **Avoid:** building a real-time cron (that's Phase 2). Enabling the hold when the transfer is decided directly by Admin (see F27).
@@ -386,10 +387,8 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **Goal:** **Claimed -> Vendor inbox** (Apply/Discard); **no-owner -> Admin queue**; Apply to sensitive fields (name/address) -> re-approval; "duplicate" flag -> push to F16.
 - **Depends:** F17, **F24 (ownership for routing)**, F15 (re-approval).
 - **Rules:** BR-57 (routing by ownership, **no crowd-voting**), BR-30 (name/address -> re-approval).
-- **Notes:** **two ratified spec gaps (see §5):**
-  - **Auto-void:** location moves to `HIDDEN`/`DELETED` while a suggestion is still `PENDING` -> set the suggestion `VOIDED` (keep the record for audit), **do not** keep it pending.
-  - **Re-route on ownership change:** ownership changes mid-process (claim approved / revoke / release) -> a `PENDING` suggestion **re-routes** to the correct inbox/queue for the new owner, not the stale route.
-- **DoD:** routes correctly by ownership state; Apply updates info (name/address -> awaits approval); auto-void & re-route work.
+- **Notes:** `CONTEXT.md` defines only `PENDING/APPLIED/DISCARDED`; do not add another state. If the location is already `HIDDEN`/`DELETED` while a suggestion is still `PENDING`, do not Apply; move it to `DISCARDED` with a reason and keep the record. Ownership changes mid-process (claim approved / revoke / release) -> a `PENDING` suggestion **re-routes** to the correct inbox/queue for the new owner, not the stale route.
+- **DoD:** routes correctly by ownership state; Apply updates info (name/address -> awaits approval); unavailable locations are Discarded with a reason; re-route works.
 - **Avoid:** crowd-voting. Applying an edit to an already `HIDDEN/DELETED` location.
 
 #### WDP-24 · F20 — Vendor reply to review  `To Do` · owner: Minh · **Medium**
@@ -399,19 +398,18 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **DoD:** reply shows under the review; a second reply is blocked.
 
 #### WDP-31 · F27 — Resolve dispute  `To Do` · owner: Dương · **Core**
-- **Goal:** Two-party case + evidence from the report; decide **keep / transfer / revoke**; revoke -> no-owner reopens claim; **Admin-decided transfer -> NO hold**. *(HF-5)*
-- **Depends:** F21/F22 (report routing), F26 (transfer), F03.
+- **Goal:** Two-party case from **RequestAccess rejected/refused by A + B appeal**; review A/B evidence; decide **keep / transfer / revoke**; revoke -> no-owner reopens claim; **Admin-decided transfer -> NO hold**. *(HF-5)*
+- **Depends:** F26 (RequestAccess `ESCALATED`), F23 (proof), F03.
 - **Rules:** BR-53 (physical control > license), BR-54 (revoke -> no-owner, reopen claim), BR-56 (Admin-decided transfer has **no** hold), I4 (audit).
-- **Notes:** three outcomes: `RESOLVED_KEEP` / `RESOLVED_TRANSFER` (set new owner, **no hold** since Admin vetted) / `RESOLVED_REVOKE` (no-owner, reopen claim). Both sides weak -> keep no-owner. Fraudulent owner -> revoke + consider ban (F31).
-- **DoD:** all 3 outcomes work; audit written; Admin-decided transfer does not enable a hold.
+- **Notes:** three outcomes: `RESOLVED_KEEP` / `RESOLVED_TRANSFER` (set new owner, **no hold** since Admin vetted) / `RESOLVED_REVOKE` (no-owner, reopen claim). A "wrong owner" report or Admin-detected fraud **does not enter F27 directly**; handle it in F22/F31 and let the affected vendor appeal in F28. Fraudulent owner -> revoke + consider ban (F31).
+- **DoD:** all 3 outcomes work; opens only from RequestAccess rejected/refused + B appeal; audit written; Admin-decided transfer does not enable a hold.
 
 #### WDP-32 · F28 — Appeal  `To Do` · owner: Dương · **High**
-- **Goal:** **Once per decision, 14-day window, a DIFFERENT Admin reviews**; applies to duplicate-hide / claim reject / location reject / revoke / review removal / ban; `OVERTURNED` -> restore. *(HF-6)*
-- **Depends:** the decisions: F16, F24, F15, F27, F22, F31; F03.
-- **Rules:** **BR-63..67** (appeal rule set — see Warning below), I4 (audit).
-- **Notes:** the appeal must be reviewed by a **different Admin** than the one who made the original decision (anti-bias). `OVERTURNED` -> restore the prior state (un-hide / re-publish / restore owner / un-ban / restore review). One appeal per decision.
-- **DoD:** submit with evidence; a decision can be overturned -> restored.
-- **Warning:** this ticket references **BR-63..67** but the SPECS currently has only **BR-63** (appeal as a single line). **Expand the SPECS to BR-63..67** before the defense (proposed split: BR-63 scope / BR-64 "once per decision" / BR-65 "different Admin reviews" / BR-66 "14-day window" / BR-67 "OVERTURNED -> restore"). Otherwise the committee finds a ticket citing rules the spec lacks.
+- **Goal:** **Once per decision, 14-day window, a DIFFERENT Admin reviews**; applies to owner-rejected/refused request-access, duplicate-hide, claim/location reject, approved "wrong owner" report, revoke, review removal, ban/warn; `OVERTURNED` -> restore. *(HF-6)*
+- **Depends:** the decisions: F26,F16,F24,F15,F27,F22,F31; F03.
+- **Rules:** **BR-63..67** (the appeal rule set already exists in `CONTEXT.md`), I4 (audit).
+- **Notes:** BR-64: one appeal per decision, UPHELD cannot be appealed again without substantial new evidence. BR-65: 14-day window. BR-66: the adverse state stays while PENDING. BR-67: a different Admin reviews when there are at least 2 Admins. A valid request-access appeal -> `ACCEPTED_TO_DISPUTE` and opens F27; appeal of "wrong owner"/revoke is review of an Admin decision, **not** a two-vendor Dispute.
+- **DoD:** submit with additional evidence; expired/duplicate appeals are blocked; the adverse state remains while pending; OVERTURNED restores the prior state correctly.
 
 #### WDP-38 · F34 — Vendor dashboard + stats  `To Do` · owner: Trung · **Medium**
 - **Goal:** List of owned locations; stats for views / review count / avg rating, filter 7/30 days.
@@ -428,24 +426,22 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 
 ---
 
-## 5. Two ratified spec gaps (encoded into F18/WDP-22)
+## 5. `CONTEXT.md` Alignment Notes
 
-These two decisions are **final** and embedded in ticket F18. This is the official behavior of `EditSuggestion`:
+`CONTEXT.md` is the canonical source. These notes call out the easy-to-miss implementation points:
 
-**(1) Auto-void when a location leaves `PUBLISHED`.** An EditSuggestion in `PENDING` whose location becomes `HIDDEN`/`DELETED` -> the suggestion moves to **`VOIDED`** (record kept for audit), not kept pending.
+**(1) EditSuggestion has only 3 states.** `PENDING / APPLIED / DISCARDED`. Do not add another state; if the location can no longer be processed (`HIDDEN`/`DELETED`), discard with a reason and keep the record.
 
-**(2) Re-route when ownership changes mid-process.** A `PENDING` EditSuggestion whose ownership changes (claim approved / revoke / release) -> **re-route** to the correct inbox/queue for the new owner (claimed->Vendor, no-owner->Admin), handled by the new route.
+**(2) Routing always follows current ownership.** A `PENDING` EditSuggestion whose ownership changes (claim approved / revoke / release) -> **re-route** to the correct inbox/queue for the new owner (claimed->Vendor, no-owner->Admin), handled by the new route.
 
 Final EditSuggestion state machine:
 ```
 PENDING ──Apply──────────────────────────────> APPLIED
 PENDING ──Discard────────────────────────────> DISCARDED
-PENDING ──location HIDDEN/DELETED────────────> VOIDED       (auto, record kept)
+PENDING ──location HIDDEN/DELETED────────────> DISCARDED    (with reason, record kept)
 PENDING ──ownership change───────────────────> PENDING      (re-route, state unchanged)
 ```
 
-> The defense argument for **auto-void vs keeping pending** is in the chat answer (kept out of the build guide on purpose).
-
 ---
 
-*Implementation Guide (EN) — Campus Local Guide (WDP backlog). Tracks all 35 Jira tickets; detailed rules in `Campus-Local-Guide-SPECS-EN.md`. When a ticket and the SPECS diverge -> build to the ticket (build target) and flag the SPECS for fixing. Already flagged: (a) the correct Jira cloud ID is `bdacd6a5-...` (not the one in older memory); (b) appeals require expanding the SPECS BR-63 -> BR-63..67.*
+*Implementation Guide (EN) — Campus Local Guide (WDP backlog). Tracks all 35 Jira tickets; detailed rules and the canonical source live in `CONTEXT.md`. When a ticket and `CONTEXT.md` diverge -> prioritize `CONTEXT.md` and update the guide/ticket accordingly.*

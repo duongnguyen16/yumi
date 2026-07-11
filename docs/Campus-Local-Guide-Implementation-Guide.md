@@ -3,7 +3,7 @@
 > **Đối tượng đọc:** (1) dev nhận 1 ticket để code, (2) AI coding agent (Claude Code / Cursor) thực thi 1 ticket.
 > **Cách dùng:** 1 ticket = 1 feature `Fxx` = 1 issue `WDP-xx`. Tìm ticket của bạn ở **§4**, đọc block từ trên xuống, build, đối chiếu **Definition of Done**.
 > **Bắt buộc đọc trước khi đụng bất kỳ ticket nào:** §1 (global context) + §2 (invariants). Đây là phần non-negotiable.
-> **Tham chiếu:** `BR-xx` → xem `Campus-Local-Guide-SPECS-VI.md` §9 · `UC` → SPECS · `HF-x` → flow chi tiết trong SPECS §6 (ownership/verification) · `M1–M5` → §1.3 bên dưới.
+> **Tham chiếu chuẩn:** `BR-xx`, `HF-x`, `UC`, state machine và catalog rule đều lấy từ `CONTEXT.md` (nguồn chuẩn duy nhất). `M1–M5` → §1.3 bên dưới.
 > **Nguồn task:** Jira project **WDP** (site `fptp.atlassian.net`), 35 task `WDP-5 → WDP-39`.
 
 ---
@@ -59,7 +59,7 @@ campus-local-guide/
 | ID | Service | Build ở ticket | Ai gọi |
 |---|---|---|---|
 | **M1** | Duplicate detection (string similarity + Haversine < 50m) | **F14 / WDP-18** | F13 (submit), F25 (vendor register) |
-| **M2** | Trust engine (TrustEvent + scoring + level + gating) | **F29 / WDP-33** | F15, F22, F27 (mọi chỗ resolve nội dung) |
+| **M2** | Trust engine (TrustEvent + scoring + level + gating) | **F29 / WDP-33** | F15, F19, F22, F27, F31 (mọi chỗ resolve nội dung/quyền) |
 | **M3** | Notification (email + SMS/OTP + in-app) | **F03 / WDP-7** | F04, F06, F15, F22, F23, F24, F26, F27, F28, F31 |
 | **M4** | Location handling (fused location + accuracy + manual pin + reverse geocode) | dùng chung trong **F08/F13** | F13, F25 (ghi khoảng cách pin↔thiết bị) |
 | **M5** | Geographic scoping (chặn ngoài bán kính Hòa Lạc) | validation chung | F13, F25 (lúc tạo location) |
@@ -67,17 +67,17 @@ campus-local-guide/
 > **Audit log** (BR-43) cũng nên là **util dùng chung từ S1** (mọi action Admin ghi log), dù *dashboard* xem log mới làm ở F35/S4. Đừng để tới S4 mới nhét audit — sẽ thiếu log của các action S2/S3.
 
 ### 1.4 Domain objects & status — quick ref
-Chi tiết ở SPECS §7–8. Bản rút gọn để agent khỏi tra:
+Chi tiết ở `CONTEXT.md` §5–6. Bản rút gọn để agent khỏi tra:
 
 - **Location.status:** `SUBMITTED → PUBLISHED → HIDDEN/PENDING_RE_APPROVAL → ...`; `REJECTED`; `DELETED` (soft).
 - **Ownership:** `no-owner` (tầng B) ↔ `owned` (tầng C). Chuyển qua claim/register/transfer; gỡ qua release/revoke.
 - **Review.status:** `PUBLISHED / DELETED / REMOVED_BY_ADMIN`.
 - **Claim.status:** `PENDING / APPROVED / REJECTED / REVOKED / RELEASED`.
-- **Report.status:** `PENDING / RESOLVED / DISMISSED`.
+- **Report.status:** `PENDING / UNDER_REVIEW / APPROVED / REJECTED / APPEALED / RESOLVED`.
 - **Dispute.status:** `OPEN / RESOLVED_KEEP / RESOLVED_TRANSFER / RESOLVED_REVOKE`.
 - **User:** `ACTIVE / WARNED / BANNED`; `trust_level: RESTRICTED / NEW / TRUSTED` (T=30).
 - **RequestAccess:** `PENDING / GRANTED / REJECTED / EXPIRED→AUTO_GRANTED / ESCALATED`.
-- **EditSuggestion:** `PENDING / APPLIED / DISCARDED / VOIDED`.
+- **EditSuggestion:** `PENDING / APPLIED / DISCARDED`.
 - **OwnershipHold:** `ACTIVE / EXPIRED`.
 
 ---
@@ -98,6 +98,7 @@ Chi tiết ở SPECS §7–8. Bản rút gọn để agent khỏi tra:
 | I8 | **Toàn bộ thay đổi quyền/nội dung sinh TrustEvent qua M2**, không cộng/trừ điểm tay rải rác. | §10 | `user.trust_score += 5` trong controller |
 | I9 | **Location ngoài bán kính Hòa Lạc bị từ chối.** | BR-40 (M5) | tạo location không validate toạ độ |
 | I10 | **Vendor không xóa review khách**; chỉ Admin gỡ. Vendor **không** review địa điểm của mình. | BR-18, BR-48 | endpoint cho vendor delete review |
+| I11 | **Tạo mới review phải có proof tại chỗ**: GPS/fused location ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ; không dùng pin tay. | BR-68, BR-69 | cho tạo review từ xa hoặc đổi `locationId` khi edit |
 
 > **Reversibility (nguyên tắc nền tảng #4):** mọi hành động phá hoại đều phải đảo ngược được + có vết. Khi nghi ngờ "xóa hay ẩn?" → **luôn ẩn (soft)**.
 
@@ -118,16 +119,16 @@ Chi tiết ở SPECS §7–8. Bản rút gọn để agent khỏi tra:
 F01 (repo/contract/schema, WDP-5) ─── khóa TẤT CẢ
 F03 (notification, WDP-7) ─── khóa mọi flow có thông báo: F04,F06,F15,F22,F23,F24,F26,F27,F28,F31
 F04+F05 (auth) ─── khóa mọi feature cần login
-F29 (trust M2, WDP-33) ─── service dùng chung, build sớm S2 → F15,F22,F27 gọi
+F29 (trust M2, WDP-33) ─── service dùng chung, build sớm S2 → F15,F19,F22,F27,F31 gọi
 F14 (dedup M1, WDP-18) ─── service dùng chung → F13,F25 gọi
 
 F13 (submit) → cần F14 (M1) + F08 (pin/map) → tạo SUBMITTED → F15 (admin duyệt)
-F19 (review) → cần location/detail + F29 (trust +2)
+F19 (review) → cần location/detail + F08/M4 proof tại chỗ + F29 (trust +2)
 F23 (claim) → cần F03 (OTP) + cơ chế cấp mã → F24 (admin xét claim)
 F25 (vendor register) → cần F13(form) + cơ chế proof của F23 + F15(duyệt)
 F26 (request-access) → cần ownership tồn tại (F24/F25) + F03
-F27 (dispute) → cần F21/F22 (report routing) + F26 + F03
-F28 (appeal) → cần các quyết định để kháng: F16,F24,F15,F27,F22,F31  (build cuối)
+F27 (dispute) → chỉ cần F26 (RequestAccess bị reject/refuse + B appeal) + F03
+F28 (appeal) → cần các quyết định để kháng: F26,F16,F24,F15,F27,F22,F31  (build cuối)
 F16 (confirm duplicate) → cần F14 (cờ nghi-trùng) + F28 (hook kháng cáo)
 F17+F18 (suggest-edit) → cần F10(detail) + F24(ownership để route) + F15(cơ chế re-approval)
 F32 (vendor manage) → cần ownership + F15 (re-approval)
@@ -166,7 +167,7 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **DoD:** Chuyển màn theo role; màn cần login bị chặn khi guest.
 
 #### WDP-7 · F03 — Notification service (Email + SMS/OTP + in-app)  `Đang làm` · owner: Đăng · **Cao**
-- **Mục tiêu:** Adapter gửi email, **gửi OTP qua SMS**, inbox in-app + đánh dấu đã đọc; template theo catalog notification (SPECS §14).
+- **Mục tiêu:** Adapter gửi email, **gửi OTP qua SMS**, inbox in-app + đánh dấu đã đọc; template theo catalog notification (`CONTEXT.md` §12).
 - **Phụ thuộc:** F01.
 - **Đụng tới:** `api` (module Notification = **M3**), `mobile`/`web` (inbox UI).
 - **Rule:** Đây là **M3** — mọi flow khác **gọi service này**, không tự gửi.
@@ -261,12 +262,12 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **DoD:** Duyệt đổi status đúng; gửi notify cho người submit; ghi audit; trust cập nhật.
 
 #### WDP-23 · F19 — Đánh giá (review)  `Cần làm` · owner: Long · **Cốt lõi**
-- **Mục tiêu:** Tạo/sửa/xóa; rating 1–5 + nội dung ≥ 20 ký tự + ảnh ≤ 3; **1 review/user/địa điểm**; chặn tự đánh giá địa điểm mình; tính lại rating TB.
-- **Phụ thuộc:** F10 (detail), F29 (trust +2), F04.
-- **Rule:** BR-17 (1/user/địa điểm, cập nhật không tạo thêm), BR-18 (Vendor không review địa điểm mình — **I10**), BR-19 (review survived → M2 +2), BR-48 (Vendor không xóa review khách).
-- **Ghi chú:** Từ cấm → vẫn hiển thị + gắn cờ cho UC22. Xóa review (tác giả) → `DELETED` + tính lại rating; Admin gỡ → `REMOVED_BY_ADMIN`.
-- **DoD:** Ràng buộc đúng; rating TB cập nhật khi thêm/sửa/xóa.
-- **Tránh:** Không cho Vendor xóa review khách; không cho review địa điểm của chính mình.
+- **Mục tiêu:** Tạo/sửa/xóa; rating 1–5 + nội dung + ảnh ≤ 3; **tạo mới chỉ khi có proof tại chỗ**; **1 review/user/địa điểm**; chặn tự đánh giá địa điểm mình; tính lại rating TB.
+- **Phụ thuộc:** F10 (detail), F08/M4 (GPS/fused location + accuracy), F29 (trust +2), F04.
+- **Rule:** BR-17 (1/user/địa điểm, cập nhật không tạo thêm), BR-18 (Vendor không review địa điểm mình — **I10**), BR-19 (review giữ → M2 +2), BR-48 (Vendor không xóa review khách), **BR-68** (tạo mới cần GPS/fused ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ; không pin tay), **BR-69** (edit review cũ từ xa được, nhưng không đổi `locationId`/không tạo mới).
+- **Ghi chú:** Create review kiểm tra hiện diện trước khi lưu; GPS không đạt thì yêu cầu ảnh tại chỗ hợp lệ. Edit/delete review cũ không cần proof mới. Xóa review (tác giả) → `DELETED` + tính lại rating; Admin gỡ → `REMOVED_BY_ADMIN`.
+- **DoD:** Tạo mới bị chặn khi thiếu GPS hợp lệ và thiếu ảnh proof; edit review cũ từ xa vẫn được; rating TB cập nhật khi thêm/sửa/xóa.
+- **Tránh:** Không cho tạo review từ xa bằng pin tay; không cho Vendor xóa review khách; không cho review địa điểm của chính mình; không cho edit đổi `locationId`.
 
 #### WDP-33 · F29 — Trust engine (M2)  `Đang làm` · owner: Trung · **Cốt lõi**
 - **Mục tiêu:** `TrustEvent` + scoring (**+15 / +5 / +2, −10 / −10**); level `RESTRICTED/NEW/TRUSTED` (T=30); gating: chặn submit khi RESTRICTED, fast-track khi TRUSTED. *(HF-9)*
@@ -295,33 +296,33 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **DoD:** Bảng xếp hạng cập nhật theo dữ liệu thực; thiếu data → mới nhất.
 
 #### WDP-25 · F21 — Report địa điểm / review  `Cần làm` · owner: Long · **Cao**
-- **Mục tiêu:** Report theo loại (sai info/spam/đóng cửa/**chủ sở hữu sai**/khác); 1 PENDING/đối tượng/loại; loại "chủ sai" → định tuyến tranh chấp.
+- **Mục tiêu:** Report theo loại (sai info/spam/đóng cửa/**chủ sở hữu sai**/khác); lưu evidence; 1 PENDING/đối tượng/loại; loại "chủ sai" → vào Report queue để Admin xử, **không tự mở Dispute**.
 - **Phụ thuộc:** F10, F04.
-- **Rule:** BR-24 (1 PENDING/đối tượng/loại), I3 (guest → login).
-- **Ghi chú:** Loại "chủ sở hữu sai" tạo đường dẫn sang **F27 (Dispute)** (AF11.1).
-- **DoD:** Gửi được; chống report trùng; "chủ sai" route đúng.
+- **Rule:** BR-24 (1 PENDING/đối tượng/loại và lưu evidence; report "chủ sai" bắt buộc evidence), I3 (guest → login).
+- **Ghi chú:** "Chủ sở hữu sai" đi sang **F22 ownership review/report handling**. Nếu Admin thông qua report hoặc revoke owner, vendor bị ảnh hưởng có quyền kháng cáo ở F28; chỉ mở Dispute khi nguồn là RequestAccess bị A reject/refuse và B appeal.
+- **DoD:** Gửi được; chống report trùng; "chủ sai" vào đúng report queue, không tạo Dispute trực tiếp.
 
 #### WDP-26 · F22 — Admin xử lý report  `Cần làm` · owner: Trung · **Cao**
-- **Mục tiêu:** Queue → resolve/dismiss; gỡ review (tính lại rating); **hook trust** (+5 đúng / −10 vu cáo); kéo sang ban khi nặng.
+- **Mục tiêu:** Queue report `PENDING` → `UNDER_REVIEW` → `APPROVED`/`REJECTED`/`RESOLVED`; gỡ review (tính lại rating); xử report "chủ sai" theo ownership review; **hook trust** (+5 đúng / −10 vu cáo); kéo sang ban khi nặng.
 - **Phụ thuộc:** F21, **F03**, **F29 (M2)**, F31 (ban).
-- **Rule:** BR-27 (vu cáo → −10 reporter), BR-48 (chỉ Admin gỡ review), BR-43 (I4 audit).
-- **Ghi chú:** Gỡ review → `REMOVED_BY_ADMIN` + tính lại rating. Report đúng → +5 reporter; vu cáo → −10. Vi phạm nặng → F31.
-- **DoD:** Xử lý đổi status; trust cập nhật; audit.
+- **Rule:** BR-24 (status/evidence), BR-27 (vu cáo → −10 reporter), BR-48 (chỉ Admin gỡ review), BR-54 (revoke owner → no-owner, mở claim), BR-63 (quyết định bất lợi có kháng cáo), BR-43 (I4 audit).
+- **Ghi chú:** Gỡ review → `REMOVED_BY_ADMIN` + tính lại rating. Report đúng → +5 reporter; vu cáo → −10. Report "chủ sai" có thể **REJECT_REPORT**, **APPROVE_REPORT_NO_REVOKE**, hoặc **REVOKE_OWNER**; nếu thông qua/revoke thì notify vendor bị ảnh hưởng kèm nút kháng cáo. Không tạo F27 Dispute từ report.
+- **DoD:** Xử lý đổi status đúng; report "chủ sai" không mở Dispute; trust cập nhật; audit.
 
 #### WDP-27 · F23 — Claim địa điểm + xác minh  `Cần làm` · owner: Dương · **Cốt lõi**
 - **Mục tiêu:** **OTP về SĐT listing** + hệ thống **cấp mã 1 lần** + upload **on-site proof geotagged** (biển hiệu + mã + timestamp) + giấy phép optional; chặn khi đã có yêu cầu PENDING. *(HF-3)*
 - **Phụ thuộc:** **F03 (OTP)**, F10, F04.
 - **Đụng tới:** `api` (Claim), `mobile`.
-- **Rule:** BR-14 (OTP + on-site proof **bắt buộc**), BR-15 (giấy phép optional, verify = kiểm soát vật lý), **BR-61/I6 (1 slot PENDING)**, BR-02 (Vendor verified).
-- **Ghi chú:** 3 yếu tố độc lập: **geotag + timestamp + mã-1-lần**. Listing chưa có SĐT → bỏ OTP, dựa on-site proof + Admin soi kỹ. Đã có chủ → chặn, gợi ý report nếu nghi chủ sai (→ UC25).
-- **DoD:** Nộp **đủ 3 yếu tố** mới gửi được claim; trùng slot PENDING bị chặn.
-- **Tránh:** Không cho gửi claim thiếu OTP/proof. Không gán owner ở bước này (owner set ở F24).
+- **Rule:** BR-14 (OTP về SĐT listing khi có SĐT + on-site proof **bắt buộc**), BR-15 (giấy phép optional, verify = kiểm soát vật lý), **BR-61/I6 (1 slot PENDING)**, BR-02 (Vendor verified).
+- **Ghi chú:** 3 yếu tố proof chính: **geotag + timestamp + mã-1-lần**; OTP là kênh bổ sung bắt buộc khi listing có SĐT. Listing chưa có SĐT → bỏ OTP, dựa on-site proof + Admin soi kỹ. Đã có chủ → chặn claim và chuyển sang **RequestAccess F26**; nếu nghi chủ giả, có thể report "chủ sai" qua F21.
+- **DoD:** Listing có SĐT thì phải OTP + on-site proof; listing chưa có SĐT thì phải proof đủ mạnh; trùng slot PENDING bị chặn.
+- **Tránh:** Không cho gửi claim thiếu proof. Không gán owner ở bước này (owner set ở F24). Không mở Dispute từ claim trên địa điểm đã có chủ.
 
 #### WDP-28 · F24 — Admin xét claim  `Cần làm` · owner: Dương · **Cao**
 - **Mục tiêu:** Đối chiếu OTP + on-site proof; **approve → gán owner + badge**; reject → claim mới không ghi đè; cho yêu cầu bổ sung.
 - **Phụ thuộc:** F23, **F03**.
 - **Rule:** BR-45 (approve chỉ khi OTP verified + proof khớp), BR-46 (reject → claim mới, **không ghi đè**), BR-29 (gán owner), BR-43 (I4).
-- **Ghi chú:** Approve → set `owner` + badge "Đã xác minh" + M3. Đã có chủ khác khi xét → chuyển **F27 (Dispute)** (EF20.1). Giấy phép → fast-track.
+- **Ghi chú:** Approve → set `owner` + badge "Đã xác minh" + M3. Nếu khi xét phát hiện địa điểm đã có chủ khác, không approve claim chồng; dừng/reject với lý do và hướng Vendor sang **RequestAccess F26**. Chỉ mở Dispute sau khi RequestAccess bị owner reject/refuse và B appeal. Giấy phép → fast-track.
 - **DoD:** Approve set chủ sở hữu; reject mở claim mới (record cũ giữ nguyên).
 
 #### WDP-29 · F25 — Vendor đăng ký địa điểm mới (auto-own)  `Cần làm` · owner: Minh · **Cao**
@@ -336,7 +337,7 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **Mục tiêu:** **1 slot PENDING/địa điểm** (người khác bị chặn); báo chủ, hạn **3 ngày (lazy-check)**; grant / reject→kháng nghị / im lặng→verify-to-claim; **hold 7 ngày** khi cấp không qua Admin. *(HF-4)*
 - **Phụ thuộc:** ownership tồn tại (F24/F25), **F03**, F23 (proof).
 - **Đụng tới:** `api` (RequestAccess + OwnershipHold), `mobile`.
-- **Rule:** BR-61/I6 (1 slot PENDING), BR-56 (hold 7 ngày khi auto-transfer/đang kháng được), BR-55 (MVP dùng **lazy-timeout**, không cron).
+- **Rule:** BR-61/I6 (1 slot PENDING), BR-56 (hold 7 ngày khi chuyển quyền **không qua Admin vetting**: A grant hoặc auto-transfer timeout; không áp với transfer do Admin trực tiếp quyết), BR-55 (MVP dùng **lazy-timeout**, không cron).
 - **Ghi chú:** **Lazy-check 3 ngày:** tính hạn lúc có truy vấn / lúc B bấm "verify để nhận quyền" — **không cron job**. 3 nhánh: (a) chủ Grant → transfer + hold; (b) chủ Reject → B kháng nghị → mở Dispute (F27); (c) chủ im lặng quá hạn → B verify đạt → auto-transfer + **hold bắt buộc**. Hold chặn: ẩn địa điểm / xóa hàng loạt sản phẩm / đổi core-info; vẫn cho edit benign.
 - **DoD:** Đủ 3 nhánh phản hồi; hold chặn đúng các action phá hoại; chỉ 1 slot PENDING.
 - **Tránh:** Đừng làm cron real-time (đó là Phase 2). Đừng bật hold khi transfer do Admin trực tiếp quyết (xem F27).
@@ -385,10 +386,8 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **Mục tiêu:** **Claimed → Vendor inbox** (Apply/Discard); **no-owner → Admin queue**; Apply trường nhạy cảm (tên/địa chỉ) → re-approval; cờ "trùng" → đẩy sang F16.
 - **Phụ thuộc:** F17, **F24 (ownership để route)**, F15 (re-approval).
 - **Rule:** BR-57 (routing theo ownership, **không crowd-voting**), BR-30 (tên/địa chỉ → re-approval).
-- **Ghi chú:** **Hai spec gap đã ratify (xem §5):**
-  - **Auto-void:** location chuyển `HIDDEN`/`DELETED` khi suggestion còn `PENDING` → set suggestion `VOIDED` (giữ record cho audit), **không** giữ pending.
-  - **Re-route on ownership change:** ownership đổi giữa chừng (claim approved / revoke / release) → suggestion `PENDING` **re-route** sang inbox/queue đúng với chủ mới, không xử theo route cũ.
-- **DoD:** Route đúng theo trạng thái sở hữu; Apply cập nhật info (tên/địa chỉ → chờ duyệt); auto-void & re-route hoạt động.
+- **Ghi chú:** `CONTEXT.md` chỉ định state `PENDING/APPLIED/DISCARDED`; không thêm state khác. Nếu location đã `HIDDEN`/`DELETED` khi suggestion còn `PENDING`, không Apply; chuyển `DISCARDED` với lý do và giữ record. Ownership đổi giữa chừng (claim approved / revoke / release) → suggestion `PENDING` **re-route** sang inbox/queue đúng với chủ mới, không xử theo route cũ.
+- **DoD:** Route đúng theo trạng thái sở hữu; Apply cập nhật info (tên/địa chỉ → chờ duyệt); location không còn `PUBLISHED` thì Discard có lý do; re-route hoạt động.
 - **Tránh:** Không crowd-voting. Không Apply edit lên location đã `HIDDEN/DELETED`.
 
 #### WDP-24 · F20 — Vendor phản hồi review  `Cần làm` · owner: Minh · **Trung bình**
@@ -398,19 +397,18 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **DoD:** Reply hiển thị dưới review; reply lần 2 bị chặn.
 
 #### WDP-31 · F27 — Phân xử tranh chấp (Dispute)  `Cần làm` · owner: Dương · **Cốt lõi**
-- **Mục tiêu:** Hồ sơ 2 bên + bằng chứng từ report; quyết **giữ / chuyển / thu hồi**; revoke → no-owner mở claim lại; **transfer do Admin → KHÔNG hold**. *(HF-5)*
-- **Phụ thuộc:** F21/F22 (report routing), F26 (transfer), F03.
+- **Mục tiêu:** Hồ sơ 2 bên từ **RequestAccess bị A reject/refuse + B appeal**; xét bằng chứng A/B; quyết **giữ / chuyển / thu hồi**; revoke → no-owner mở claim lại; **transfer do Admin → KHÔNG hold**. *(HF-5)*
+- **Phụ thuộc:** F26 (RequestAccess `ESCALATED`), F23 (proof), F03.
 - **Rule:** BR-53 (kiểm soát vật lý > giấy phép), BR-54 (revoke → no-owner, mở claim), BR-56 (transfer do Admin **không** hold), I4 (audit).
-- **Ghi chú:** 3 kết cục: `RESOLVED_KEEP` / `RESOLVED_TRANSFER` (set owner mới, **không hold** vì Admin đã vetting) / `RESOLVED_REVOKE` (no-owner, mở claim). Cả 2 bên yếu → giữ no-owner. Owner giả mạo → revoke + cân nhắc ban (F31).
-- **DoD:** 3 kết cục chạy đúng; ghi audit; transfer do Admin không bật hold.
+- **Ghi chú:** 3 kết cục: `RESOLVED_KEEP` / `RESOLVED_TRANSFER` (set owner mới, **không hold** vì Admin đã vetting) / `RESOLVED_REVOKE` (no-owner, mở claim). Report "chủ sai" hoặc Admin tự phát hiện giả mạo **không vào F27 trực tiếp**; xử ở F22/F31 và vendor bị ảnh hưởng có quyền appeal F28. Owner giả mạo → revoke + cân nhắc ban (F31).
+- **DoD:** 3 kết cục chạy đúng; chỉ mở từ RequestAccess bị reject/refuse + B appeal; ghi audit; transfer do Admin không bật hold.
 
 #### WDP-32 · F28 — Kháng cáo (Appeal)  `Cần làm` · owner: Dương · **Cao**
-- **Mục tiêu:** **1 lần/quyết định, hạn 14 ngày, Admin KHÁC xét**; áp cho duplicate-hide / reject claim / reject location / revoke / gỡ review / ban; `OVERTURNED` → khôi phục. *(HF-6)*
-- **Phụ thuộc:** các quyết định: F16, F24, F15, F27, F22, F31; F03.
-- **Rule:** **BR-63..67** (bộ rule appeal — xem **Cảnh báo:** bên dưới), I4 (audit).
-- **Ghi chú:** Appeal phải do **Admin khác** người ra quyết định gốc xét (chống thiên vị). `OVERTURNED` → khôi phục trạng thái trước (un-hide / re-publish / restore owner / un-ban / restore review). 1 quyết định chỉ kháng 1 lần.
-- **DoD:** Nộp kèm bằng chứng; lật được quyết định → khôi phục.
-- **Cảnh báo:** **Cờ cho team:** ticket này tham chiếu **BR-63..67** nhưng SPECS hiện chỉ có **BR-63** (appeal gộp 1 dòng). Phải **mở rộng SPECS thành BR-63..67** trước defense (đề xuất: BR-63 phạm vi áp dụng / BR-64 "1 lần/quyết định" / BR-65 "Admin khác xét" / BR-66 "hạn 14 ngày" / BR-67 "OVERTURNED → khôi phục"). Nếu không, hội đồng soi ra ticket nói rule mà spec không có.
+- **Mục tiêu:** **1 lần/quyết định, hạn 14 ngày, Admin KHÁC xét**; áp cho request-access bị owner reject/refuse, duplicate-hide, reject claim/location, report "chủ sai" được thông qua, revoke, gỡ review, ban/cảnh cáo; `OVERTURNED` → khôi phục. *(HF-6)*
+- **Phụ thuộc:** các quyết định: F26,F16,F24,F15,F27,F22,F31; F03.
+- **Rule:** **BR-63..67** (appeal rule set đã có trong `CONTEXT.md`), I4 (audit).
+- **Ghi chú:** BR-64: 1 appeal/quyết định, UPHELD không kháng lại trừ bằng chứng mới đáng kể. BR-65: hạn 14 ngày. BR-66: trong lúc PENDING giữ trạng thái bất lợi. BR-67: Admin khác người quyết gốc xét khi có ≥2 Admin. Appeal request-access hợp lệ → `ACCEPTED_TO_DISPUTE` và mở F27; appeal report "chủ sai"/revoke là xét lại quyết định Admin, **không** biến thành Dispute giữa 2 Vendor.
+- **DoD:** Nộp kèm evidence bổ sung; quá hạn/kháng trùng bị chặn; trạng thái bất lợi giữ nguyên khi chờ; OVERTURNED khôi phục đúng trạng thái trước.
 
 #### WDP-38 · F34 — Vendor dashboard + thống kê  `Cần làm` · owner: Trung · **Trung bình**
 - **Mục tiêu:** Danh sách địa điểm sở hữu; thống kê view / số review / rating TB, lọc 7/30 ngày.
@@ -427,24 +425,22 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 
 ---
 
-## 5. Hai spec gap đã ratify (encode vào F18/WDP-22)
+## 5. Ghi chú đồng bộ với `CONTEXT.md`
 
-Hai quyết định này **đã chốt** và đã nhúng vào ticket F18. Đây là behavior chính thức của `EditSuggestion`:
+`CONTEXT.md` là nguồn chuẩn. Các điểm dưới đây nhắc lại những chỗ dễ nhầm khi implement:
 
-**(1) Auto-void khi location rời `PUBLISHED`.** EditSuggestion đang `PENDING` mà location bị `HIDDEN`/`DELETED` → suggestion chuyển **`VOIDED`** (giữ record cho audit), không giữ pending.
+**(1) EditSuggestion chỉ có 3 state.** `PENDING / APPLIED / DISCARDED`. Không thêm state khác; nếu location không còn xử lý được (`HIDDEN`/`DELETED`) thì discard với lý do và giữ record.
 
-**(2) Re-route khi ownership đổi giữa chừng.** EditSuggestion `PENDING` mà ownership đổi (claim approved / revoke / release) → **re-route** sang đúng inbox/queue của chủ mới (claimed→Vendor, no-owner→Admin), xử theo route mới.
+**(2) Routing luôn theo ownership hiện tại.** EditSuggestion `PENDING` mà ownership đổi (claim approved / revoke / release) → **re-route** sang đúng inbox/queue của chủ mới (claimed→Vendor, no-owner→Admin), xử theo route mới.
 
 State machine cuối của EditSuggestion:
 ```
 PENDING ──Apply──────────────────────────────> APPLIED
 PENDING ──Discard────────────────────────────> DISCARDED
-PENDING ──location HIDDEN/DELETED────────────> VOIDED       (auto, giữ record)
+PENDING ──location HIDDEN/DELETED────────────> DISCARDED    (kèm lý do, giữ record)
 PENDING ──ownership đổi──────────────────────> PENDING      (re-route, không đổi state)
 ```
 
-> Lập luận defense cho **auto-void thay vì giữ pending** → xem phần trả lời trong chat (không nhồi vào guide build).
-
 ---
 
-*Implementation Guide — Campus Local Guide (WDP backlog). Bám 35 ticket Jira; rule chi tiết ở `Campus-Local-Guide-SPECS-VI.md`. Khi ticket và SPECS lệch nhau → build theo ticket (build target), đồng thời flag để sửa SPECS. Đã flag sẵn: (a) cloud ID Jira đúng là `bdacd6a5-...` (không phải bản trong memory cũ); (b) appeal cần mở rộng SPECS BR-63 → BR-63..67.*
+*Implementation Guide — Campus Local Guide (WDP backlog). Bám 35 ticket Jira; rule chi tiết và nguồn chuẩn nằm ở `CONTEXT.md`. Khi ticket và `CONTEXT.md` lệch nhau → ưu tiên `CONTEXT.md` và cập nhật guide/ticket tương ứng.*

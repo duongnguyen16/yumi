@@ -1,8 +1,10 @@
-import * as storage from "react-native-keychain";
-// import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
-const ACCESS_TOKEN_SERVICE = "app_access_token_service";
-const REFRESH_TOKEN_SERVICE = "app_refresh_token_service";
+const ACCESS_TOKEN_KEY = "app_access_token";
+const REFRESH_TOKEN_KEY = "app_refresh_token";
+const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+};
 
 let accessToken: string | null = null;
 const getAccessToken = () => accessToken;
@@ -10,91 +12,13 @@ const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
 
-// const saveAccessTokens = async (accessToken: string) => {
-//   try {
-//     await AsyncStorage.setItem("accessToken", accessToken);
-//     return true;
-//   } catch (error) {
-//     console.error("Error saving access token:", error);
-//     return false;
-//   }
-// };
-
-// const saveRefreshTokens = async (refreshToken: string) => {
-//   try {
-//     await AsyncStorage.setItem("refreshToken", refreshToken);
-//     return true;
-//   } catch (error) {
-//     console.error("Error saving refresh token:", error);
-//     return false;
-//   }
-// };
-
-// const getAccessTokenAsync = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem("accessToken");
-//     return token ? token : null;
-//   } catch (error) {
-//     console.error("Error retrieving access token:", error);
-//     return null;
-//   }
-// };
-
-// const getRefreshTokens = async () => {
-//   try {
-//     const token = await AsyncStorage.getItem("refreshToken");
-//     return token ? token : null;
-//   } catch (error) {
-//     console.error("Error retrieving refresh token:", error);
-//     return null;
-//   }
-// };
-
-// const deleteAccessTokens = async () => {
-//   try {
-//     await AsyncStorage.removeItem("accessToken");
-//     return true;
-//   } catch (error) {
-//     console.error("Error deleting access token:", error);
-//     return false;
-//   }
-// };
-// const deleteRefreshTokens = async () => {
-//   try {
-//     await AsyncStorage.removeItem("refreshToken");
-//     return true;
-//   } catch (error) {
-//     console.error("Error deleting refresh token:", error);
-//     return false;
-//   }
-// };
-
-// const deleteAllTokens = async () => {
-//   try {
-//     await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
-//     return true;
-//   } catch (error) {
-//     console.error("Error deleting all tokens:", error);
-//     return false;
-//   }
-// };
-//     await storage.setGenericPassword("accessToken", accessToken, {
-//       service: ACCESS_TOKEN_SERVICE,
-//       accessible: storage.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-//     });
-//     return true;
-//   } catch (error) {
-//     console.error("Error saving access token:", error);
-//     return false;
-//   }
-// };
-
 const saveAccessTokens = async (accessToken: string) => {
   try {
-    await storage.setGenericPassword("accessToken", accessToken, {
-      service: ACCESS_TOKEN_SERVICE,
-      accessible: storage.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-    });
+    await SecureStore.setItemAsync(
+      ACCESS_TOKEN_KEY,
+      accessToken,
+      SECURE_STORE_OPTIONS,
+    );
     return true;
   } catch (error) {
     console.error("Error saving access token:", error);
@@ -104,10 +28,11 @@ const saveAccessTokens = async (accessToken: string) => {
 
 const saveRefreshTokens = async (refreshToken: string) => {
   try {
-    await storage.setGenericPassword("refreshToken", refreshToken, {
-      service: REFRESH_TOKEN_SERVICE,
-      accessible: storage.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
-    });
+    await SecureStore.setItemAsync(
+      REFRESH_TOKEN_KEY,
+      refreshToken,
+      SECURE_STORE_OPTIONS,
+    );
     return true;
   } catch (error) {
     console.error("Error saving refresh token:", error);
@@ -117,10 +42,10 @@ const saveRefreshTokens = async (refreshToken: string) => {
 
 const getAccessTokenAsync = async () => {
   try {
-    const token = await storage.getGenericPassword({
-      service: ACCESS_TOKEN_SERVICE,
-    });
-    return token ? token.password : null;
+    return await SecureStore.getItemAsync(
+      ACCESS_TOKEN_KEY,
+      SECURE_STORE_OPTIONS,
+    );
   } catch (error) {
     console.error("Error retrieving access token:", error);
     return null;
@@ -129,10 +54,10 @@ const getAccessTokenAsync = async () => {
 
 const getRefreshTokens = async () => {
   try {
-    const token = await storage.getGenericPassword({
-      service: REFRESH_TOKEN_SERVICE,
-    });
-    return token ? token.password : null;
+    return await SecureStore.getItemAsync(
+      REFRESH_TOKEN_KEY,
+      SECURE_STORE_OPTIONS,
+    );
   } catch (error) {
     console.error("Error retrieving refresh token:", error);
     return null;
@@ -141,7 +66,10 @@ const getRefreshTokens = async () => {
 
 const deleteAccessTokens = async () => {
   try {
-    await storage.resetGenericPassword({ service: ACCESS_TOKEN_SERVICE });
+    await SecureStore.deleteItemAsync(
+      ACCESS_TOKEN_KEY,
+      SECURE_STORE_OPTIONS,
+    );
     return true;
   } catch (error) {
     console.error("Error deleting access token:", error);
@@ -151,7 +79,10 @@ const deleteAccessTokens = async () => {
 
 const deleteRefreshTokens = async () => {
   try {
-    await storage.resetGenericPassword({ service: REFRESH_TOKEN_SERVICE });
+    await SecureStore.deleteItemAsync(
+      REFRESH_TOKEN_KEY,
+      SECURE_STORE_OPTIONS,
+    );
     return true;
   } catch (error) {
     console.error("Error deleting refresh token:", error);

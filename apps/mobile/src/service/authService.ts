@@ -1,3 +1,4 @@
+import axios from "axios";
 import api from "./aixos";
 import {
   deleteAllTokens,
@@ -5,6 +6,24 @@ import {
   saveRefreshTokens,
   setAccessToken,
 } from "./tokenStorage";
+
+type AuthResult = {
+  success: boolean;
+  message?: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const message = error.response?.data?.message;
+    if (Array.isArray(message)) {
+      return message[0] ?? fallback;
+    }
+    if (typeof message === "string") {
+      return message;
+    }
+  }
+  return fallback;
+};
 
 const login = async (email: string, password: string) => {
   try {
@@ -25,12 +44,44 @@ const login = async (email: string, password: string) => {
       message: response.data?.message || "Đăng nhập thất bại",
     };
   } catch (error) {
-    console.log(error);
     return {
       success: false,
-      message:
-        error.response?.data?.message ||
+      message: getErrorMessage(
+        error,
         "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.",
+      ),
+    };
+  }
+};
+
+const forgotPassword = async (email: string): Promise<AuthResult> => {
+  try {
+    const response = await api.post("/auth/forgot-password", { email });
+    return response.data as AuthResult;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "Không thể gửi mã xác nhận."),
+    };
+  }
+};
+
+const resetPassword = async (
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<AuthResult> => {
+  try {
+    const response = await api.post("/auth/reset-password", {
+      email,
+      code,
+      newPassword,
+    });
+    return response.data as AuthResult;
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "Không thể đặt lại mật khẩu."),
     };
   }
 };
@@ -55,28 +106,26 @@ const register = async (email: string, password: string, name: string) => {
     }
     return {
       success: false,
-      message: response.data?.message || "Dang ky that bai",
+      message: response.data?.message || "Đăng ký thất bại",
     };
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
     return {
       success: false,
       message:
         error.response?.data?.message ||
-        "Dang ky that bai. Vui long kiem tra lai thong tin.",
+        "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.",
     };
   }
 };
 
 const authMe = async () => {
   try {
-    console.log("Fetching user info with authMe");
     const res = await api.get("/auth/me");
     if (res.data?.success) {
       return res.data;
     }
-  } catch (error) {
-    console.error("Error fetching user info:", error);
+  } catch {
     return {
       success: false,
     };
@@ -98,13 +147,13 @@ const restoreSession = async (token: string) => {
     }
     return {
       success: false,
-      message: response.data?.message || "Không thể khôi phục phiên đăng nhập",
+      message:
+        response.data?.message || "Không thể khôi phục phiên đăng nhập",
     };
   } catch (error) {
-    console.error("Error restoring session:", error);
     return {
       success: false,
-      message: "Không thể khôi phục phiên đăng nhập",
+      message: getErrorMessage(error, "Không thể khôi phục phiên đăng nhập"),
     };
   }
 };
@@ -118,18 +167,11 @@ const clearSession = async () => {
   }
 };
 
-// const logout = async () => {
-//   try {
-//     const res = await api.post("/auth/logout");
-//     if (res.data?.success) {
-//       return res.data;
-//     }
-//   } catch (error) {
-//     console.error("Error logging out:", error);
-//     return {
-//       success: false,
-//     };
-//   }
-// };
-
-export { login, register, authMe, restoreSession, clearSession };
+export {
+  authMe,
+  clearSession,
+  forgotPassword,
+  login,
+  resetPassword,
+  restoreSession,
+};
