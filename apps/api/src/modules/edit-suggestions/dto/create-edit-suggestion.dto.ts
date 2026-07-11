@@ -15,6 +15,8 @@ import {
 } from 'class-validator';
 
 export enum EditSuggestionField {
+  NAME = 'name',
+  ADDRESS = 'address',
   OPENING_HOURS = 'openingHours',
   PHONE = 'phone',
   GEO = 'geo',
@@ -45,12 +47,15 @@ export class EditSuggestionChangeDto {
   fieldName!: EditSuggestionField;
 
   @ValidateIf((change: EditSuggestionChangeDto) =>
-    [EditSuggestionField.OPENING_HOURS, EditSuggestionField.PHONE].includes(
-      change.fieldName,
-    ),
+    [
+      EditSuggestionField.NAME,
+      EditSuggestionField.ADDRESS,
+      EditSuggestionField.OPENING_HOURS,
+      EditSuggestionField.PHONE,
+    ].includes(change.fieldName),
   )
   @IsString()
-  @MaxLength(120)
+  @MaxLength(300)
   textValue?: string;
 
   @ValidateIf(
