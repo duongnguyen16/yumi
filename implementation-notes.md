@@ -7,8 +7,8 @@
 - **Comprehensive dependency selection**: All major NestJS packages included (JWT, Mongoose, Passport, Swagger, Throttler, Supabase)
 - **Security packages included**: helmet for HTTP headers, class-validator/class-transformer for DTOs
 - **Development tooling**: Jest, ESLint, Prettier, TypeScript all properly configured with appropriate versions
-- **Build success**: `pnpm build` and `pnpm --filter api build` both compile without errors
-- **Monorepo structure**: Properly configured with root package.json and pnpm workspace setup
+- **Build success**: `npm run build --workspace=api` compiles without errors
+- **Monorepo structure**: Properly configured with root package.json and npm workspace setup
 
 ### Issues Found
 
@@ -21,13 +21,13 @@
 - **Action**: Remove `@types/bcryptjs` from devDependencies - it's not needed and adds unnecessary maintenance burden
 - **Recommendation**: Update package.json to remove this dependency; build tested without it during this review
 
-#### Issue 2: pnpm build sandbox policy (NON-ISSUE - Already resolved)
+#### Issue 2: package manager build sandbox policy (NON-ISSUE - Already resolved)
 - **Status**: No build script issues detected
 - **Evidence**:
   - @nestjs/core at v11.0.1 is properly linked in node_modules
   - Build completes successfully without any sandbox warnings
-  - No `.pnpm/build-failed` indicators present
-- **Assessment**: The concern about `pnpm approve-builds` was preemptive; the installation succeeded without requiring approvals
+  - No package-manager build approval indicators present
+- **Assessment**: The concern about package-manager build approvals was preemptive; the installation succeeded without requiring approvals
 
 ### Assessment: **APPROVED** (with one minor cleanup recommendation)
 
