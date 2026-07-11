@@ -18,10 +18,7 @@ import {
   DisputeStatus,
   TrustEventType,
 } from 'src/common/schemas/common.enums';
-import {
-  Dispute,
-  DisputeDocument,
-} from 'src/common/schemas/dispute.schema';
+import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { EvidenceFile } from 'src/common/schemas/common.embedded';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
@@ -218,13 +215,9 @@ export class AdminClaimService {
         refCollection: 'claim_requests',
         refId: String(claim._id),
       });
-      await this.writeLog(
-        adminId,
-        'CLAIM_REQUEST_EVIDENCE',
-        claim._id,
-        text,
-        { claimStatus: ClaimRequestStatus.PENDING },
-      );
+      await this.writeLog(adminId, 'CLAIM_REQUEST_EVIDENCE', claim._id, text, {
+        claimStatus: ClaimRequestStatus.PENDING,
+      });
 
       return {
         success: true,
@@ -249,8 +242,7 @@ export class AdminClaimService {
       (file) => typeof file.metadata?.siteCode === 'string',
     );
     const needsAdminScrutiny = files.some(
-      (file) =>
-        file.metadata?.adminScrutiny === 'NO_PHONE_HIGHER_SCRUTINY',
+      (file) => file.metadata?.adminScrutiny === 'NO_PHONE_HIGHER_SCRUTINY',
     );
     const otpVerified = claim.otpVerified === true;
 
