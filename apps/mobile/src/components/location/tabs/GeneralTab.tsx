@@ -79,6 +79,16 @@ export default function GeneralTab({ data, productData }) {
             </Button>
           </Card.Actions>
         ) : null}
+        {user?.role === "VENDOR" && !data?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="contained"
+              onPress={() => router.push(`/claim/${String(data?._id)}` as never)}
+            >
+              Xác nhận sở hữu địa điểm
+            </Button>
+          </Card.Actions>
+        ) : null}
       </Card>
       <View
         style={{
