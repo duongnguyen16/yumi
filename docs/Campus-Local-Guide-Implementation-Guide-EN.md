@@ -263,7 +263,7 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **DoD:** approval changes status correctly; submitter notified; audit written; trust updated.
 
 #### WDP-23 · F19 — Review  `To Do` · owner: Long · **Core**
-- **Goal:** Create/edit/delete; rating 1-5 + content >= 20 chars + <= 3 photos; **new reviews require on-site proof**; **1 review/user/location**; block reviewing your own location; recompute avg rating.
+- **Goal:** Create/edit/delete; rating 1-5 + content + <= 3 photos; **new reviews require on-site proof**; **1 review/user/location**; block reviewing your own location; recompute avg rating.
 - **Depends:** F10 (detail), F08/M4 (GPS/fused location + accuracy), F29 (trust +2), F04.
 - **Rules:** BR-17 (1/user/location, update not duplicate), BR-18 (Vendor can't review own location — **I10**), BR-19 (surviving review -> M2 +2), BR-48 (Vendor can't delete customer reviews), **BR-68** (new review needs GPS/fused ≤50m with accuracy ≤50m or valid on-site photo proof; no manual pin), **BR-69** (remote edit of an old review is allowed, but cannot change `locationId` or create a new review).
 - **Notes:** check presence before creating a review; if GPS fails, require valid on-site photo proof. Editing/deleting an old review does not require new proof. Author delete -> `DELETED` + recompute rating; Admin remove -> `REMOVED_BY_ADMIN`.
