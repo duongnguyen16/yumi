@@ -71,7 +71,6 @@ export default class AuthService {
           statusCode: 401,
         };
       }
-
       const storedPassword =
         user.passwordHash ?? (user as UserWithLegacyPassword).password_hash;
       if (!storedPassword) {
