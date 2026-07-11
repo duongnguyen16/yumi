@@ -166,3 +166,104 @@ export async function rejectLocationRequest(
     duplicateOfLocationId,
   });
 }
+
+export interface ClaimEvidence {
+  url: string;
+  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  geo?: { type: 'Point'; coordinates: [number, number] };
+  accuracyMeters?: number;
+  capturedAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ClaimFlags {
+  otpVerified: boolean;
+  needsAdminScrutiny: boolean;
+  hasOnSiteProof: boolean;
+  hasSiteCode: boolean;
+  hasLicense: boolean;
+  eligibleForApprove: boolean;
+}
+
+export interface AdminClaim {
+  _id: string;
+  vendorId?:
+    | { _id: string; fullName?: string; email?: string; phone?: string }
+    | string;
+  locationId?:
+    | {
+        _id: string;
+        name?: string;
+        address?: string;
+        ownerId?: string | null;
+        status?: string;
+        phone?: string;
+      }
+    | string;
+  type: string;
+  evidenceFiles: ClaimEvidence[];
+  licenseUrl?: string;
+  otpVerified: boolean;
+  otpVerifiedAt?: string;
+  deviceDistanceMeters?: number;
+  status: string;
+  createdAt?: string;
+  flags: ClaimFlags;
+}
+
+export interface ClaimQueueResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  items: AdminClaim[];
+}
+
+export interface ClaimActionResponse {
+  success: boolean;
+  message: string;
+  routedToDispute?: boolean;
+}
+
+export async function getClaimQueue(
+  page = 1,
+  limit = 20,
+): Promise<ClaimQueueResponse> {
+  const res = await api.get<ClaimQueueResponse>('/admin/claims/queue', {
+    params: { page, limit },
+  });
+  return res.data;
+}
+
+export async function approveClaim(
+  id: string,
+  reason?: string,
+): Promise<ClaimActionResponse> {
+  const res = await api.patch<ClaimActionResponse>(
+    `/admin/claims/${id}/approve`,
+    { reason },
+  );
+  return res.data;
+}
+
+export async function rejectClaim(
+  id: string,
+  reason: string,
+): Promise<ClaimActionResponse> {
+  const res = await api.patch<ClaimActionResponse>(
+    `/admin/claims/${id}/reject`,
+    { reason },
+  );
+  return res.data;
+}
+
+export async function requestClaimEvidence(
+  id: string,
+  message: string,
+): Promise<ClaimActionResponse> {
+  const res = await api.patch<ClaimActionResponse>(
+    `/admin/claims/${id}/request-evidence`,
+    { message },
+  );
+  return res.data;
+}
