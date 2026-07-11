@@ -152,11 +152,11 @@ function CustomMap(
     }
   };
 
-  // const previewCenter = useMemo<Coordinates | null>(
-  //   () =>
-  //     pinLocation ? [pinLocation.longitude, pinLocation.latitude] : coordinates,
-  //   [coordinates, pinLocation],
-  // );
+  const previewCenter = useMemo<Coordinates | null>(
+    () =>
+      pinLocation ? [pinLocation.longitude, pinLocation.latitude] : coordinates,
+    [coordinates, pinLocation],
+  );
 
   useEffect(() => {
     if (!pinLocation || !previewMode) return;

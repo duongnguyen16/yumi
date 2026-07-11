@@ -20,6 +20,7 @@ import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { SidebarItem } from './SidebarItem';
 import { tokens } from '@/theme/admin-tokens';
@@ -32,23 +33,24 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { icon: <DashboardOutlinedIcon />, label: 'Tổng quan' },
   {
-    icon: <LocationOnOutlinedIcon />,
-    label: 'Duyệt địa điểm',
-    href: '/admin/location-requests',
+    icon: <DashboardOutlinedIcon />,
+    label: 'Tổng quan',
+    href: '/admin/dashboard',
   },
-  {
-    icon: <HowToRegOutlinedIcon />,
-    label: 'Duyệt Claim',
-    href: '/admin/claims',
-  },
-  { icon: <FlagOutlinedIcon />, label: 'Xử lý Report' },
-  { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User' },
+  { icon: <LocationOnOutlinedIcon />, label: 'Duyệt địa điểm' },
+  { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
+  { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/admin/reports' },
+  { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User', href: '/admin/users' },
   {
     icon: <CategoryOutlinedIcon />,
     label: 'Quản lí danh mục',
     href: '/admin/categories',
+  },
+  {
+    icon: <HistoryOutlinedIcon />,
+    label: 'Lịch sử hoạt động',
+    href: '/admin/audit-logs',
   },
 ];
 
@@ -148,7 +150,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             href={item.href}
             active={!!item.href && pathname === item.href}
             disabled={!item.href}
-            onClick={item.href ? onMobileClose : undefined}
           />
         ))}
       </List>
