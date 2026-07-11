@@ -32,15 +32,7 @@ export class ProductsController {
 
   @Get(':locationId')
   async getAllProductsByLocation(@Param('locationId') locationId: string) {
-    const response = await this.productsService.getAllProductsByLocation(locationId);
-    if (!response?.success) {
-      return {
-        success: false,
-        message: response?.message,
-        statusCode: response?.statusCode,
-      };
-    }
-    return response;
+    return this.productsService.getAllProductsByLocation(locationId);
   }
 
   @Post('location/:locationId')
