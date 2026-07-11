@@ -1,16 +1,18 @@
 import {
-  Body,
   Controller,
   Get,
   InternalServerErrorException,
   NotFoundException,
   Param,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { LocationService } from './location.service';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle } from '@nestjs/throttler';
+import { SearchDto } from './dto/search.dto';
+import { LocationService } from './location.service';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -21,18 +23,33 @@ interface AuthenticatedRequest extends Request {
 @Controller('location')
 export class LocationController {
   constructor(private readonly locationService: LocationService) {}
+
   @Get()
-  //   @UseGuards(AuthGuard('jwt-at'))
   async getAllLocations() {
     const result = await this.locationService.getAllLocations();
     if (!result.success) {
       if (result.statusCode === 404) {
         throw new NotFoundException('Không tìm thấy địa điểm nào');
-      } else {
-        throw new InternalServerErrorException('Xảy ra lỗi khi lấy địa điểm');
       }
+      throw new InternalServerErrorException('Xảy ra lỗi khi lấy địa điểm');
     }
     return result;
+  }
+
+  @Get('search')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @UseGuards(AuthGuard('jwt-at'))
+  async searchLocation(@Query() query: SearchDto) {
+    const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
+    return this.locationService.searchLocation(
+      limit,
+      page,
+      lat,
+      lng,
+      keyword,
+      categoryId,
+      subCategoryId,
+    );
   }
 
   @Get(':id')
@@ -44,10 +61,9 @@ export class LocationController {
     if (!locationId) {
       throw new NotFoundException('Không tìm thấy địa điểm với ID này');
     }
-    const userId = req.user.userId;
     const result = await this.locationService.getLocationById(
       locationId,
-      userId,
+      req.user.userId,
     );
     if (!result.success) {
       throw new NotFoundException('Không tìm thấy địa điểm');
@@ -64,7 +80,6 @@ export class LocationController {
     if (!locationId) {
       return;
     }
-    const userId = req.user.userId;
-    await this.locationService.viewCount(userId, locationId);
+    return this.locationService.viewCount(req.user.userId, locationId);
   }
 }

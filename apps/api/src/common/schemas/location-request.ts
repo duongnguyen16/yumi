@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { User } from './user.schema';
 import { Location } from './location.schema';
 
@@ -8,7 +8,6 @@ export type LocationRequestDocument = HydratedDocument<LocationRequest>;
 export enum LocationRequestType {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
-  RE_APPROVAL = 'RE_APPROVAL',
   DELETE = 'DELETE',
 }
 
@@ -17,49 +16,18 @@ export enum LocationRequestStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   CANCELLED = 'CANCELLED',
+  PENDING_RE_APPROVAL = 'PENDING_RE_APPROVAL',
 }
 
 @Schema({ timestamps: true, collection: 'location_requests' })
 export class LocationRequest {
   @Prop({
-    type: Types.ObjectId,
-    ref: User.name,
-    required: true,
-    index: true,
-  })
-  submittedBy!: Types.ObjectId;
-
-  @Prop({
-    type: Types.ObjectId,
-    ref: Location.name,
-    required: true,
-    index: true,
-  })
-  locationId!: Types.ObjectId;
-
-  @Prop({
     type: String,
     enum: LocationRequestType,
     required: true,
-    default: LocationRequestType.CREATE,
     index: true,
   })
-  requestType!: LocationRequestType;
-
-  @Prop({
-    type: Types.ObjectId,
-    ref: User.name,
-    default: null,
-    index: true,
-  })
-  reviewerId?: Types.ObjectId | null;
-
-  @Prop({
-    type: String,
-    trim: true,
-    default: null,
-  })
-  rejectReason?: string | null;
+  type!: LocationRequestType;
 
   @Prop({
     type: String,
@@ -70,11 +38,65 @@ export class LocationRequest {
   status!: LocationRequestStatus;
 
   @Prop({
-    type: Boolean,
-    default: false,
+    type: MongooseSchema.Types.ObjectId,
+    ref: User.name,
+    required: true,
     index: true,
   })
-  isPotentialDuplicate!: boolean;
+  submittedBy!: Types.ObjectId;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: Location.name,
+    required: function (this: LocationRequest) {
+      return this.type !== LocationRequestType.CREATE;
+    },
+    default: null,
+    index: true,
+  })
+  locationId?: Types.ObjectId | null;
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: null,
+  })
+  oldData?: Record<string, unknown> | null;
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    required: true,
+  })
+  newData!: Record<string, unknown>;
+
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  changedFields!: string[];
+
+  @Prop({
+    type: [String],
+    default: [],
+  })
+  imageUrls!: string[];
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: null,
+  })
+  pinLocation?: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: null,
+  })
+  deviceLocation?: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
 
   @Prop({
     type: Number,
@@ -82,6 +104,48 @@ export class LocationRequest {
     default: null,
   })
   deviceDistanceMeters?: number | null;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+    index: true,
+  })
+  isPotentialDuplicate!: boolean;
+
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: Location.name }],
+    default: [],
+  })
+  suspectedDuplicateLocationIds!: Types.ObjectId[];
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: User.name,
+    default: null,
+    index: true,
+  })
+  reviewerId?: Types.ObjectId | null;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  reviewedAt?: Date | null;
+
+  @Prop({
+    type: String,
+    trim: true,
+    default: null,
+  })
+  reviewNote?: string | null;
+
+  @Prop({ type: Object })
+  verificationProof?: {
+    proofUrls?: string[];
+    licenseUrls?: string[];
+    systemCode?: string;
+    capturedAt?: Date;
+  };
 }
 
 export const LocationRequestSchema =
@@ -90,9 +154,31 @@ export const LocationRequestSchema =
 LocationRequestSchema.index({
   submittedBy: 1,
   status: 1,
+  createdAt: -1,
 });
 
 LocationRequestSchema.index({
   locationId: 1,
   status: 1,
 });
+
+LocationRequestSchema.index({
+  status: 1,
+  createdAt: -1,
+});
+
+LocationRequestSchema.index(
+  {
+    locationId: 1,
+    type: 1,
+    status: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      type: LocationRequestType.UPDATE,
+      status: LocationRequestStatus.PENDING,
+    },
+    name: 'uniq_pending_update_request_per_location',
+  },
+);
