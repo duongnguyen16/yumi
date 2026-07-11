@@ -1,19 +1,15 @@
-import React from "react";
+import { userContext } from "@/contexts/userContext";
+import { useRouter } from "expo-router";
+import React, { useContext, useState } from "react";
 import { View } from "react-native";
-import { Card, Icon, Text } from "react-native-paper";
+import { Button, Card, Icon, Text } from "react-native-paper";
+import EditLocationModal from "../modals/EditLocationModal";
+import ProductCard from "../ui/ProductCard";
 
-type GeneralTabProps = {
-  data?: {
-    location?: {
-      address?: string;
-      openingHours?: string;
-      description?: string;
-      viewCount?: number;
-    };
-  } | null;
-};
-
-export default function GeneralTab({ data }: GeneralTabProps) {
+export default function GeneralTab({ data, productData }) {
+  const { user } = useContext(userContext);
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
@@ -29,7 +25,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="map-marker" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.address || "Địa chỉ không có sẵn"}
+              {data?.address || "Địa chỉ không có sẵn"}
             </Text>
           </View>
           <View
@@ -42,7 +38,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="clock" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.openingHours || "Giờ mở cửa không có sẵn"}
+              {data?.openingHours || "Giờ mở cửa không có sẵn"}
             </Text>
           </View>
           <View
@@ -55,7 +51,7 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="information" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location.description || "Mô tả không có sẵn"}
+              {data?.description || "Mô tả không có sẵn"}
             </Text>
           </View>
           <View
@@ -68,17 +64,69 @@ export default function GeneralTab({ data }: GeneralTabProps) {
           >
             <Icon source="eye" size={24} color="blue" />
             <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.location?.viewCount || "0"} lượt xem
+              {data?.viewCount || "0"} lượt xem
             </Text>
           </View>
         </Card.Content>
+        {user?._id ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              onPress={() => {
+                setVisible(true);
+              }}
+            >
+              Chỉnh sửa thông tin
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?._id && user?._id !== data?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              icon="flag-outline"
+              onPress={() => {
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data._id,
+                    type: "flag",
+                  },
+                });
+              }}
+            >
+              Bao co trang thai
+            </Button>
+          </Card.Actions>
+        ) : null}
       </Card>
-      <Card style={{ padding: 16, marginTop: 16 }}>
-        <Card.Title title="Sản phẩm" />
-        <Card.Content>
-          <Text>Product</Text>
-        </Card.Content>
-      </Card>
+      <View
+        style={{
+          marginTop: 16,
+          flexDirection: "column",
+          gap: 16,
+          borderRadius: 8,
+          padding: 10,
+        }}
+      >
+        <Text variant="headlineSmall">Sản phẩm</Text>
+        {(productData || []).map((product) => (
+          <ProductCard key={product._id} data={product} />
+        ))}
+        {user?._id === data?.ownerId ? (
+          <Button
+            mode="outlined"
+            onPress={() => {
+              // Handle button press
+            }}
+          >
+            Chỉnh sửa sản phẩm
+          </Button>
+        ) : null}
+      </View>
+      <EditLocationModal
+        setVisible={setVisible}
+        visible={visible}
+        data={data}
+      />
     </View>
   );
 }

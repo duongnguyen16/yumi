@@ -14,13 +14,12 @@ import {
   useEffect,
   useState,
 } from "react";
-import { View } from "react-native";
-import { ActivityIndicator } from "react-native-paper";
 
 type AuthenticatedUser = Record<string, unknown>;
 
 type UserContextValue = {
   user: AuthenticatedUser | null;
+  loading: boolean;
   setUser: Dispatch<SetStateAction<AuthenticatedUser | null>>;
   accessToken: string | null;
   setAccessToken: (token: string | null) => void;
@@ -29,6 +28,7 @@ type UserContextValue = {
 
 export const userContext = createContext<UserContextValue>({
   user: null,
+  loading: true,
   setUser: () => undefined,
   accessToken: null,
   setAccessToken: () => undefined,
@@ -58,57 +58,45 @@ export default function UserContextProvider({
 
   useEffect(() => {
     const restoreUserSession = async () => {
-      const token = await getRefreshTokens();
-      if (token) {
-        try {
+      try {
+        const token = await getRefreshTokens();
+        if (token) {
           const res = await restoreSession(token);
           if (res?.success) {
             const userInfo = await authMe();
             if (userInfo?.success) {
               setUser(userInfo?.user);
-              router.replace("/home");
             } else {
               setUser(null);
               setAccessToken(null);
               await deleteAllTokens();
-              router.replace("/auth/login");
             }
           } else {
             setUser(null);
             setAccessToken(null);
             await deleteAllTokens();
-            router.replace("/auth/login");
           }
-        } catch {
+        } else {
           setUser(null);
           setAccessToken(null);
           await deleteAllTokens();
-          router.replace("/auth/login");
-        } finally {
-          setLoading(false);
         }
-      } else {
-        setLoading(false);
+      } catch (error) {
         setUser(null);
         setAccessToken(null);
         await deleteAllTokens();
-        router.replace("/auth/login");
+      } finally {
+        setLoading(false);
       }
     };
     restoreUserSession();
   }, [router]);
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
   return (
     <userContext.Provider
       value={{
         user,
+        loading,
         setUser,
         accessToken,
         setAccessToken,

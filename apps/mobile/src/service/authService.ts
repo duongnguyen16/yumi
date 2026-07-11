@@ -86,6 +86,39 @@ const resetPassword = async (
   }
 };
 
+const register = async (email: string, password: string, name: string) => {
+  try {
+    const response = await api.post("/auth/register", {
+      email,
+      password,
+      name,
+    });
+    if (response.data?.success) {
+      setAccessToken(response.data.accessToken);
+      await saveRefreshTokens(response.data.refreshToken);
+      await saveAccessTokens(response.data.accessToken);
+      return {
+        accessToken: response.data.accessToken,
+        user: response.data.user,
+        success: true,
+        message: response.data.message,
+      };
+    }
+    return {
+      success: false,
+      message: response.data?.message || "Đăng ký thất bại",
+    };
+  } catch (error: any) {
+    console.log(error);
+    return {
+      success: false,
+      message:
+        error.response?.data?.message ||
+        "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.",
+    };
+  }
+};
+
 const authMe = async () => {
   try {
     const res = await api.get("/auth/me");
