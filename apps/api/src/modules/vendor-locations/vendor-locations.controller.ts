@@ -22,6 +22,8 @@ import { validate } from 'class-validator';
 import { VendorGuard } from 'src/common/guard/vendor.guard';
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { VendorLocationsService } from './vendor-locations.service';
+import { CreateLocationDto } from './dto/vendor-register-location.dto';
+import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -173,10 +175,18 @@ export class VendorLocationsController {
     try {
       const requestDataParsed = JSON.parse(requestData);
       const locationDataParsed = JSON.parse(locationData);
+      const validateLocationData = plainToInstance(
+        CreateLocationDto,
+        locationDataParsed,
+      );
+      const validateLocationRequest = plainToInstance(
+        CreateLocationRequestDataDto,
+        requestDataParsed,
+      );
       const result = await this.vendorLocationsService.registerLocation(
         req.user.userId,
-        requestDataParsed,
-        locationDataParsed,
+        validateLocationRequest,
+        validateLocationData,
         files,
       );
       if (!result.success) {
