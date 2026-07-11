@@ -73,7 +73,10 @@ export class VendorLocationsService {
           statusCode: 404,
         };
       }
-      if (!location.ownerId || !location.ownerId.equals(new Types.ObjectId(userId))) {
+      if (
+        !location.ownerId ||
+        !location.ownerId.equals(new Types.ObjectId(userId))
+      ) {
         return {
           success: false,
           message: 'Bạn không có quyền chỉnh sửa địa điểm này',
@@ -141,8 +144,7 @@ export class VendorLocationsService {
           changedFields: Object.keys(cleanData),
           deviceLocation: reviewRequiredData.deviceLocation ?? null,
           pinLocation: reviewRequiredData.pinLocation ?? null,
-          deviceDistanceMeters:
-            reviewRequiredData.deviceDistanceMeters ?? null,
+          deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
           verificationProof: {
             proofUrls: urls.map((url) => url.url),
             capturedAt: now,
@@ -195,7 +197,18 @@ export class VendorLocationsService {
     try {
       const user = await this.userModel.findById(userId);
       if (!user) {
-        throw new NotFoundException('Không tìm thấy người dùng');
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 404,
+        };
+      }
+      if (user.phoneVerified === false) {
+        return {
+          success: false,
+          message: 'Số điện thoại chưa được xác minh',
+          statusCode: 400,
+        };
       }
       const uploadedImages = await this.imagesService.uploadMultiMedia(
         'vendor-verification',
@@ -286,12 +299,34 @@ export class VendorLocationsService {
       return {
         success: true,
         message: 'Gửi địa điểm để duyệt thành công',
+        statusCode: 200,
       };
     } catch (error) {
       console.error('Error in registerLocation service:', error);
       return {
         success: false,
         message: 'Xảy ra lỗi khi đăng ký địa điểm',
+        statusCode: 500,
+      };
+    }
+  }
+
+  async listOwnedLocations(userId: string) {
+    try {
+      const locations = await this.locationModel
+        .find({ ownerId: new Types.ObjectId(userId) })
+        .sort({ updatedAt: -1 })
+        .lean()
+        .exec();
+      return {
+        success: true,
+        data: locations,
+      };
+    } catch (error) {
+      console.error('Error in listOwnedLocations:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi lấy danh sách địa điểm',
         statusCode: 500,
       };
     }

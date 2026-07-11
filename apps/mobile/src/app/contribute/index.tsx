@@ -586,12 +586,14 @@ export default function ContributePlaceScreen() {
         "Đăng ký vendor thành công",
         "Hồ sơ của bạn đang chờ phê duyệt.",
       );
+      return;
     }
     if (response.success === false) {
       Alert.alert(
         "Đăng ký vendor thất bại",
         response.message || "Không thể gửi đăng ký vendor.",
       );
+      return;
     }
   };
 

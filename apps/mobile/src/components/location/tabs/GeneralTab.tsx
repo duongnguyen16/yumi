@@ -4,71 +4,62 @@ import React, { useContext, useState } from "react";
 import { View } from "react-native";
 import { Button, Card, Icon, Text } from "react-native-paper";
 import EditLocationModal from "../modals/EditLocationModal";
-import ProductCard from "../ui/ProductCard";
+import ProductSection from "../ProductSection";
 
-export default function GeneralTab({ data, productData }) {
+type Product = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  price?: number | null;
+  priceDisclaimer?: string;
+};
+
+type GeneralTabProps = {
+  data?: {
+    _id?: string;
+    id?: string;
+    ownerId?: string | { _id?: string; id?: string } | null;
+    address?: string;
+    openingHours?: string;
+    description?: string;
+    viewCount?: number;
+    products?: Product[];
+  } | null;
+  productData?: Product[] | null;
+  onRefresh?: () => Promise<void> | void;
+};
+
+export default function GeneralTab({
+  data,
+  productData,
+  onRefresh,
+}: GeneralTabProps) {
   const { user } = useContext(userContext);
   const router = useRouter();
   const [visible, setVisible] = useState(false);
+
   return (
     <View style={{ flex: 1 }}>
       <Card style={{ padding: 16 }}>
-        <Card.Title title="Thông tin chung" />
+        <Card.Title title="Thong tin chung" />
         <Card.Content>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 10,
-              gap: 10,
-            }}
-          >
-            <Icon source="map-marker" size={24} color="blue" />
-            <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.address || "Địa chỉ không có sẵn"}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 10,
-              gap: 10,
-            }}
-          >
-            <Icon source="clock" size={24} color="blue" />
-            <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.openingHours || "Giờ mở cửa không có sẵn"}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 10,
-              gap: 10,
-            }}
-          >
-            <Icon source="information" size={24} color="blue" />
-            <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.description || "Mô tả không có sẵn"}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 10,
-              gap: 10,
-            }}
-          >
-            <Icon source="eye" size={24} color="blue" />
-            <Text style={{ flex: 1, flexShrink: 1 }}>
-              {data?.viewCount || "0"} lượt xem
-            </Text>
-          </View>
+          <InfoRow
+            icon="map-marker"
+            text={data?.address || "Địa chỉ không có sẵn"}
+          />
+          <InfoRow
+            icon="clock"
+            text={data?.openingHours || "Giờ mở cửa không có sẵn"}
+          />
+          <InfoRow
+            icon="information"
+            text={data?.description || "Mô tả không có sẵn"}
+          />
+          <InfoRow icon="eye" text={`${data?.viewCount || "0"} lượt xem`} />
         </Card.Content>
-        {user?._id === data?.ownerId ? (
+        {user?._id ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
@@ -79,46 +70,54 @@ export default function GeneralTab({ data, productData }) {
             </Button>
           </Card.Actions>
         ) : null}
-        {user?.role === "VENDOR" && !data?.ownerId ? (
+        {user?._id && user?._id !== data?.ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
-              mode="contained"
-              onPress={() => router.push(`/claim/${String(data?._id)}` as never)}
+              icon="flag-outline"
+              onPress={() => {
+                router.push({
+                  pathname: `/location/edit/[id]`,
+                  params: {
+                    id: data?._id,
+                    type: "flag",
+                  },
+                });
+              }}
             >
-              Xác nhận sở hữu địa điểm
+              Bao co trang thai
             </Button>
           </Card.Actions>
         ) : null}
       </Card>
-      <View
-        style={{
-          marginTop: 16,
-          flexDirection: "column",
-          gap: 16,
-          borderRadius: 8,
-          padding: 10,
-        }}
-      >
-        <Text variant="headlineSmall">Sản phẩm</Text>
-        {(productData || []).map((product) => (
-          <ProductCard key={product._id} data={product} />
-        ))}
-        {user?._id === data?.ownerId ? (
-          <Button
-            mode="outlined"
-            onPress={() => {
-              // Handle button press
-            }}
-          >
-            Chỉnh sửa sản phẩm
-          </Button>
-        ) : null}
-      </View>
+
+      <ProductSection
+        locationId={data?._id ?? data?.id}
+        ownerId={data?.ownerId}
+        products={productData || data?.products || []}
+        onChanged={onRefresh}
+      />
+
       <EditLocationModal
         setVisible={setVisible}
         visible={visible}
         data={data}
       />
+    </View>
+  );
+}
+
+function InfoRow({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 10,
+        gap: 10,
+      }}
+    >
+      <Icon source={icon} size={24} color="blue" />
+      <Text style={{ flex: 1, flexShrink: 1 }}>{text}</Text>
     </View>
   );
 }

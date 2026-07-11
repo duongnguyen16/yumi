@@ -2,15 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { LocationStatus, ReviewStatus } from 'src/common/schemas/common.enums';
-import {
-  Location,
-  LocationDocument,
-} from 'src/common/schemas/location.schema';
+import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
   LocationView,
   LocationViewDocument,
 } from 'src/common/schemas/location-view';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
+import { Product, ProductDocument } from 'src/common/schemas/product.schema';
 
 type LocationRating = {
   _id: unknown;
@@ -23,6 +21,7 @@ export class LocationService {
   constructor(
     @InjectModel(Location.name) private locationModel: Model<LocationDocument>,
     @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
+    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(LocationView.name)
     private locationViewModel: Model<LocationViewDocument>,
   ) {}
@@ -85,26 +84,43 @@ export class LocationService {
           statusCode: 404,
         };
       }
-      const rating = await this.reviewModel.aggregate<LocationRating>([
-        {
-          $match: {
-            locationId: location._id,
-            status: ReviewStatus.PUBLISHED,
+      const [rating, products] = await Promise.all([
+        this.reviewModel.aggregate<LocationRating>([
+          {
+            $match: {
+              locationId: location._id,
+              status: ReviewStatus.PUBLISHED,
+            },
           },
-        },
-        {
-          $group: {
-            _id: '$locationId',
-            avgRating: { $avg: '$rating' },
-            reviewCount: { $sum: 1 },
+          {
+            $group: {
+              _id: '$locationId',
+              avgRating: { $avg: '$rating' },
+              reviewCount: { $sum: 1 },
+            },
           },
-        },
+        ]),
+        this.productModel
+          .find({ locationId: location._id })
+          .sort({ createdAt: -1 })
+          .lean()
+          .exec(),
       ]);
       return {
         success: true,
         location: {
           ...location.toObject(),
           rating: rating[0],
+          products: products.map((product) => ({
+            ...product,
+            _id: String(product._id),
+            id: String(product._id),
+            locationId: String(product.locationId),
+            priceDisclaimer:
+              product.price !== undefined && product.price !== null
+                ? 'Reference price only. Please confirm with the vendor before buying.'
+                : undefined,
+          })),
         },
       };
     } catch (error) {
