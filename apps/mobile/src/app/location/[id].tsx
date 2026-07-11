@@ -42,33 +42,52 @@ export default function LocationDetail() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      try {
-        const response = await getLocationById(id as string);
-        if (response.success) {
-          setLocationData(response.data);
-        } else {
-          console.log("Error fetching location data:", response.message);
-          setDialogVisible(true);
-        }
-      } catch (error) {
-        console.log("Error fetching location data:", error);
+  const fetchLocationData = async () => {
+    if (!id) return;
+
+    try {
+      const response = await getLocationById(id as string);
+      if (response.success) {
+        setLocationData(response);
+      } else {
+        console.log("Error fetching location data:", response.message);
         setDialogVisible(true);
-      } finally {
-        setLoading(false);
       }
-    };
-    const fetchProductData = async () => {
-      try {
-        const response = await getAllProductsByLocation(id as string);
-        if (response.success) {
-          setProductData(response.data);
-        }
-      } catch (error) {
-        console.log("Error fetching product data:", error);
+    } catch (error) {
+      console.log("Error fetching location data:", error);
+      setDialogVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshLocationData = async () => {
+    try {
+      const response = await getLocationById(id as string);
+      if (response.success) {
+        setLocationData(response);
+      } else {
+        console.log("Error refreshing location data:", response.message);
+        setDialogVisible(true);
       }
-    };
+    } catch (error) {
+      console.log("Error refreshing location data:", error);
+      setDialogVisible(true);
+    }
+  };
+
+  const fetchProductData = async () => {
+    try {
+      const response = await getAllProductsByLocation(id as string);
+      if (response.success) {
+        setProductData(response.data);
+      }
+    } catch (error) {
+      console.log("Error fetching product data:", error);
+    }
+  };
+
+  useEffect(() => {
     fetchLocationData();
     fetchProductData();
   }, [id]);
@@ -116,7 +135,7 @@ export default function LocationDetail() {
     <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
       <Stack.Screen
         options={{
-          headerTitle: locationData?.name || "Chi tiết vị trí",
+          headerTitle: locationData?.location?.name || "Chi tiết vị trí",
           headerShown: true,
           headerRight: () => (
             <Button
@@ -130,7 +149,11 @@ export default function LocationDetail() {
           ),
         }}
       />
-      <LocationDetailScreen data={locationData} productData={productData} />
+      <LocationDetailScreen
+        data={locationData}
+        productData={productData}
+        onRefresh={refreshLocationData}
+      />
       <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)}>
         <Dialog.Title>Lỗi</Dialog.Title>
         <Dialog.Content>
