@@ -45,7 +45,7 @@ Giấy phép kinh doanh là **tuỳ chọn** — xác minh dựa vào *kiểm so
 | **Issue** | [WDP-27](https://fptp.atlassian.net/browse/WDP-27) — `[S3] F23 — Claim địa điểm + xác minh` |
 | **Quan trọng** | Core · Sprint S3 · Feature Ownership · HF-3 |
 | **Mô tả** | Vendor claim một địa điểm **đã có sẵn** (no-owner). Bắt buộc **3 yếu tố xác minh độc lập** (BR-14): (a) **OTP gửi tới SĐT của listing**; (b) **mã dùng-một-lần do hệ thống cấp** mà người claim phải đặt tại hiện trường; (c) **ảnh hiện trường có geotag + timestamp** (biển hiệu + mã hệ thống). Giấy phép kinh doanh **tùy chọn** (BR-15). Chặn nếu đã có 1 PENDING (BR-61/I6) hoặc địa điểm đã có chủ. |
-| **Đụng tới (docs)** | `api` (module Claim mới) + `mobile` (form claim — tách riêng, không nằm trong ticket backend này) |
+| **Đụng tới** | `api` (module Claim) + `mobile` (vendor claim wizard tại `app/claim/[locationId].tsx`) |
 | **DoD** | (1) Claim chỉ gửi được khi **đủ cả 3 yếu tố**; (2) chặn **duplicate PENDING slot**; (3) **KHÔNG** gán owner (để F24 làm); (4) gọi **M3 notify** báo đã nhận claim. |
 
 ### Phân rã DoD
@@ -199,13 +199,13 @@ ClaimRequestSchema.index(
 > ```
 > **Không tự thêm enum mới** (vd `ClaimRequestStatus.AWAITING_PROOF`) — quy tắc chung của repo: enum mới phải khai ở `common.enums.ts` (data contract dùng chung) và chốt cả team, không thêm lẻ. Trạng thái trung gian (đã gửi OTP, chưa nộp) ở đây là **session tạm**, không phải status của `ClaimRequest`.
 
-### 3.5. Listing KHÔNG có `phone` → bỏ OTP
+### 3.5. Listing có `phone`, nhưng vẫn phải xử lý nhánh không có giá trị
 
-`location` (xem [location.schema.ts](apps/api/src/common/schemas/location.schema.ts)) **không** có field `phone` riêng — SĐT thường nằm ở owner/vendor profile, còn location no-owner thì có thể chưa có SĐT nào. → Khi không lấy được SĐT của listing:
+`location` hiện có field `phone` trong [location.schema.ts](apps/api/src/common/schemas/location.schema.ts). Dùng trực tiếp `location.phone` để gửi OTP. Vì field là optional, location cũ hoặc community location vẫn có thể không có giá trị; khi đó:
 - **Bỏ yếu tố (a)**, đặt `otpRequired = false`, `otpVerified = false`.
 - **Bù lại bằng siết yếu tố (b)+(c):** vẫn bắt buộc on-site proof; ghi chú `metadata.adminScrutiny = 'NO_PHONE_HIGHER_SCRUTINY'` để **F24 soi kỹ hơn**.
 
-> **RULE-AMBIGUOUS:** spec viết "OTP to the listing's phone" nhưng schema `Location` chưa có field `phone`. Mình **đọc SĐT của listing từ nguồn tốt nhất hiện có**, không có thì rơi vào nhánh no-phone. Để comment `// RULE-AMBIGUOUS: nguồn SĐT listing chưa chốt — xem §9` và **chọn cách chặt hơn** (thiếu phone vẫn phải có proof, không cho bỏ qua proof).
+> Không còn ambiguity về nguồn số điện thoại: ưu tiên `location.phone`. Nhánh no-phone chỉ là fallback dữ liệu thiếu, không được bỏ qua proof.
 
 ---
 
@@ -666,13 +666,9 @@ export class ClaimService {
     return !!claim || !!ra;
   }
 
-  /**
-   * RULE-AMBIGUOUS: schema Location chưa có field `phone`. Tạm trả undefined
-   * (nhánh no-phone). Khi chốt được nguồn SĐT listing (vendor profile / field mới) thì sửa ở đây.
-   * // TODO: chốt nguồn SĐT listing với team — xem §9.
-   */
-  private resolveListingPhone(_location: any): string | undefined {
-    return (_location?.phone as string | undefined) ?? undefined;
+  /** Lấy số trực tiếp từ Location; thiếu giá trị thì đi nhánh no-phone. */
+  private resolveListingPhone(location: LocationDocument): string | undefined {
+    return location.phone?.trim() || undefined;
   }
 
   private generateOtp(): string {
@@ -872,7 +868,7 @@ Swagger `http://localhost:3000/api/docs` → `POST /api/auth/login` (VENDOR) →
 1. **M3 / WDP-7 (Đăng, `Đang làm`):** notification đang dùng **stub** (`NotificationStub`, port từ guide WDP-19). Khi M3 xong → đổi `useClass` trong `claim.module.ts`. Chốt `notify(...)` eventType `CLAIM_SUBMITTED` + payload.
 2. **Cross-ref WDP-28 / F24 (Admin xét claim — cũng Dương):** ticket này **feed** F24. F24 sẽ: đối chiếu `otpVerified` + `evidenceFiles[].metadata.siteCode` (so với mã đã cấp) + geo; **approve → mới gán `location.ownerId` + badge Verified + M3 + trust** (BR-29/BR-45); **reject → tạo claim mới, không ghi đè** (BR-46). → **Chốt với F24:** Admin lấy đâu ra mã gốc để đối chiếu nếu session đã bị TTL xóa? (đề xuất: lưu **hash của siteCode** vào `evidenceFiles[].metadata` hoặc một field read-only trên `ClaimRequest` lúc submit, để F24 verify mà không cần session). **Đây là điểm phải thống nhất trước khi F24 review.**
 3. **SCHEMA GAP — siteCode (§3.4):** đã chọn collection tạm TTL (chặt hơn). Nếu team muốn audit lâu dài, cân nhắc thêm field `issuedCodeHash?` vào `ClaimRequest` (phải khai ở `common.enums`/schema chung, **không** tự thêm lẻ).
-4. **Nguồn SĐT của listing (§3.5):** `Location` chưa có `phone`. Cần chốt: lấy từ field mới trên `Location`, hay từ vendor/owner profile? Hiện `resolveListingPhone()` trả undefined → luôn rơi nhánh no-phone. **Phải chốt** trước demo để nhánh OTP hoạt động thật.
+4. **Dữ liệu SĐT của listing (§3.5):** nguồn đã chốt là `Location.phone`. Cần seed cả nhánh có phone và không có phone để kiểm OTP/fallback; không lấy ngầm từ vendor/owner profile.
 5. **SmsService dùng chung (§5 Bước 0):** mình cần `AuthModule` export `SmsService` (hoặc tách `SmsModule`). **Báo Đăng/Minh** (owner auth) để không đụng nhau. Nội dung SMS hiện hardcode "đăng ký vendor" → nhờ M3 chuẩn hóa template theo eventType.
 6. **request-access (WDP-30/F26 — cũng Dương):** I6 nói slot dùng chung. Hiện mình query `request_accesses` để check. Khi F26 hoàn thiện, đảm bảo F26 **cũng** check ngược lại slot của claim (đối xứng) — chốt 1 helper `hasPendingSlot()` dùng chung.
 7. **Geo trong/ngoài bán kính Hòa Lạc (I9/M5):** ảnh proof geotag nên nằm trong bán kính. Tùy mức độ, có thể thêm validate khoảng cách proof↔location ở `submit` (đề xuất Phase sau / để F24 soi). Hiện để Admin kiểm thủ công.

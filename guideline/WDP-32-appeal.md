@@ -94,7 +94,7 @@ Bạn đang làm **cơ chế kháng cáo (appeal)**. Khi Admin ra 1 quyết đ�
 > **Invariant I1 (no hard delete):** khôi phục = **lật `status` ngược lại**, KHÔNG insert lại record đã xoá cứng (vì đã không xoá cứng).
 > **Invariant I4 (audit):** mọi hành động admin (kể cả OVERTURNED và UPHELD) → ghi `audit_logs`.
 
-**Không bị chặn:** data contract khoá ở WDP-5 (Done). `appeal.schema.ts` đã có sẵn đủ field cần (`type`, `targetCollection`, `targetId`, `appellantId`, `additionalEvidenceFiles[]`, `status`, `originalDecisionReason`, `appealDeadline`, `adminDecision`) + **unique index `{targetCollection, targetId}`** đã khai sẵn (`AppealSchema.index(..., { unique: true })` ở cuối file) → BR-64 được DB ép cứng.
+**Schema gap hiện tại:** `appeal.schema.ts` đã có `type`, `targetCollection`, `targetId`, `appellantId`, `additionalEvidenceFiles[]`, `status`, `originalDecisionReason`, `appealDeadline`, `adminDecision` và unique index `{targetCollection, targetId}` cho BR-64. Tuy nhiên DTO dưới đây nhận `argument` nhưng schema **chưa có field này**, nên lý do người kháng cáo sẽ không được persist. Trước khi làm `AppealService`, thêm `argument?: string` (trim, maxlength 1000) vào schema và migration/seed tương ứng.
 
 ---
 
@@ -157,6 +157,8 @@ apps/api/src/
 │  ├─ guard/admin.guard.ts                 (♻️ TÁI DÙNG — đã có sẵn trong repo)
 │  └─ contracts/
 │     └─ notification.port.ts              (♻️ TÁI DÙNG từ WDP-19 — NOTIFICATION_PORT + NotificationStub)
+├─ common/schemas/
+│  └─ appeal.schema.ts                     (SỬA: thêm `argument` trước khi persist DTO)
 ├─ modules/appeals/
 │  ├─ dto/
 │  │  ├─ submit-appeal.dto.ts              (TẠO) type + targetId + evidence[]
@@ -225,7 +227,7 @@ export class SubmitAppealDTO {
   @IsMongoId({ message: 'targetId không hợp lệ' })
   targetId!: string;
 
-  // Lý do người dùng trình bày (đi vào notify + audit)
+  // Lý do người dùng trình bày (phải thêm field `argument` vào Appeal schema trước khi persist)
   @IsOptional() @IsString() @MinLength(10) @MaxLength(1000)
   argument?: string;
 
