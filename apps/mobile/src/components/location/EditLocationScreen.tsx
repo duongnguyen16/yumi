@@ -221,7 +221,7 @@ export default function EditLocationScreen({
 
   const handleSubmitSuggestion = async () => {
     if (!data?._id) {
-      Alert.alert("Khong tim thay dia diem");
+      Alert.alert("Không tìm thấy địa điểm");
       setLoading(false);
       return;
     }
@@ -639,7 +639,7 @@ export default function EditLocationScreen({
                   selected={flagValue === "NON_EXISTENT"}
                   onPress={() => setFlagValue("NON_EXISTENT")}
                 >
-                  Khong ton tai
+                  Không tồn tại
                 </Chip>
               </View>
             </View>
@@ -697,7 +697,7 @@ export default function EditLocationScreen({
             <View style={{ marginBottom: 12 }}>
               <Text>Ghi chu</Text>
               <TextInput
-                placeholder="Them mo ta ngan cho nguoi duyet"
+                placeholder="Thêm mô tả ngắn cho người duyệt"
                 mode="outlined"
                 multiline
                 value={suggestionNote}
