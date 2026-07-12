@@ -20,7 +20,7 @@ export class CreateLocationDto {
   description?: string;
 
   @IsOptional()
-  @IsArray()
+  @IsString()
   openingHours?: string;
 
   @IsMongoId()
