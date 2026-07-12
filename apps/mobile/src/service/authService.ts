@@ -172,6 +172,7 @@ export {
   clearSession,
   forgotPassword,
   login,
+  register,
   resetPassword,
   restoreSession,
 };
