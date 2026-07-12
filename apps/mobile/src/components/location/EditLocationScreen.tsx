@@ -149,7 +149,7 @@ export default function EditLocationScreen({
         setLoading(false);
         return;
       }
-      if (!assets) {
+      if (!assets || assets.length === 0) {
         Alert.alert("Vui lòng thêm bằng chứng");
         setLoading(false);
         return;
