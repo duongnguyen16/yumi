@@ -109,6 +109,8 @@ function StateText({ state }: { state: AccessRequest["effectiveState"] }) {
     GRANTED: "Đã chuyển quyền",
     REJECTED: "Đã từ chối",
     AUTO_GRANTED: "Đã tự động chuyển quyền",
+    EXPIRED: "Đã hết hạn",
+    ESCALATED: "Đã mở tranh chấp",
   };
   return (
     <Text selectable style={{ color: "#606C38", fontWeight: "700" }}>

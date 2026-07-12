@@ -6,7 +6,9 @@ export type AccessState =
   | "PENDING_TIMED_OUT"
   | "GRANTED"
   | "REJECTED"
-  | "AUTO_GRANTED";
+  | "AUTO_GRANTED"
+  | "EXPIRED"
+  | "ESCALATED";
 
 export type AccessEvidence = {
   url: string;
