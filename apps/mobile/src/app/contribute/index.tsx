@@ -600,6 +600,9 @@ export default function ContributePlaceScreen() {
       imageFiles: toPendingEvidenceFiles(images),
     });
     if (response?.success === false) {
+      setImages([]);
+      setVideos([]);
+      setLicenseFiles([]);
       throw new Error(response.message || "Không thể gửi đăng ký vendor.");
     }
   };
