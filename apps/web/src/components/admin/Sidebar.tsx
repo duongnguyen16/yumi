@@ -21,6 +21,7 @@ import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlin
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { SidebarItem } from './SidebarItem';
 import { tokens } from '@/theme/admin-tokens';
@@ -41,6 +42,11 @@ const NAV: NavItem[] = [
   { icon: <LocationOnOutlinedIcon />, label: 'Duyệt địa điểm' },
   { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
   { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/admin/reports' },
+  {
+    icon: <GavelOutlinedIcon />,
+    label: 'Tranh chấp',
+    href: '/admin/disputes',
+  },
   { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User', href: '/admin/users' },
   {
     icon: <CategoryOutlinedIcon />,
