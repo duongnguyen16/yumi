@@ -59,7 +59,7 @@ export default function GeneralTab({
           />
           <InfoRow icon="eye" text={`${data?.viewCount || "0"} lượt xem`} />
         </Card.Content>
-        {user?._id ? (
+        {user?._id === data?.ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
