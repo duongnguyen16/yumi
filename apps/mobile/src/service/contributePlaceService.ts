@@ -51,6 +51,7 @@ export type CustomerContributionPayload = {
   accuracyMeters?: number;
   imageUrls: string[];
   suspectedDuplicateLocationIds?: string[];
+  isPotentialDuplicate?: boolean;
 };
 
 export type VendorRegistrationPayload = CustomerContributionPayload & {
@@ -58,6 +59,21 @@ export type VendorRegistrationPayload = CustomerContributionPayload & {
   videoFiles: PendingVendorEvidenceFile[];
   licenseFiles: PendingVendorEvidenceFile[];
   imageFiles: PendingContributionImage[];
+};
+
+const appendEvidenceFile = (
+  formData: FormData,
+  fieldName: string,
+  file: PendingContributionImage,
+) => {
+  formData.append(
+    fieldName,
+    {
+      uri: file.uri,
+      name: file.fileName,
+      type: file.mimeType,
+    } as unknown as Blob,
+  );
 };
 
 let supabaseClient: SupabaseClient | null = null;
@@ -132,6 +148,7 @@ export const validateContributionPosition = async (payload: {
 
   return response.data as {
     success: boolean;
+    message?: string;
     distanceMeters: number;
     withinRange: boolean;
   };
@@ -215,7 +232,7 @@ export const submitVendorRegistration = async (
       deviceLatitude: payload.deviceLatitude,
       deviceLongitude: payload.deviceLongitude,
       newData: locationData,
-      isPotentialDuplicate: payload.suspectedDuplicateLocationIds?.length > 0,
+      isPotentialDuplicate: payload.isPotentialDuplicate,
       suspectedDuplicateLocationIds: payload.suspectedDuplicateLocationIds,
       captureAt: new Date().toISOString(),
       pinLatitude: payload.latitude,
@@ -224,29 +241,17 @@ export const submitVendorRegistration = async (
     const formData = new FormData();
     formData.append("request", JSON.stringify(requestData));
     formData.append("locationData", JSON.stringify(locationData));
-    payload.videoFiles.forEach((file, index) => {
-      formData.append(`videoFiles`, {
-        uri: file.uri,
-        name: file.fileName,
-        type: file.mimeType,
-      } as any);
-    });
+    payload.videoFiles.forEach((file) =>
+      appendEvidenceFile(formData, "videoFiles", file),
+    );
     if (payload.licenseFiles.length > 0) {
-      payload.licenseFiles.forEach((file, index) => {
-        formData.append(`licenseFiles`, {
-          uri: file.uri,
-          name: file.fileName,
-          type: file.mimeType,
-        } as any);
-      });
+      payload.licenseFiles.forEach((file) =>
+        appendEvidenceFile(formData, "licenseFiles", file),
+      );
     }
-    payload.imageFiles.forEach((file, index) => {
-      formData.append(`imageFiles`, {
-        uri: file.uri,
-        name: file.fileName,
-        type: file.mimeType,
-      } as any);
-    });
+    payload.imageFiles.forEach((file) =>
+      appendEvidenceFile(formData, "imageFiles", file),
+    );
     const response = await api.post("/location/register", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
