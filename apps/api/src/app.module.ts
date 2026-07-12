@@ -26,6 +26,7 @@ import { EditSuggestionsModule } from './modules/edit-suggestions/edit-suggestio
 import { ClaimModule } from './modules/claims/claim.module';
 import { AdminClaimModule } from './modules/admin-claims/admin-claim.module';
 import { RequestAccessModule } from './modules/request-access/request-access.module';
+import { DisputeModule } from './modules/disputes/dispute.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { RequestAccessModule } from './modules/request-access/request-access.mod
     ClaimModule,
     AdminClaimModule,
     RequestAccessModule,
+    DisputeModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
