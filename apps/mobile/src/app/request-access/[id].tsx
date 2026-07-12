@@ -192,7 +192,17 @@ export default function AccessDetailScreen() {
         <View style={cardStyle}>
           <Text selectable style={titleStyle}>Yêu cầu đã bị từ chối</Text>
           <Text selectable style={bodyStyle}>{item.responseReason || "Không có lý do."}</Text>
-          <Text selectable style={bodyStyle}>Bạn có thể kháng cáo trong luồng tranh chấp WDP-31.</Text>
+          <Button
+            mode="contained"
+            onPress={() =>
+              router.push({
+                pathname: "/appeals/new",
+                params: { type: "REQUEST_ACCESS_REJECTED", targetId: item._id },
+              } as never)
+            }
+          >
+            Gửi kháng cáo
+          </Button>
         </View>
       ) : null}
 
