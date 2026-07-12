@@ -27,14 +27,14 @@ export class ProductsService {
   ) {}
 
   async getAllProductsByLocation(locationId: string) {
-    this.assertObjectId(locationId, 'Dia diem khong hop le');
+    this.assertObjectId(locationId, 'Địa điểm không hợp lệ');
 
     const locationExists = await this.locationModel.exists({
       _id: new Types.ObjectId(locationId),
       status: LocationStatus.PUBLISHED,
     });
     if (!locationExists) {
-      throw new NotFoundException('Khong tim thay dia diem');
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
 
     const products = await this.productModel
@@ -50,14 +50,14 @@ export class ProductsService {
   }
 
   async findByLocation(locationId: string) {
-    this.assertObjectId(locationId, 'Dia diem khong hop le');
+    this.assertObjectId(locationId, 'Địa điểm không hợp lệ');
 
     const locationExists = await this.locationModel.exists({
       _id: new Types.ObjectId(locationId),
       status: LocationStatus.PUBLISHED,
     });
     if (!locationExists) {
-      throw new NotFoundException('Khong tim thay dia diem');
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
 
     const products = await this.productModel
@@ -79,7 +79,7 @@ export class ProductsService {
     });
 
     if (productCount >= MAX_PRODUCTS_PER_LOCATION) {
-      throw new BadRequestException('Moi dia diem chi duoc co toi da 50 san pham');
+      throw new BadRequestException('Mỗi địa điểm chỉ được có tối đa 50 sản phẩm');
     }
 
     const product = await this.productModel.create({
@@ -92,7 +92,7 @@ export class ProductsService {
 
     return {
       success: true,
-      message: 'Tao san pham thanh cong',
+      message: 'Tạo sản phẩm thành công',
       product: this.toResponse(product),
     };
   }
@@ -118,7 +118,7 @@ export class ProductsService {
 
     return {
       success: true,
-      message: 'Cap nhat san pham thanh cong',
+      message: 'Cập nhật sản phẩm thành công',
       product: this.toResponse(product),
     };
   }
@@ -130,35 +130,35 @@ export class ProductsService {
 
     return {
       success: true,
-      message: 'Xoa san pham thanh cong',
+      message: 'Xóa sản phẩm thành công',
     };
   }
 
   private async findOwnedLocation(locationId: string, userId: string) {
-    this.assertObjectId(locationId, 'Dia diem khong hop le');
+    this.assertObjectId(locationId, 'Địa điểm không hợp lệ');
 
     const location = await this.locationModel
       .findById(new Types.ObjectId(locationId))
       .exec();
     if (!location) {
-      throw new NotFoundException('Khong tim thay dia diem');
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
 
     if (!location.ownerId || String(location.ownerId) !== userId) {
-      throw new ForbiddenException('Chi chu so huu dia diem moi duoc sua san pham');
+      throw new ForbiddenException('Chỉ chủ sở hữu địa điểm mới được sửa sản phẩm');
     }
 
     return location;
   }
 
   private async findProduct(productId: string) {
-    this.assertObjectId(productId, 'San pham khong hop le');
+    this.assertObjectId(productId, 'Sản phẩm không hợp lệ');
 
     const product = await this.productModel
       .findById(new Types.ObjectId(productId))
       .exec();
     if (!product) {
-      throw new NotFoundException('Khong tim thay san pham');
+      throw new NotFoundException('Không tìm thấy sản phẩm');
     }
 
     return product;
