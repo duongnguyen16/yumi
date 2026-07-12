@@ -70,6 +70,9 @@ export class VendorLocationsController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       console.error('Error in sendOtpUpdatePhone controller:', error);
       throw new InternalServerErrorException(
         'Xảy ra lỗi khi gửi OTP cập nhật số điện thoại',
@@ -103,6 +106,9 @@ export class VendorLocationsController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       console.error('Error in verifyOtpUpdatePhone controller:', error);
       throw new InternalServerErrorException(
         'Xảy ra lỗi khi xác thực OTP cập nhật số điện thoại',
@@ -146,6 +152,9 @@ export class VendorLocationsController {
 
       return result;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       console.error('Error in updateLocation controller:', error);
       throw new InternalServerErrorException(
         'Xảy ra lỗi khi cập nhật địa điểm',
