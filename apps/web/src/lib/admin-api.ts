@@ -416,8 +416,7 @@ export interface ClaimActionResponse {
   message: string;
   claim?: { id: string; status: string };
   location?: { id: string; ownerId: string };
-  routedToDispute?: boolean;
-  dispute?: { id: string; status: string };
+  redirectToRequestAccess?: boolean;
 }
 
 export async function getClaimQueue(
@@ -536,6 +535,72 @@ export async function rejectLocationRequest(
   const res = await api.patch<LocationRequestActionResponse>(
     `/admin/location-requests/${id}/reject`,
     { reason, ...(duplicateOfLocationId ? { duplicateOfLocationId } : {}) },
+  );
+  return res.data;
+}
+
+export interface DecisionEvidence {
+  url: string;
+  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  capturedAt?: string;
+  geo?: { type: 'Point'; coordinates: [number, number] };
+}
+
+export interface DecisionUser {
+  _id: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface DecisionLocation {
+  _id: string;
+  name?: string;
+  address?: string;
+  ownerId?: string | null;
+}
+
+export interface AdminDispute {
+  _id: string;
+  requestAccessId?: string;
+  locationId: DecisionLocation | string;
+  vendorAId: DecisionUser | string;
+  vendorBId: DecisionUser | string;
+  evidenceA: DecisionEvidence[];
+  evidenceB: DecisionEvidence[];
+  status: string;
+  adminDecision?: { reason?: string; decidedAt?: string };
+  createdAt?: string;
+}
+
+export interface DisputeQueueResponse {
+  success: boolean;
+  items: AdminDispute[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getDisputeQueue(): Promise<DisputeQueueResponse> {
+  const res = await api.get<DisputeQueueResponse>('/admin/disputes');
+  return res.data;
+}
+
+export async function getDisputeDetail(id: string): Promise<AdminDispute> {
+  const res = await api.get<{ success: boolean; dispute: AdminDispute }>(
+    `/admin/disputes/${id}`,
+  );
+  return res.data.dispute;
+}
+
+export async function resolveDispute(
+  id: string,
+  outcome: 'KEEP' | 'TRANSFER' | 'REVOKE',
+  reason: string,
+): Promise<{ message: string }> {
+  const res = await api.patch<{ success: boolean; message: string }>(
+    `/admin/disputes/${id}/resolve`,
+    { outcome, reason },
   );
   return res.data;
 }
