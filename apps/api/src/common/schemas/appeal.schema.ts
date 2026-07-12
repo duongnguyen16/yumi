@@ -32,6 +32,9 @@ export class Appeal {
   @Prop({ type: [EvidenceFileSchema], default: [] })
   additionalEvidenceFiles!: EvidenceFile[];
 
+  @Prop({ required: true, trim: true, minlength: 10, maxlength: 1000 })
+  argument!: string;
+
   @Prop({
     type: String,
     enum: AppealStatus,
@@ -42,6 +45,12 @@ export class Appeal {
 
   @Prop({ trim: true })
   originalDecisionReason?: string;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User' })
+  originalDeciderId?: Types.ObjectId;
+
+  @Prop({ type: Date, required: true })
+  originalDecidedAt!: Date;
 
   @Prop({ type: Date, required: true, index: true })
   appealDeadline!: Date;
