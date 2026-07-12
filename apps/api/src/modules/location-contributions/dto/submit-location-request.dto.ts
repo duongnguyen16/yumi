@@ -28,6 +28,11 @@ export class SubmitLocationRequestDto {
   @MaxLength(500)
   description!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  openingHours?: string;
+
   @IsMongoId()
   categoryId!: string;
 
