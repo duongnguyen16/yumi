@@ -66,14 +66,11 @@ const appendEvidenceFile = (
   fieldName: string,
   file: PendingContributionImage,
 ) => {
-  formData.append(
-    fieldName,
-    {
-      uri: file.uri,
-      name: file.fileName,
-      type: file.mimeType,
-    } as unknown as Blob,
-  );
+  formData.append(fieldName, {
+    uri: file.uri,
+    name: file.fileName,
+    type: file.mimeType,
+  } as unknown as Blob);
 };
 
 let supabaseClient: SupabaseClient | null = null;
@@ -215,55 +212,52 @@ export const submitContribution = submitCustomerContribution;
 export const submitVendorRegistration = async (
   payload: VendorRegistrationPayload,
 ) => {
-  try {
-    const locationData = {
-      name: payload.name,
-      description: payload.description,
-      openingHours: payload.openingHours,
-      categoryId: payload.categoryId,
-      subCategoryIds: payload.tagIds,
-      address: payload.address,
-      accuracyMeters: payload.accuracyMeters,
-      longitude: payload.longitude,
-      latitude: payload.latitude,
-    };
-    const requestData = {
-      systemCode: payload.systemCode,
-      deviceLatitude: payload.deviceLatitude,
-      deviceLongitude: payload.deviceLongitude,
-      newData: locationData,
-      isPotentialDuplicate: payload.isPotentialDuplicate,
-      suspectedDuplicateLocationIds: payload.suspectedDuplicateLocationIds,
-      captureAt: new Date().toISOString(),
-      pinLatitude: payload.latitude,
-      pinLongitude: payload.longitude,
-    };
-    const formData = new FormData();
-    formData.append("request", JSON.stringify(requestData));
-    formData.append("locationData", JSON.stringify(locationData));
-    payload.videoFiles.forEach((file) =>
-      appendEvidenceFile(formData, "videoFiles", file),
+  const locationData = {
+    name: payload.name,
+    description: payload.description,
+    openingHours: payload.openingHours,
+    categoryId: payload.categoryId,
+    subCategoryIds: payload.tagIds,
+    address: payload.address,
+    accuracyMeters: payload.accuracyMeters,
+    longitude: payload.longitude,
+    latitude: payload.latitude,
+  };
+  const requestData = {
+    systemCode: payload.systemCode,
+    deviceLatitude: payload.deviceLatitude,
+    deviceLongitude: payload.deviceLongitude,
+    newData: locationData,
+    isPotentialDuplicate: payload.isPotentialDuplicate,
+    suspectedDuplicateLocationIds: payload.suspectedDuplicateLocationIds,
+    captureAt: new Date().toISOString(),
+    pinLatitude: payload.latitude,
+    pinLongitude: payload.longitude,
+  };
+  const formData = new FormData();
+  formData.append("request", JSON.stringify(requestData));
+  formData.append("locationData", JSON.stringify(locationData));
+  payload.videoFiles.forEach((file) =>
+    appendEvidenceFile(formData, "videoFiles", file),
+  );
+  if (payload.licenseFiles.length > 0) {
+    payload.licenseFiles.forEach((file) =>
+      appendEvidenceFile(formData, "licenseFiles", file),
     );
-    if (payload.licenseFiles.length > 0) {
-      payload.licenseFiles.forEach((file) =>
-        appendEvidenceFile(formData, "licenseFiles", file),
-      );
-    }
-    payload.imageFiles.forEach((file) =>
-      appendEvidenceFile(formData, "imageFiles", file),
-    );
-    const response = await api.post("/location/register", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.log("Error in submitVendorRegistration: ", error);
-    return {
-      success: false,
-      message:
-        error.response?.data?.message || "Xảy ra lỗi khi gửi đăng ký địa điểm",
-    };
   }
+  payload.imageFiles.forEach((file) =>
+    appendEvidenceFile(formData, "imageFiles", file),
+  );
+  const response = await api.post("/location/register", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  if (response.data?.success === false) {
+    throw new Error(
+      response.data.message || "Xảy ra lỗi khi gửi đăng ký địa điểm",
+    );
+  }
+
+  return response.data;
 };

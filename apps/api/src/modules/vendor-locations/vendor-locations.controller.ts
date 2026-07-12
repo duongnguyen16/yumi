@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
   InternalServerErrorException,
   NotFoundException,
   Param,
@@ -173,8 +174,14 @@ export class VendorLocationsController {
     },
   ) {
     try {
-      const requestDataParsed = JSON.parse(requestData);
-      const locationDataParsed = JSON.parse(locationData);
+      let requestDataParsed: unknown;
+      let locationDataParsed: unknown;
+      try {
+        requestDataParsed = JSON.parse(requestData);
+        locationDataParsed = JSON.parse(locationData);
+      } catch {
+        throw new BadRequestException('Dữ liệu đăng ký không hợp lệ');
+      }
       const validateLocationData = plainToInstance(
         CreateLocationDto,
         locationDataParsed,
@@ -183,6 +190,22 @@ export class VendorLocationsController {
         CreateLocationRequestDataDto,
         requestDataParsed,
       );
+      const [locationDataErrors, locationRequestErrors] = await Promise.all([
+        validate(validateLocationData, {
+          whitelist: true,
+          forbidNonWhitelisted: true,
+        }),
+        validate(validateLocationRequest, {
+          whitelist: true,
+          forbidNonWhitelisted: true,
+        }),
+      ]);
+      if (locationDataErrors.length > 0 || locationRequestErrors.length > 0) {
+        throw new BadRequestException([
+          ...locationDataErrors,
+          ...locationRequestErrors,
+        ]);
+      }
       const result = await this.vendorLocationsService.registerLocation(
         req.user.userId,
         validateLocationRequest,
@@ -202,6 +225,9 @@ export class VendorLocationsController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       console.error('Error in registerLocation controller:', error);
       throw new InternalServerErrorException('Xảy ra lỗi khi đăng ký địa điểm');
     }
