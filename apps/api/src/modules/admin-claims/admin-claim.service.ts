@@ -15,10 +15,8 @@ import {
 } from 'src/common/schemas/claim-request.schema';
 import {
   ClaimRequestStatus,
-  DisputeStatus,
   TrustEventType,
 } from 'src/common/schemas/common.enums';
-import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { EvidenceFile } from 'src/common/schemas/common.embedded';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
@@ -51,8 +49,6 @@ export class AdminClaimService {
     private readonly claimModel: Model<ClaimRequestDocument>,
     @InjectModel(Location.name)
     private readonly locModel: Model<LocationDocument>,
-    @InjectModel(Dispute.name)
-    private readonly disputeModel: Model<DisputeDocument>,
     @InjectModel(AuditLog.name)
     private readonly logModel: Model<AuditLogDocument>,
     private readonly trust: TrustEngineService,
@@ -109,7 +105,7 @@ export class AdminClaimService {
       }
 
       if (loc.ownerId && String(loc.ownerId) !== String(claim.vendorId)) {
-        return this.routeToDispute(claim, loc, adminId);
+        return this.redirectToAccess(claim, loc, adminId);
       }
 
       const oldOwner = loc.ownerId ? String(loc.ownerId) : null;
@@ -230,6 +226,42 @@ export class AdminClaimService {
     }
   }
 
+  private async redirectToAccess(
+    claim: ClaimRequestDocument,
+    loc: LocationDocument,
+    adminId: string,
+  ) {
+    const reason = 'Địa điểm đã có chủ, hãy gửi RequestAccess';
+    claim.status = ClaimRequestStatus.REJECTED;
+    claim.adminDecision = {
+      decidedBy: new Types.ObjectId(adminId),
+      reason,
+      decidedAt: new Date(),
+    };
+    await claim.save();
+    await this.notification.notify({
+      userId: String(claim.vendorId),
+      type: 'CLAIM_REDIRECTED_TO_REQUEST_ACCESS',
+      title: 'Hãy gửi yêu cầu chuyển quyền',
+      body: `"${loc.name}" đã có chủ. Bạn có thể gửi RequestAccess để yêu cầu quyền quản lý.`,
+      refCollection: 'claim_requests',
+      refId: String(claim._id),
+    });
+    await this.writeLog(adminId, 'CLAIM_REDIRECT_TO_REQUEST_ACCESS', claim._id, reason, {
+      claimStatus: {
+        from: ClaimRequestStatus.PENDING,
+        to: ClaimRequestStatus.REJECTED,
+      },
+      locationId: String(loc._id),
+    });
+    return {
+      success: true,
+      redirectToRequestAccess: true,
+      message: reason,
+      claim: { id: claim._id, status: claim.status },
+    };
+  }
+
   private getFlags(claim: ClaimData) {
     const files = claim.evidenceFiles ?? [];
     const hasOnSiteProof = files.some(
@@ -272,44 +304,6 @@ export class AdminClaimService {
     const loc = await this.locModel.findById(claim.locationId).exec();
     if (!loc) return this.fail(404, 'Không tìm thấy địa điểm của claim');
     return { success: true, claim, loc };
-  }
-
-  private async routeToDispute(
-    claim: ClaimRequestDocument,
-    loc: LocationDocument,
-    adminId: string,
-  ) {
-    const dispute = await this.disputeModel.create({
-      locationId: loc._id,
-      vendorAId: loc.ownerId,
-      vendorBId: claim.vendorId,
-      evidenceB: claim.evidenceFiles ?? [],
-      status: DisputeStatus.OPEN,
-    });
-
-    await this.notification.notify({
-      userId: String(claim.vendorId),
-      type: 'CLAIM_ROUTED_TO_DISPUTE',
-      title: 'Claim được chuyển sang tranh chấp',
-      body: `"${loc.name}" đã có chủ sở hữu khác. Claim được chuyển sang quy trình tranh chấp.`,
-      refCollection: 'disputes',
-      refId: String(dispute._id),
-    });
-    await this.writeLog(
-      adminId,
-      'CLAIM_ROUTED_TO_DISPUTE',
-      claim._id,
-      'Địa điểm đã có chủ sở hữu khác',
-      { disputeId: String(dispute._id), locationId: String(loc._id) },
-    );
-
-    return {
-      success: true,
-      routedToDispute: true,
-      message: 'Đã chuyển claim sang tranh chấp',
-      dispute: { id: dispute._id, status: dispute.status },
-      claim: { id: claim._id, status: claim.status },
-    };
   }
 
   private async writeLog(
