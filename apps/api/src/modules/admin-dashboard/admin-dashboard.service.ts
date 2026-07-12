@@ -5,10 +5,7 @@ import {
   AuditLog,
   AuditLogDocument,
 } from 'src/common/schemas/audit-log.schema';
-import {
-  Location,
-  LocationDocument,
-} from 'src/common/schemas/location.schema';
+import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { Report, ReportDocument } from 'src/common/schemas/report.schema';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
