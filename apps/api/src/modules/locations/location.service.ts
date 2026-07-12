@@ -73,7 +73,7 @@ export class LocationService {
     void userId;
     try {
       const location = await this.locationModel
-        .findById(locationId)
+        .findOne({ _id: locationId, status: LocationStatus.PUBLISHED })
         .populate('subCategoryIds')
         .populate('categoryId')
         .exec();
