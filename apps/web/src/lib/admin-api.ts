@@ -604,3 +604,52 @@ export async function resolveDispute(
   );
   return res.data;
 }
+
+export interface AdminAppeal {
+  _id: string;
+  type: string;
+  targetCollection: string;
+  targetId: string;
+  appellantId: DecisionUser | string;
+  argument: string;
+  additionalEvidenceFiles: DecisionEvidence[];
+  originalDecisionReason?: string;
+  originalDeciderId?: string;
+  originalDecidedAt: string;
+  appealDeadline: string;
+  status: string;
+  adminDecision?: { reason?: string; decidedAt?: string };
+  createdAt?: string;
+}
+
+export interface AppealQueueResponse {
+  success: boolean;
+  items: AdminAppeal[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function getAppealQueue(): Promise<AppealQueueResponse> {
+  const res = await api.get<AppealQueueResponse>('/admin/appeals');
+  return res.data;
+}
+
+export async function getAppealDetail(id: string): Promise<AdminAppeal> {
+  const res = await api.get<{ success: boolean; appeal: AdminAppeal }>(
+    `/admin/appeals/${id}`,
+  );
+  return res.data.appeal;
+}
+
+export async function resolveAppeal(
+  id: string,
+  decision: 'ACCEPTED_TO_DISPUTE' | 'OVERTURNED' | 'UPHELD',
+  reason: string,
+): Promise<{ message: string }> {
+  const res = await api.patch<{ success: boolean; message: string }>(
+    `/admin/appeals/${id}/resolve`,
+    { decision, reason },
+  );
+  return res.data;
+}

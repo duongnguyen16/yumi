@@ -22,6 +22,7 @@ import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { SidebarItem } from './SidebarItem';
 import { tokens } from '@/theme/admin-tokens';
@@ -46,6 +47,11 @@ const NAV: NavItem[] = [
     icon: <GavelOutlinedIcon />,
     label: 'Tranh chấp',
     href: '/admin/disputes',
+  },
+  {
+    icon: <RuleOutlinedIcon />,
+    label: 'Kháng cáo',
+    href: '/admin/appeals',
   },
   { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User', href: '/admin/users' },
   {
