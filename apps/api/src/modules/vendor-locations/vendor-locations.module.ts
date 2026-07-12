@@ -4,6 +4,7 @@ import { VendorGuard } from 'src/common/guard/vendor.guard';
 import { SchemaModule } from 'src/common/schemas/schema.module';
 import { SmsService } from '../auth/services/sms.service';
 import { ImagesService } from '../images/images.service';
+import { DuplicateDetectionService } from '../duplicate-detection/duplicate-detection.service';
 import { LocationGeoService } from '../location-geo/location-geo.service';
 import { VendorLocationsController } from './vendor-locations.controller';
 import { VendorLocationsService } from './vendor-locations.service';
@@ -18,6 +19,7 @@ import { VendorLocationsService } from './vendor-locations.service';
     ImagesService,
     SmsService,
     LocationGeoService,
+    DuplicateDetectionService,
   ],
 })
 export class VendorLocationsModule {}

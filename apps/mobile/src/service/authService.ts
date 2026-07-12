@@ -147,8 +147,7 @@ const restoreSession = async (token: string) => {
     }
     return {
       success: false,
-      message:
-        response.data?.message || "Không thể khôi phục phiên đăng nhập",
+      message: response.data?.message || "Không thể khôi phục phiên đăng nhập",
     };
   } catch (error) {
     return {
@@ -175,4 +174,5 @@ export {
   register,
   resetPassword,
   restoreSession,
+  register,
 };
