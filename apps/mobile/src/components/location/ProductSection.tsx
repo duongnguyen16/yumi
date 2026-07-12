@@ -83,18 +83,18 @@ export default function ProductSection({
 
   const saveProduct = async () => {
     if (!locationId) {
-      setMessage("Khong tim thay dia diem.");
+      setMessage("Không tìm thấy địa điểm.");
       return;
     }
     if (!form.name.trim()) {
-      setMessage("Ten san pham khong duoc de trong.");
+      setMessage("Tên sản phẩm không được để trống.");
       return;
     }
 
     const price = form.price.trim();
     const parsedPrice = price ? Number(price) : null;
     if (price && (!Number.isFinite(parsedPrice) || parsedPrice < 0)) {
-      setMessage("Gia phai la so khong am.");
+      setMessage("Giá phải là số không âm.");
       return;
     }
 
@@ -113,10 +113,10 @@ export default function ProductSection({
 
     if (response?.success) {
       setModalVisible(false);
-      setMessage(productId ? "Da cap nhat san pham." : "Da tao san pham.");
+      setMessage(productId ? "Đã cập nhật sản phẩm." : "Đã tạo sản phẩm.");
       await onChanged?.();
     } else {
-      setMessage(response?.message || "Khong the luu san pham.");
+      setMessage(response?.message || "Không thể lưu sản phẩm.");
     }
     setSaving(false);
   };
@@ -127,18 +127,18 @@ export default function ProductSection({
       return;
     }
 
-    Alert.alert("Xoa san pham", "Ban co chac muon xoa san pham nay?", [
-      { text: "Huy", style: "cancel" },
+    Alert.alert("Xóa sản phẩm", "Bạn có chắc muốn xóa sản phẩm này?", [
+      { text: "Hủy", style: "cancel" },
       {
-        text: "Xoa",
+        text: "Xóa",
         style: "destructive",
         onPress: async () => {
           const response = await deleteProduct(productId);
           if (response?.success) {
-            setMessage("Da xoa san pham.");
+            setMessage("Đã xóa sản phẩm.");
             await onChanged?.();
           } else {
-            setMessage(response?.message || "Khong the xoa san pham.");
+            setMessage(response?.message || "Không thể xóa sản phẩm.");
           }
         },
       },
@@ -148,8 +148,8 @@ export default function ProductSection({
   return (
     <Card style={styles.card}>
       <Card.Title
-        title="San pham"
-        subtitle="Gia chi mang tinh tham khao"
+        title="Sản phẩm"
+        subtitle="Giá chỉ mang tính tham khảo"
         right={() =>
           canManage ? (
             <IconButton
@@ -163,7 +163,7 @@ export default function ProductSection({
       />
       <Card.Content>
         {sortedProducts.length === 0 ? (
-          <Text style={styles.empty}>Chua co san pham.</Text>
+          <Text style={styles.empty}>Chưa có sản phẩm.</Text>
         ) : (
           sortedProducts.map((product, index) => (
             <View key={getId(product) ?? product.name ?? index}>
@@ -187,7 +187,7 @@ export default function ProductSection({
                       </Text>
                     </>
                   ) : (
-                    <Text style={styles.noPrice}>Chua co gia</Text>
+                    <Text style={styles.noPrice}>Chưa có giá</Text>
                   )}
                 </View>
                 {canManage && (
@@ -205,7 +205,7 @@ export default function ProductSection({
           ))
         )}
         {canManage && sortedProducts.length >= 50 && (
-          <Text style={styles.limit}>Da dat gioi han 50 san pham.</Text>
+          <Text style={styles.limit}>Đã đạt giới hạn 50 sản phẩm.</Text>
         )}
       </Card.Content>
 
@@ -218,16 +218,16 @@ export default function ProductSection({
         <View style={styles.modalBackdrop}>
           <View style={styles.sheet}>
             <Text variant="titleLarge" style={styles.sheetTitle}>
-              {editingProduct ? "Sua san pham" : "Them san pham"}
+              {editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}
             </Text>
             <TextInput
-              label="Ten san pham"
+              label="Tên sản phẩm"
               mode="outlined"
               value={form.name}
               onChangeText={(name) => setForm((current) => ({ ...current, name }))}
             />
             <TextInput
-              label="Mo ta"
+              label="Mô tả"
               mode="outlined"
               value={form.description}
               multiline
@@ -236,7 +236,7 @@ export default function ProductSection({
               }
             />
             <TextInput
-              label="Gia tham khao"
+              label="Giá tham khảo"
               mode="outlined"
               value={form.price}
               keyboardType="numeric"
@@ -245,7 +245,7 @@ export default function ProductSection({
               }
             />
             <TextInput
-              label="URL hinh anh"
+              label="URL hình ảnh"
               mode="outlined"
               value={form.imageUrl}
               onChangeText={(imageUrl) =>
@@ -253,14 +253,14 @@ export default function ProductSection({
               }
             />
             <Text style={styles.formNote}>
-              Khong tao gio hang hoac thanh toan trong ung dung.
+              Không tạo giỏ hàng hoặc thanh toán trong ứng dụng.
             </Text>
             <View style={styles.sheetActions}>
               <Button mode="outlined" onPress={() => setModalVisible(false)}>
-                Huy
+                Hủy
               </Button>
               <Button mode="contained" loading={saving} onPress={saveProduct}>
-                Luu
+                Lưu
               </Button>
             </View>
           </View>
