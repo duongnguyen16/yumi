@@ -349,6 +349,12 @@ export default function Profile() {
                 label="Yêu cầu chuyển quyền"
                 onPress={() => router.push("/request-access" as never)}
               />
+              <Divider />
+              <MenuItem
+                icon="shield"
+                label="Tranh chấp sở hữu"
+                onPress={() => router.push("/disputes" as never)}
+              />
             </>
           ) : null}
         </View>
