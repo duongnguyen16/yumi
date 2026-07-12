@@ -1,5 +1,5 @@
-import { api } from './api';
-import type { StoredUser } from './auth';
+import { api } from "./api";
+import type { StoredUser } from "./auth";
 
 export interface AdminSubCategory {
   _id: string;
@@ -32,7 +32,10 @@ export async function login(
   email: string,
   password: string,
 ): Promise<LoginResponse> {
-  const res = await api.post<Record<string, unknown>>('/auth/login', { email, password });
+  const res = await api.post<Record<string, unknown>>("/auth/login", {
+    email,
+    password,
+  });
   const raw = res.data as Record<string, unknown>;
   return {
     success: !!raw.success,
@@ -44,7 +47,7 @@ export async function login(
 }
 
 export async function listCategories(): Promise<AdminCategory[]> {
-  const res = await api.get<AdminCategory[]>('/admin/categories');
+  const res = await api.get<AdminCategory[]>("/admin/categories");
   return res.data;
 }
 
@@ -52,7 +55,7 @@ export async function createCategory(
   name: string,
   description?: string,
 ): Promise<AdminCategory> {
-  const res = await api.post<AdminCategory>('/admin/categories', {
+  const res = await api.post<AdminCategory>("/admin/categories", {
     name,
     description,
   });
@@ -71,10 +74,9 @@ export async function setCategoryStatus(
   id: string,
   isActive: boolean,
 ): Promise<AdminCategory> {
-  const res = await api.patch<AdminCategory>(
-    `/admin/categories/${id}/status`,
-    { isActive },
-  );
+  const res = await api.patch<AdminCategory>(`/admin/categories/${id}/status`, {
+    isActive,
+  });
   return res.data;
 }
 
@@ -116,29 +118,29 @@ export async function setSubCategoryStatus(
 /* ───── Report types ───── */
 
 export type ReportReason =
-  | 'INCORRECT_INFORMATION'
-  | 'SPAM'
-  | 'PERMANENTLY_CLOSED'
-  | 'WRONG_OWNER'
-  | 'OTHER';
+  | "INCORRECT_INFORMATION"
+  | "SPAM"
+  | "PERMANENTLY_CLOSED"
+  | "WRONG_OWNER"
+  | "OTHER";
 
-export type ReportTargetType = 'LOCATION' | 'REVIEW' | 'USER' | 'OWNERSHIP';
+export type ReportTargetType = "LOCATION" | "REVIEW" | "USER" | "OWNERSHIP";
 
 export type ReportStatus =
-  | 'PENDING'
-  | 'UNDER_REVIEW'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'DISMISSED'
-  | 'APPEALED'
-  | 'RESOLVED';
+  | "PENDING"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "REJECTED"
+  | "DISMISSED"
+  | "APPEALED"
+  | "RESOLVED";
 
-export type ReportRoute = 'STANDARD_REVIEW' | 'OWNERSHIP_REVIEW';
+export type ReportRoute = "STANDARD_REVIEW" | "OWNERSHIP_REVIEW";
 
 export interface ReportEvidenceFile {
   url: string;
-  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
-  geo?: { type: 'Point'; coordinates: [number, number] };
+  fileType: "IMAGE" | "VIDEO" | "DOCUMENT";
+  geo?: { type: "Point"; coordinates: [number, number] };
   accuracyMeters?: number;
   capturedAt?: string;
 }
@@ -184,7 +186,7 @@ export async function listReports(
   page = 1,
   limit = 20,
 ): Promise<ReportListResponse> {
-  const res = await api.get<ReportListResponse>('/admin/reports', {
+  const res = await api.get<ReportListResponse>("/admin/reports", {
     params: { page, limit },
   });
   return res.data;
@@ -195,10 +197,13 @@ export async function resolveReport(
   resultReason: string,
   removeReviewId?: string,
 ): Promise<ReportActionResponse> {
-  const res = await api.post<ReportActionResponse>(`/admin/reports/${id}/resolve`, {
-    resultReason,
-    ...(removeReviewId ? { removeReviewId } : {}),
-  });
+  const res = await api.post<ReportActionResponse>(
+    `/admin/reports/${id}/resolve`,
+    {
+      resultReason,
+      ...(removeReviewId ? { removeReviewId } : {}),
+    },
+  );
   return res.data;
 }
 
@@ -206,9 +211,12 @@ export async function dismissReport(
   id: string,
   resultReason: string,
 ): Promise<ReportActionResponse> {
-  const res = await api.post<ReportActionResponse>(`/admin/reports/${id}/dismiss`, {
-    resultReason,
-  });
+  const res = await api.post<ReportActionResponse>(
+    `/admin/reports/${id}/dismiss`,
+    {
+      resultReason,
+    },
+  );
   return res.data;
 }
 
@@ -231,7 +239,7 @@ export interface AdminUser {
 
 export async function listUsers(): Promise<AdminUser[]> {
   const res = await api.get<{ success: boolean; users: AdminUser[] }>(
-    '/admin/users',
+    "/admin/users",
   );
   return res.data.users;
 }
@@ -327,7 +335,7 @@ export async function getDashboardOverview(): Promise<{
   data: DashboardOverview;
 }> {
   const res = await api.get<{ success: boolean; data: DashboardOverview }>(
-    '/admin/dashboard/overview',
+    "/admin/dashboard/overview",
   );
   return res.data;
 }
@@ -338,7 +346,7 @@ export async function listAuditLogs(params?: {
   action?: string;
   actorId?: string;
 }): Promise<PaginatedAuditLogs> {
-  const res = await api.get<PaginatedAuditLogs>('/admin/dashboard/audit-logs', {
+  const res = await api.get<PaginatedAuditLogs>("/admin/dashboard/audit-logs", {
     params,
   });
   return res.data;
