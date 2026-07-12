@@ -36,7 +36,6 @@ export async function login(
     email,
     password,
   });
-  // API returns userData but client expects user — normalize
   const raw = res.data as Record<string, unknown>;
   return {
     success: !!raw.success,
