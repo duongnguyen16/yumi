@@ -2,11 +2,9 @@ import { Model, Types } from 'mongoose';
 import { NotificationPort } from 'src/common/contracts/notification.port';
 import { AuditLogDocument } from 'src/common/schemas/audit-log.schema';
 import { ClaimRequestDocument } from 'src/common/schemas/claim-request.schema';
-import { DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { LocationDocument } from 'src/common/schemas/location.schema';
 import {
   ClaimRequestStatus,
-  DisputeStatus,
   TrustEventType,
 } from 'src/common/schemas/common.enums';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
@@ -29,7 +27,6 @@ describe('AdminClaimService', () => {
       findById: jest.fn(),
     };
     const locModel = { findById: jest.fn() };
-    const disputeModel = { create: jest.fn() };
     const logModel = { create: jest.fn().mockResolvedValue({}) };
     const trust = { recordEvent: jest.fn().mockResolvedValue({}) };
     const notification = { notify: jest.fn().mockResolvedValue(undefined) };
@@ -38,14 +35,12 @@ describe('AdminClaimService', () => {
       service: new AdminClaimService(
         claimModel as unknown as Model<ClaimRequestDocument>,
         locModel as unknown as Model<LocationDocument>,
-        disputeModel as unknown as Model<DisputeDocument>,
         logModel as unknown as Model<AuditLogDocument>,
         trust as unknown as TrustEngineService,
         notification as unknown as NotificationPort,
       ),
       claimModel,
       locModel,
-      disputeModel,
       logModel,
       trust,
       notification,
@@ -180,30 +175,27 @@ describe('AdminClaimService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
-  it('routes a conflicting owner to an open dispute', async () => {
-    const { service, claimModel, locModel, disputeModel, trust } =
+  it('closes a conflicting claim before directing to request access', async () => {
+    const { service, claimModel, locModel, trust, notification, logModel } =
       createService();
     const ownerId = new Types.ObjectId();
     const req = claim();
     const loc = location({ ownerId });
-    const disputeId = new Types.ObjectId();
     claimModel.findById.mockReturnValue(query(req));
     locModel.findById.mockReturnValue(query(loc));
-    disputeModel.create.mockResolvedValue({
-      _id: disputeId,
-      status: DisputeStatus.OPEN,
-    });
 
     const result = await service.approve(String(claimId), String(adminId));
 
     expect(result).toMatchObject({
       success: true,
-      routedToDispute: true,
-      claim: { status: ClaimRequestStatus.PENDING },
-      dispute: { status: DisputeStatus.OPEN },
+      redirectToRequestAccess: true,
+      claim: { status: ClaimRequestStatus.REJECTED },
     });
+    expect(req.status).toBe(ClaimRequestStatus.REJECTED);
     expect(loc.save).not.toHaveBeenCalled();
     expect(trust.recordEvent).not.toHaveBeenCalled();
+    expect(notification.notify).toHaveBeenCalledTimes(1);
+    expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
   it('rejects claim without changing the owner', async () => {
