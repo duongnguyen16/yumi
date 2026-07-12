@@ -33,11 +33,10 @@ export async function login(
   password: string,
 ): Promise<LoginResponse> {
   const res = await api.post<Record<string, unknown>>('/auth/login', { email, password });
-  // API returns userData but client expects user — normalize
   const raw = res.data as Record<string, unknown>;
   return {
     success: !!raw.success,
-    user: raw.userData as StoredUser,
+    user: raw.user as StoredUser,
     accessToken: raw.accessToken as string,
     refreshToken: raw.refreshToken as string,
     message: raw.message as string | undefined,
