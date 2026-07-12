@@ -351,6 +351,12 @@ export default function Profile() {
               />
               <Divider />
               <MenuItem
+                icon="file-text"
+                label="Kháng cáo"
+                onPress={() => router.push("/appeals" as never)}
+              />
+              <Divider />
+              <MenuItem
                 icon="shield"
                 label="Tranh chấp sở hữu"
                 onPress={() => router.push("/disputes" as never)}
