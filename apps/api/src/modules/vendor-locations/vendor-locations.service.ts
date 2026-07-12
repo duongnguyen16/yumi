@@ -195,6 +195,7 @@ export class VendorLocationsService {
     },
   ) {
     try {
+      console.log(requestDataParsed, locationDataParsed);
       const user = await this.userModel.findById(userId);
       if (!user) {
         return {
