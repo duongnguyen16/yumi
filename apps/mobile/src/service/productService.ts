@@ -15,7 +15,7 @@ const createProduct = async (locationId: string, payload: ProductPayload) => {
     return {
       success: false,
       message:
-        error?.response?.data?.message || "Khong the tao san pham. Hay thu lai.",
+        error?.response?.data?.message || "Không thể tạo sản phẩm. Hãy thử lại.",
     };
   }
 };
@@ -29,7 +29,7 @@ const updateProduct = async (productId: string, payload: ProductPayload) => {
       success: false,
       message:
         error?.response?.data?.message ||
-        "Khong the cap nhat san pham. Hay thu lai.",
+        "Không thể cập nhật sản phẩm. Hãy thử lại.",
     };
   }
 };
@@ -42,7 +42,7 @@ const deleteProduct = async (productId: string) => {
     return {
       success: false,
       message:
-        error?.response?.data?.message || "Khong the xoa san pham. Hay thu lai.",
+        error?.response?.data?.message || "Không thể xóa sản phẩm. Hãy thử lại.",
     };
   }
 };
