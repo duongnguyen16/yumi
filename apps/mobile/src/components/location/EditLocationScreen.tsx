@@ -171,7 +171,6 @@ export default function EditLocationScreen({
     } finally {
       setOtp("");
       setOtpSent(false);
-      setOtpVerified(false);
     }
   };
 
