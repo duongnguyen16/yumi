@@ -39,6 +39,8 @@ export default function GeneralTab({
   const { user } = useContext(userContext);
   const router = useRouter();
   const [visible, setVisible] = useState(false);
+  const userId = getId(user);
+  const ownerId = getId(data?.ownerId);
 
   return (
     <View style={{ flex: 1 }}>
@@ -70,7 +72,7 @@ export default function GeneralTab({
             </Button>
           </Card.Actions>
         ) : null}
-        {user?._id && user?._id !== data?.ownerId ? (
+        {userId && userId !== ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               icon="flag-outline"
@@ -120,4 +122,18 @@ function InfoRow({ icon, text }: { icon: string; text: string }) {
       <Text style={{ flex: 1, flexShrink: 1 }}>{text}</Text>
     </View>
   );
+}
+
+function getId(value: unknown) {
+  if (!value) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "object") {
+    const item = value as { _id?: string; id?: string };
+    return item._id ?? item.id ?? "";
+  }
+  return "";
 }
