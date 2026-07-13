@@ -133,10 +133,9 @@ export class VendorLocationsService {
           }
         }
         const cleanData = Object.fromEntries(
-          Object.entries({
-            name: reviewRequiredData.name,
-            address: reviewRequiredData.address,
-          }).filter(([_, value]) => value !== null && value !== undefined),
+          Object.entries(reviewRequiredData).filter(
+            ([_, value]) => value !== null && value !== undefined,
+          ),
         );
         const oldData: Record<string, unknown> = {};
         if ('name' in cleanData) {
