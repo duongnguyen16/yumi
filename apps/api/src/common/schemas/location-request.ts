@@ -72,12 +72,6 @@ export class LocationRequest {
     type: [String],
     default: [],
   })
-  changedFields!: string[];
-
-  @Prop({
-    type: [String],
-    default: [],
-  })
   imageUrls!: string[];
 
   @Prop({
