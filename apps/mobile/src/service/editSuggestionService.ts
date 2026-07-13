@@ -49,7 +49,7 @@ const submitEditSuggestion = async (
       success: false,
       message:
         error?.response?.data?.message ||
-        "Khong the gui de xuat chinh sua luc nay.",
+        "Không thể gửi đề xuất chỉnh sửa lúc này.",
     };
   }
 };

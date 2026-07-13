@@ -14,7 +14,7 @@ const HEADER_HEIGHT = 310;
 export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const { width } = useWindowDimensions();
   const theme = useTheme();
-  const location = data?.location;
+  const location = data?.data;
   const locationId = location?._id;
 
   const coverImage =
@@ -127,7 +127,11 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
       >
         <Tabs.Tab name="general" label="Tổng quan">
           <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <GeneralTab data={location} productData={productData} onRefresh={onRefresh} />
+            <GeneralTab
+              data={location}
+              productData={productData}
+              onRefresh={onRefresh}
+            />
           </Tabs.ScrollView>
         </Tabs.Tab>
 
