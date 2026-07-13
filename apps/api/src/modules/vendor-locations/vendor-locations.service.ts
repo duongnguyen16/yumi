@@ -327,7 +327,7 @@ export class VendorLocationsService {
         deviceLocation: {
           type: 'Point',
           coordinates: [
-            requestDataParsed.deviceLongitude,s
+            requestDataParsed.deviceLongitude,
             requestDataParsed.deviceLatitude,
           ],
         },
