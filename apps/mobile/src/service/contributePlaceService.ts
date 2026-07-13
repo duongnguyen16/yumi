@@ -227,7 +227,6 @@ export const submitVendorRegistration = async (
     systemCode: payload.systemCode,
     deviceLatitude: payload.deviceLatitude,
     deviceLongitude: payload.deviceLongitude,
-    newData: locationData,
     isPotentialDuplicate: payload.isPotentialDuplicate,
     suspectedDuplicateLocationIds: payload.suspectedDuplicateLocationIds,
     captureAt: new Date().toISOString(),
