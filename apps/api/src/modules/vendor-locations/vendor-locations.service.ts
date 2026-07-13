@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -31,6 +32,7 @@ import {
 import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { SmsService } from '../auth/services/sms.service';
 import { ImagesService } from '../images/images.service';
+import { DuplicateDetectionService } from '../duplicate-detection/duplicate-detection.service';
 import { LocationGeoService } from '../location-geo/location-geo.service';
 import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
@@ -56,6 +58,7 @@ export class VendorLocationsService {
     private readonly imagesService: ImagesService,
     private readonly smsService: SmsService,
     private readonly locationGeoService: LocationGeoService,
+    private readonly duplicateDetectionService: DuplicateDetectionService,
   ) {}
 
   async updateLocation(
@@ -210,6 +213,24 @@ export class VendorLocationsService {
           statusCode: 400,
         };
       }
+      const deviceDistanceMeters = this.locationGeoService.getDistanceMeters(
+        requestDataParsed.deviceLatitude,
+        requestDataParsed.deviceLongitude,
+        requestDataParsed.pinLatitude,
+        requestDataParsed.pinLongitude,
+      );
+      if (deviceDistanceMeters > 50) {
+        throw new BadRequestException(
+          'Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm',
+        );
+      }
+      const duplicateCandidates =
+        await this.duplicateDetectionService.findPossibleDuplicates(
+          locationDataParsed.name,
+          locationDataParsed.latitude,
+          locationDataParsed.longitude,
+          locationDataParsed.categoryId,
+        );
       const uploadedImages = await this.imagesService.uploadMultiMedia(
         'vendor-verification',
         files?.imageFiles ?? [],
@@ -259,13 +280,10 @@ export class VendorLocationsService {
         submittedBy: new Types.ObjectId(userId),
         locationId: location._id,
         newData: requestDataParsed.newData,
-        isPotentialDuplicate: requestDataParsed.isPotentialDuplicate,
-        suspectedDuplicateLocationIds:
-          requestDataParsed?.suspectedDuplicateLocationIds
-            ? requestDataParsed.suspectedDuplicateLocationIds.map(
-                (id) => new Types.ObjectId(id),
-              )
-            : [],
+        isPotentialDuplicate: duplicateCandidates.length > 0,
+        suspectedDuplicateLocationIds: duplicateCandidates.map(
+          (item) => new Types.ObjectId(item.id),
+        ),
         pinLocation: {
           type: 'Point',
           coordinates: [
@@ -280,12 +298,7 @@ export class VendorLocationsService {
             requestDataParsed.deviceLatitude,
           ],
         },
-        deviceDistanceMeters: this.locationGeoService.getDistanceMeters(
-          requestDataParsed.deviceLatitude,
-          requestDataParsed.deviceLongitude,
-          requestDataParsed.pinLatitude,
-          requestDataParsed.pinLongitude,
-        ),
+        deviceDistanceMeters,
         verificationProof: {
           proofUrls: [
             ...uploadedImages.map((url) => url.url),
@@ -303,11 +316,10 @@ export class VendorLocationsService {
       };
     } catch (error) {
       console.error('Error in registerLocation service:', error);
-      return {
-        success: false,
-        message: 'Xảy ra lỗi khi đăng ký địa điểm',
-        statusCode: 500,
-      };
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Xảy ra lỗi khi đăng ký địa điểm');
     }
   }
 

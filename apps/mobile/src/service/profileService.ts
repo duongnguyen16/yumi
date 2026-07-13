@@ -1,6 +1,7 @@
 import axios from "axios";
 import api from "./aixos";
 import { getAccessToken } from "./tokenStorage";
+import { toAbsoluteUrl } from "./url";
 
 type ProfileUpdate = {
   name?: string;
@@ -101,13 +102,6 @@ const verifyProfilePhoneOtp = async (otp: string) => {
         error?.response?.data?.message || "Không thể xác minh mã OTP.",
     };
   }
-};
-
-const toAbsoluteUrl = (url?: string | null) => {
-  if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const baseUrl = api.defaults.baseURL?.replace(/\/api\/?$/, "") ?? "";
-  return `${baseUrl}${url}`;
 };
 
 export {

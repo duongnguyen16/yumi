@@ -163,6 +163,11 @@ export class LocationContributionsService {
       accuracyMeters: dto.accuracyMeters,
       address: dto.address,
     });
+    if (!positionValidation.withinRange) {
+      throw new BadRequestException(
+        'Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm',
+      );
+    }
 
     const duplicateCandidates =
       await this.duplicateDetectionService.findPossibleDuplicates(
@@ -185,6 +190,7 @@ export class LocationContributionsService {
         coordinates: [dto.longitude, dto.latitude],
       },
       accuracyMeters: dto.accuracyMeters,
+      openingHours: dto.openingHours,
       status: LocationStatus.SUBMITTED,
       isDuplicate: false,
       isSuspectedDuplicate: duplicateCandidates.length > 0,
@@ -202,6 +208,7 @@ export class LocationContributionsService {
     const newData = {
       name: dto.name,
       description: dto.description,
+      openingHours: dto.openingHours,
       categoryId: dto.categoryId,
       tagIds: dto.tagIds ?? [],
       latitude: dto.latitude,

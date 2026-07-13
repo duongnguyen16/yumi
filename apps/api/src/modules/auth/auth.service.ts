@@ -550,8 +550,8 @@ export default class AuthService {
 
   private toSafeUser(user: UserDocument) {
     const rawUser = user.toObject ? user.toObject() : user;
-    const { passwordHash, password_hash, ...safeUser } = rawUser as unknown as
-      Record<string, unknown>;
+    const { passwordHash, password_hash, ...safeUser } =
+      rawUser as unknown as Record<string, unknown>;
     void passwordHash;
     void password_hash;
     return safeUser;
