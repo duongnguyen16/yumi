@@ -7,6 +7,7 @@ import { TimePickerModal } from "react-native-paper-dates";
 import CustomMap from "./ui/CustomMap";
 import GetNewLocation from "./modals/GetNewLocation";
 import {
+  getCurrentLocation,
   sentUpdatePhoneOtp,
   updateLocation,
   verifyUpdatePhoneOtp,
@@ -17,6 +18,7 @@ import {
   submitEditSuggestion,
 } from "@/service/editSuggestionService";
 import { userContext } from "@/contexts/userContext";
+import { set } from "zod/v3";
 
 type TimeValue = {
   hours: number;
@@ -46,7 +48,12 @@ const OWNER_CHIPS: EditChip[] = [
   "category",
 ];
 
-const NON_OWNER_CHIPS: EditChip[] = ["address", "openingHours", "phone", "flag"];
+const NON_OWNER_CHIPS: EditChip[] = [
+  "address",
+  "openingHours",
+  "phone",
+  "flag",
+];
 
 const CHIP_LABELS: Record<EditChip, string> = {
   name: "Tên địa điểm",
@@ -161,6 +168,10 @@ export default function EditLocationScreen({
     } catch (error) {
       console.error("Error verifying OTP:", error);
       Alert.alert("Xác nhận mã OTP thất bại");
+    } finally {
+      setOtp("");
+      setOtpSent(false);
+      setOtpVerified(false);
     }
   };
 
@@ -183,7 +194,7 @@ export default function EditLocationScreen({
         setLoading(false);
         return;
       }
-      if (!assets) {
+      if (!assets || assets.length === 0) {
         Alert.alert("Vui lòng thêm bằng chứng");
         setLoading(false);
         return;
@@ -195,6 +206,11 @@ export default function EditLocationScreen({
       return;
     }
     if (!selectedCategory) return;
+    let deviceLocation = null;
+    if (selectedChip.includes("address")) {
+      const result = await getCurrentLocation();
+      deviceLocation = [result.coords.longitude, result.coords.latitude];
+    }
     const submitData = {
       name: selectedChips.includes("name") ? name : undefined,
       address: selectedChips.includes("address") ? address : undefined,
@@ -217,11 +233,11 @@ export default function EditLocationScreen({
       pinLatitude: selectedChips.includes("address")
         ? (pinLocation?.latitude ?? coordinates[1])
         : undefined,
-      deviceLongitude: selectedChips.includes("address")
-        ? coordinates[0]
+      deviceLongitude: selectedChip.includes("address")
+        ? deviceLocation?.[0]
         : undefined,
-      deviceLatitude: selectedChips.includes("address")
-        ? coordinates[1]
+      deviceLatitude: selectedChip.includes("address")
+        ? deviceLocation?.[1]
         : undefined,
     };
     console.log(submitData);
@@ -250,6 +266,9 @@ export default function EditLocationScreen({
     } finally {
       setLoading(false);
       setAssets([]);
+      setOtp("");
+      setOtpSent(false);
+      setOtpVerified(false);
     }
   };
 
@@ -259,7 +278,6 @@ export default function EditLocationScreen({
       setLoading(false);
       return;
     }
-
     const changes: EditSuggestionChange[] = [];
 
     if (selectedChips.includes("openingHours")) {
@@ -425,7 +443,7 @@ export default function EditLocationScreen({
               onPress={() => setSelectedChip("name")}
               selected={selectedChips.includes("name")}
             >
-            Tên địa điểm
+              Tên địa điểm
             </Chip>
           ) : null}
 
@@ -448,7 +466,7 @@ export default function EditLocationScreen({
               onPress={() => setSelectedChip("description")}
               selected={selectedChips.includes("description")}
             >
-            Mô tả
+              Mô tả
             </Chip>
           ) : null}
           <Chip
@@ -470,7 +488,7 @@ export default function EditLocationScreen({
               onPress={() => setSelectedChip("category")}
               selected={selectedChips.includes("category")}
             >
-            Danh mục
+              Danh mục
             </Chip>
           ) : null}
         </View>
