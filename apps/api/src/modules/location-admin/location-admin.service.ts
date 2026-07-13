@@ -123,7 +123,6 @@ export class LocationAdminService {
             from: previousLocationStatus,
             to: LocationStatus.PUBLISHED,
           },
-          changedFields: request.changedFields,
           newData: request.newData,
         },
       }),

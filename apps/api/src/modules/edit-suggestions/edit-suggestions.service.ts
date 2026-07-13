@@ -21,10 +21,7 @@ import {
   UserRole,
   UserStatus,
 } from 'src/common/schemas/common.enums';
-import {
-  Location,
-  LocationDocument,
-} from 'src/common/schemas/location.schema';
+import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
   LocationRequest,
   LocationRequestDocument,
@@ -514,7 +511,6 @@ export class EditSuggestionsService {
       locationId: location._id,
       oldData,
       newData,
-      changedFields: [fieldName],
       reviewNote: reason,
     });
 
