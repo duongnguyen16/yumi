@@ -9,7 +9,6 @@ import Feather from "@expo/vector-icons/Feather";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
 import {
   Image,
   Modal,
@@ -46,7 +45,6 @@ type ProfileData = {
 export default function Profile() {
   const router = useRouter();
   const { user, setUser, handleLogout } = useContext(userContext);
-  const router = useRouter();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<{
@@ -63,8 +61,8 @@ export default function Profile() {
 
   const displayName =
     profile?.display_name ?? profile?.fullName ?? "Người dùng";
-  const email = profile?.email ?? user?.email ?? "";
-  const phone = profile?.phone ?? user?.phone ?? "";
+  const email = String(profile?.email ?? user?.email ?? "");
+  const phone = String(profile?.phone ?? user?.phone ?? "");
   const phoneVerified =
     profile?.phoneVerified === true || user?.phoneVerified === true;
   const avatarUrl = useMemo(() => {
@@ -212,20 +210,20 @@ export default function Profile() {
       phone: nextPhone,
       phoneVerified: true,
     }));
-    setUser((current) => ({
+    setUser((current: Record<string, unknown> | null) => ({
       ...(current ?? user ?? {}),
       phone: nextPhone,
       phoneVerified: true,
       fullName:
         verifiedUser?.display_name ??
         verifiedUser?.fullName ??
-        current?.fullName ??
-        user?.fullName,
+        (current?.fullName as string | undefined) ??
+        (user?.fullName as string | undefined),
       avatarUrl:
         verifiedUser?.avatar_url ??
         verifiedUser?.avatarUrl ??
-        current?.avatarUrl ??
-        user?.avatarUrl,
+        (current?.avatarUrl as string | undefined) ??
+        (user?.avatarUrl as string | undefined),
     }));
     setPhoneModalVisible(false);
     setMessage("Xác minh số điện thoại thành công.");
