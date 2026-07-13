@@ -447,6 +447,24 @@ export class VendorLocationsService {
           statusCode: 404,
         };
       }
+      const location = await this.locationModel.findById(locationId);
+      if (!location) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Không tìm thấy địa điểm',
+        };
+      }
+      if (
+        !location.ownerId ||
+        location.ownerId !== new Types.ObjectId(userId)
+      ) {
+        return {
+          success: false,
+          statusCode: 403,
+          message: 'Bạn không có quyền chỉnh sửa địa điểm này',
+        };
+      }
       const otpRecord = await this.otpModel
         .findOne({
           userId: userId,
