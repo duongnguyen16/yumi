@@ -17,6 +17,7 @@ import {
   submitEditSuggestion,
 } from "@/service/editSuggestionService";
 import { userContext } from "@/contexts/userContext";
+import { set } from "zod/v3";
 
 type TimeValue = {
   hours: number;
@@ -216,6 +217,9 @@ export default function EditLocationScreen({
     } finally {
       setLoading(false);
       setAssets([]);
+      setOtp("");
+      setOtpSent(false);
+      setOtpVerified(false);
     }
   };
 

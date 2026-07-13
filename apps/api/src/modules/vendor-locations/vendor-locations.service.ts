@@ -15,21 +15,19 @@ import {
   UserRole,
 } from 'src/common/schemas/common.enums';
 import { GeoPoint } from 'src/common/schemas/common.embedded';
-import { Location, LocationDocument } from 'src/common/schemas/location.schema';
+import { Location } from 'src/common/schemas/location.schema';
 import {
   LocationRequest,
-  LocationRequestDocument,
   LocationRequestStatus,
   LocationRequestType,
 } from 'src/common/schemas/location-request';
 import {
   Otp,
   OtpChannel,
-  OtpDocument,
   OtpPurpose,
   OtpStatus,
 } from 'src/common/schemas/otp.schema';
-import { User, UserDocument } from 'src/common/schemas/user.schema';
+import { User } from 'src/common/schemas/user.schema';
 import { SmsService } from '../auth/services/sms.service';
 import { ImagesService } from '../images/images.service';
 import { DuplicateDetectionService } from '../duplicate-detection/duplicate-detection.service';
@@ -49,18 +47,19 @@ type ReviewRequiredData = {
 @Injectable()
 export class VendorLocationsService {
   constructor(
-    @InjectModel(Location.name) private locationModel: Model<LocationDocument>,
+    @InjectModel(Location.name) private locationModel: Model<Location>,
     @InjectModel(LocationRequest.name)
-    private locationRequestModel: Model<LocationRequestDocument>,
+    private locationRequestModel: Model<LocationRequest>,
     @InjectModel(User.name)
-    private userModel: Model<UserDocument>,
-    @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
+    private userModel: Model<User>,
+    @InjectModel(Otp.name) private otpModel: Model<Otp>,
     private readonly imagesService: ImagesService,
     private readonly smsService: SmsService,
     private readonly locationGeoService: LocationGeoService,
     private readonly duplicateDetectionService: DuplicateDetectionService,
   ) {}
 
+  //kiểm tra số điện thoại đã xác minh otp chưa bằng cách check trong schema otp, thêm validate khoảng cách 50m khi cập nhập vị trí
   async updateLocation(
     id: string,
     updateData: UpdateLocationDto,
@@ -120,6 +119,14 @@ export class VendorLocationsService {
               updateData.pinLatitude ?? 0,
               updateData.pinLongitude ?? 0,
             );
+          if (reviewRequiredData.deviceDistanceMeters > 50) {
+            return {
+              success: false,
+              message:
+                'Bạn phải đứng trong phạm vi 50m mới được cập nhật địa điểm',
+              statusCode: 400,
+            };
+          }
         }
         const cleanData = Object.fromEntries(
           Object.entries(updateData).filter(
@@ -144,7 +151,6 @@ export class VendorLocationsService {
           status: LocationRequestStatus.PENDING_RE_APPROVAL,
           oldData,
           newData: cleanData,
-          changedFields: Object.keys(cleanData),
           deviceLocation: reviewRequiredData.deviceLocation ?? null,
           pinLocation: reviewRequiredData.pinLocation ?? null,
           deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
@@ -161,6 +167,21 @@ export class VendorLocationsService {
         subCategoryIds: updateData.subCategoryIds ?? null,
         phone: updateData.phone ?? null,
       };
+      if (nonReviewData.phone) {
+        const checkPhoneVerified = await this.otpModel.findOne({
+          userId: new Types.ObjectId(userId),
+          purpose: OtpPurpose.CHANGE_PHONE,
+          recipient: nonReviewData.phone,
+          status: OtpStatus.VERIFIED,
+        });
+        if (!checkPhoneVerified) {
+          return {
+            success: false,
+            message: 'Số điện thoại chưa được xác minh',
+            statusCode: 400,
+          };
+        }
+      }
       const cleanNonReviewData = Object.fromEntries(
         Object.entries(nonReviewData).filter(
           ([_, value]) => value !== null && value !== undefined,
@@ -279,7 +300,9 @@ export class VendorLocationsService {
         status: LocationRequestStatus.PENDING,
         submittedBy: new Types.ObjectId(userId),
         locationId: location._id,
-        newData: requestDataParsed.newData,
+        newData: {
+          ...locationDataParsed,
+        },
         isPotentialDuplicate: duplicateCandidates.length > 0,
         suspectedDuplicateLocationIds: duplicateCandidates.map(
           (item) => new Types.ObjectId(item.id),
