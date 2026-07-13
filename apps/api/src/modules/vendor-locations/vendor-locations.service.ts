@@ -133,7 +133,7 @@ export class VendorLocationsService {
           }
         }
         const cleanData = Object.fromEntries(
-          Object.entries(updateData).filter(
+          Object.entries(reviewRequiredData).filter(
             ([_, value]) => value !== null && value !== undefined,
           ),
         );
@@ -154,7 +154,7 @@ export class VendorLocationsService {
           locationId: id,
           status: LocationRequestStatus.PENDING_RE_APPROVAL,
           oldData,
-          newData: cleanData,
+          newData: {},
           deviceLocation: reviewRequiredData.deviceLocation ?? null,
           pinLocation: reviewRequiredData.pinLocation ?? null,
           deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
