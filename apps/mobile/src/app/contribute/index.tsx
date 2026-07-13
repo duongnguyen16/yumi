@@ -589,21 +589,37 @@ export default function ContributePlaceScreen() {
 
   const submitVendorRegistrationDataToBackend = async () => {
     if (!systemCode) {
-      throw new Error("Chưa có mã xác thực đăng ký vendor.");
+      alert("Không thể gửi đăng ký vendor khi chưa có mã xác thực.");
+      return;
     }
-
-    const response = await submitVendorRegistration({
-      ...buildCustomerContributionPayload(),
-      systemCode,
-      videoFiles: toPendingEvidenceFiles(videos),
-      licenseFiles: toPendingEvidenceFiles(licenseFiles),
-      imageFiles: toPendingEvidenceFiles(images),
-    });
-    if (response?.success === false) {
+    try {
+      const response = await submitVendorRegistration({
+        ...buildCustomerContributionPayload(),
+        systemCode,
+        videoFiles: toPendingEvidenceFiles(videos),
+        licenseFiles: toPendingEvidenceFiles(licenseFiles),
+        imageFiles: toPendingEvidenceFiles(images),
+      });
+      if (response?.success === false) {
+        setImages([]);
+        setVideos([]);
+        setLicenseFiles([]);
+        alert(
+          response?.message ||
+            "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("Error submitting vendor registration:", error);
+      Alert.alert(
+        "Gửi đăng ký thất bại",
+        "Có lỗi xảy ra khi gửi đăng ký vendor. Vui lòng thử lại.",
+      );
+    } finally {
       setImages([]);
       setVideos([]);
       setLicenseFiles([]);
-      throw new Error(response.message || "Không thể gửi đăng ký vendor.");
     }
   };
 
