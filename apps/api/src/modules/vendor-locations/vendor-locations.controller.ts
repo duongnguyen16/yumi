@@ -148,6 +148,12 @@ export class VendorLocationsController {
         if (result.statusCode === 403) {
           throw new BadRequestException(result.message);
         }
+        if (result.statusCode === 404) {
+          throw new NotFoundException(result.message);
+        }
+        if (result.statusCode === 500) {
+          throw new InternalServerErrorException(result.message);
+        }
       }
 
       return result;
