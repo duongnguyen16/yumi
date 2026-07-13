@@ -1,13 +1,14 @@
 import {
   BadRequestException,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import bcrypt from 'bcryptjs';
-import { Model, Types } from 'mongoose';
+import { Model, Types, Connection } from 'mongoose';
 import { generateSystemCode } from 'src/common/func/generate-code';
 import {
   LocationSource,
@@ -29,7 +30,7 @@ import {
   OtpPurpose,
   OtpStatus,
 } from 'src/common/schemas/otp.schema';
-import { User, UserDocument } from 'src/common/schemas/user.schema';
+import { User } from 'src/common/schemas/user.schema';
 import { SmsService } from '../auth/services/sms.service';
 import { ImagesService } from '../images/images.service';
 import { DuplicateDetectionService } from '../duplicate-detection/duplicate-detection.service';
@@ -53,14 +54,16 @@ export class VendorLocationsService {
     @InjectModel(LocationRequest.name)
     private locationRequestModel: Model<LocationRequestDocument>,
     @InjectModel(User.name)
-    private userModel: Model<UserDocument>,
+    private userModel: Model<User>,
     @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
     private readonly imagesService: ImagesService,
     private readonly smsService: SmsService,
     private readonly locationGeoService: LocationGeoService,
     private readonly duplicateDetectionService: DuplicateDetectionService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
+  //kiểm tra số điện thoại đã xác minh otp chưa bằng cách check trong schema otp, thêm validate khoảng cách 50m khi cập nhập vị trí
   async updateLocation(
     id: string,
     updateData: UpdateLocationDto,
@@ -68,106 +71,134 @@ export class VendorLocationsService {
     files?: Express.Multer.File[],
   ) {
     try {
-      const location = await this.locationModel.findById(id).exec();
-      if (!location) {
-        return {
-          success: false,
-          message: 'Không tìm thấy địa điểm',
-          statusCode: 404,
-        };
-      }
-      if (
-        !location.ownerId ||
-        !location.ownerId.equals(new Types.ObjectId(userId))
-      ) {
-        return {
-          success: false,
-          message: 'Bạn không có quyền chỉnh sửa địa điểm này',
-          statusCode: 403,
-        };
-      }
-      let reviewRequiredData: ReviewRequiredData = {};
-      if (updateData?.name || updateData?.address) {
-        reviewRequiredData = {
-          name: updateData.name ?? null,
-          address: updateData.address ?? null,
-          pinLocation:
-            updateData.pinLatitude && updateData.pinLongitude
-              ? {
-                  type: 'Point',
-                  coordinates: [
-                    updateData.pinLongitude,
-                    updateData.pinLatitude,
-                  ],
-                }
-              : null,
-          deviceLocation:
-            updateData.deviceLatitude && updateData.deviceLongitude
-              ? {
-                  type: 'Point',
-                  coordinates: [
-                    updateData.deviceLongitude,
-                    updateData.deviceLatitude,
-                  ],
-                }
-              : null,
-        };
-        if (updateData?.address) {
-          reviewRequiredData.deviceDistanceMeters =
-            this.locationGeoService.getDistanceMeters(
-              updateData.deviceLatitude ?? 0,
-              updateData.deviceLongitude ?? 0,
-              updateData.pinLatitude ?? 0,
-              updateData.pinLongitude ?? 0,
-            );
+      const result = await this.connection.transaction(async (session) => {
+        const location = await this.locationModel.findById(id).exec();
+        if (!location) {
+          return {
+            success: false,
+            message: 'Không tìm thấy địa điểm',
+            statusCode: 404,
+          };
         }
-        const cleanData = Object.fromEntries(
-          Object.entries(updateData).filter(
+        if (
+          !location.ownerId ||
+          !location.ownerId.equals(new Types.ObjectId(userId))
+        ) {
+          return {
+            success: false,
+            message: 'Bạn không có quyền chỉnh sửa địa điểm này',
+            statusCode: 403,
+          };
+        }
+        let reviewRequiredData: ReviewRequiredData = {};
+        if (updateData?.name || updateData?.address) {
+          reviewRequiredData = {
+            name: updateData.name ?? null,
+            address: updateData.address ?? null,
+            pinLocation:
+              updateData.pinLatitude && updateData.pinLongitude
+                ? {
+                    type: 'Point',
+                    coordinates: [
+                      updateData.pinLongitude,
+                      updateData.pinLatitude,
+                    ],
+                  }
+                : null,
+            deviceLocation:
+              updateData.deviceLatitude && updateData.deviceLongitude
+                ? {
+                    type: 'Point',
+                    coordinates: [
+                      updateData.deviceLongitude,
+                      updateData.deviceLatitude,
+                    ],
+                  }
+                : null,
+          };
+          if (updateData?.address) {
+            reviewRequiredData.deviceDistanceMeters =
+              this.locationGeoService.getDistanceMeters(
+                updateData.deviceLatitude ?? 0,
+                updateData.deviceLongitude ?? 0,
+                updateData.pinLatitude ?? 0,
+                updateData.pinLongitude ?? 0,
+              );
+            if (reviewRequiredData.deviceDistanceMeters > 50) {
+              return {
+                success: false,
+                message:
+                  'Bạn phải đứng trong phạm vi 50m mới được cập nhật địa điểm',
+                statusCode: 400,
+              };
+            }
+          }
+          const cleanData = Object.fromEntries(
+            Object.entries(updateData).filter(
+              ([_, value]) => value !== null && value !== undefined,
+            ),
+          );
+          const oldData: Record<string, unknown> = {};
+          if ('name' in cleanData) {
+            oldData.name = location.name;
+          }
+
+          if ('address' in cleanData) {
+            oldData.address = location.address;
+            oldData.coordinates = location.geo.coordinates;
+          }
+          const now = new Date();
+          const urls = await this.imagesService.uploadMultiMedia(
+            id,
+            files ?? [],
+          );
+          await this.locationRequestModel.create({
+            type: LocationRequestType.UPDATE,
+            submittedBy: userId,
+            locationId: id,
+            status: LocationRequestStatus.PENDING_RE_APPROVAL,
+            oldData,
+            newData: cleanData,
+            deviceLocation: reviewRequiredData.deviceLocation ?? null,
+            pinLocation: reviewRequiredData.pinLocation ?? null,
+            deviceDistanceMeters:
+              reviewRequiredData.deviceDistanceMeters ?? null,
+            verificationProof: {
+              proofUrls: urls.map((url) => url.url),
+              capturedAt: now,
+            },
+          });
+        }
+        const nonReviewData = {
+          openingHours: updateData.openingHours ?? null,
+          description: updateData.description ?? null,
+          categoryId: updateData.categoryId ?? null,
+          subCategoryIds: updateData.subCategoryIds ?? null,
+          phone: updateData.phone ?? null,
+        };
+        if (nonReviewData.phone) {
+          const checkPhoneVerified = await this.otpModel.findOne({
+            userId: new Types.ObjectId(userId),
+            purpose: OtpPurpose.CHANGE_PHONE,
+            recipient: nonReviewData.phone,
+            status: OtpStatus.VERIFIED,
+          });
+          if (!checkPhoneVerified) {
+            return {
+              success: false,
+              message: 'Số điện thoại chưa được xác minh',
+              statusCode: 400,
+            };
+          }
+        }
+        const cleanNonReviewData = Object.fromEntries(
+          Object.entries(nonReviewData).filter(
             ([_, value]) => value !== null && value !== undefined,
           ),
         );
-        const oldData: Record<string, unknown> = {};
-        if ('name' in cleanData) {
-          oldData.name = location.name;
-        }
-
-        if ('address' in cleanData) {
-          oldData.address = location.address;
-          oldData.coordinates = location.geo.coordinates;
-        }
-        const now = new Date();
-        const urls = await this.imagesService.uploadMultiMedia(id, files ?? []);
-        await this.locationRequestModel.create({
-          type: LocationRequestType.UPDATE,
-          submittedBy: userId,
-          locationId: id,
-          status: LocationRequestStatus.PENDING_RE_APPROVAL,
-          oldData,
-          newData: cleanData,
-          changedFields: Object.keys(cleanData),
-          deviceLocation: reviewRequiredData.deviceLocation ?? null,
-          pinLocation: reviewRequiredData.pinLocation ?? null,
-          deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
-          verificationProof: {
-            proofUrls: urls.map((url) => url.url),
-            capturedAt: now,
-          },
-        });
-      }
-      const nonReviewData = {
-        openingHours: updateData.openingHours ?? null,
-        description: updateData.description ?? null,
-        categoryId: updateData.categoryId ?? null,
-        subCategoryIds: updateData.subCategoryIds ?? null,
-        phone: updateData.phone ?? null,
-      };
-      const cleanNonReviewData = Object.fromEntries(
-        Object.entries(nonReviewData).filter(
-          ([_, value]) => value !== null && value !== undefined,
-        ),
-      );
-      location.set(cleanNonReviewData);
-      await location.save();
+        location.set(cleanNonReviewData);
+        await location.save();
+      });
       return {
         success: true,
         message: 'Cập nhật địa điểm thành công',
@@ -279,7 +310,9 @@ export class VendorLocationsService {
         status: LocationRequestStatus.PENDING,
         submittedBy: new Types.ObjectId(userId),
         locationId: location._id,
-        newData: requestDataParsed.newData,
+        newData: {
+          ...locationDataParsed,
+        },
         isPotentialDuplicate: duplicateCandidates.length > 0,
         suspectedDuplicateLocationIds: duplicateCandidates.map(
           (item) => new Types.ObjectId(item.id),
@@ -412,6 +445,24 @@ export class VendorLocationsService {
           success: false,
           message: 'Không tìm thấy người dùng',
           statusCode: 404,
+        };
+      }
+      const location = await this.locationModel.findById(locationId);
+      if (!location) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Không tìm thấy địa điểm',
+        };
+      }
+      if (
+        !location.ownerId ||
+        location.ownerId !== new Types.ObjectId(userId)
+      ) {
+        return {
+          success: false,
+          statusCode: 403,
+          message: 'Bạn không có quyền chỉnh sửa địa điểm này',
         };
       }
       const otpRecord = await this.otpModel
