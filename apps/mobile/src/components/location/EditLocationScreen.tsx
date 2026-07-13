@@ -168,6 +168,10 @@ export default function EditLocationScreen({
     } catch (error) {
       console.error("Error verifying OTP:", error);
       Alert.alert("Xác nhận mã OTP thất bại");
+    } finally {
+      setOtp("");
+      setOtpSent(false);
+      setOtpVerified(false);
     }
   };
 
@@ -274,7 +278,6 @@ export default function EditLocationScreen({
       setLoading(false);
       return;
     }
-
     const changes: EditSuggestionChange[] = [];
 
     if (selectedChips.includes("openingHours")) {
