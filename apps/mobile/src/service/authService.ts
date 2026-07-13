@@ -174,5 +174,4 @@ export {
   register,
   resetPassword,
   restoreSession,
-  register,
 };
