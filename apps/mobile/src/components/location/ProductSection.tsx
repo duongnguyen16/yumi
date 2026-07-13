@@ -5,8 +5,9 @@ import {
   updateProduct,
   type ProductPayload,
 } from "@/service/productService";
+import { toAbsoluteUrl } from "@/service/url";
 import React, { useContext, useMemo, useState } from "react";
-import { Alert, Modal, StyleSheet, View } from "react-native";
+import { Alert, Image, Modal, StyleSheet, View } from "react-native";
 import {
   Button,
   Card,
@@ -173,6 +174,7 @@ export default function ProductSection({
                   <Text variant="titleMedium" style={styles.productName}>
                     {product.name}
                   </Text>
+                  {renderProductImage(product.imageUrl)}
                   {!!product.description && (
                     <Text style={styles.description}>{product.description}</Text>
                   )}
@@ -296,6 +298,21 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
+function renderProductImage(imageUrl?: string | null) {
+  const normalizedUrl = toAbsoluteUrl(imageUrl?.trim());
+  if (!normalizedUrl) return null;
+
+  return (
+    <Image
+      source={{ uri: normalizedUrl }}
+      style={styles.productImage}
+      resizeMode="cover"
+      alt="Ảnh sản phẩm"
+      accessibilityLabel="Ảnh sản phẩm"
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     padding: 16,
@@ -320,6 +337,13 @@ const styles = StyleSheet.create({
   description: {
     marginTop: 4,
     color: "#4B5563",
+  },
+  productImage: {
+    marginTop: 8,
+    width: "100%",
+    height: 140,
+    borderRadius: 10,
+    backgroundColor: "#E5E7EB",
   },
   price: {
     marginTop: 8,
