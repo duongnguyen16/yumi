@@ -30,6 +30,41 @@ type TimePickerMode = "start" | "end";
 const formatTimeValue = ({ hours, minutes }: TimeValue) =>
   `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 
+type EditChip =
+  | "name"
+  | "address"
+  | "openingHours"
+  | "description"
+  | "phone"
+  | "flag"
+  | "category";
+
+const OWNER_CHIPS: EditChip[] = [
+  "name",
+  "address",
+  "openingHours",
+  "description",
+  "phone",
+  "category",
+];
+
+const NON_OWNER_CHIPS: EditChip[] = [
+  "address",
+  "openingHours",
+  "phone",
+  "flag",
+];
+
+const CHIP_LABELS: Record<EditChip, string> = {
+  name: "Tên địa điểm",
+  address: "Vị trí",
+  openingHours: "Giờ mở cửa",
+  description: "Mô tả",
+  phone: "Số điện thoại",
+  flag: "Cờ trạng thái",
+  category: "Danh mục",
+};
+
 export default function EditLocationScreen({
   selectedChip,
   setSelectedChip,
@@ -68,6 +103,10 @@ export default function EditLocationScreen({
   const [suggestionNote, setSuggestionNote] = useState("");
   const isOwner = Boolean(
     user?._id && data?.ownerId && String(user._id) === String(data.ownerId),
+  );
+  const allowedChips = isOwner ? OWNER_CHIPS : NON_OWNER_CHIPS;
+  const selectedChips = selectedChip.filter((chip): chip is EditChip =>
+    allowedChips.includes(chip as EditChip),
   );
 
   const uploadMedia = async () => {
@@ -138,14 +177,14 @@ export default function EditLocationScreen({
       await handleSubmitSuggestion();
       return;
     }
-    if (selectedChip.includes("name")) {
+    if (selectedChips.includes("name")) {
       if (!assets || assets.length === 0) {
         Alert.alert("Vui lòng thêm bằng chứng");
         setLoading(false);
         return;
       }
     }
-    if (selectedChip.includes("address")) {
+    if (selectedChips.includes("address")) {
       if (!coordinates) {
         Alert.alert("Vui lòng xác thực lại vị trí");
         setLoading(false);
@@ -157,7 +196,7 @@ export default function EditLocationScreen({
         return;
       }
     }
-    if (selectedChip.includes("phone") && !otpVerified) {
+    if (selectedChips.includes("phone") && !otpVerified) {
       Alert.alert("Vui lòng xác nhận số điện thoại");
       setLoading(false);
       return;
@@ -169,25 +208,25 @@ export default function EditLocationScreen({
       deviceLocation = [result.coords.longitude, result.coords.latitude];
     }
     const submitData = {
-      name: selectedChip.includes("name") ? name : undefined,
-      address: selectedChip.includes("address") ? address : undefined,
-      openingHours: selectedChip.includes("openingHours")
+      name: selectedChips.includes("name") ? name : undefined,
+      address: selectedChips.includes("address") ? address : undefined,
+      openingHours: selectedChips.includes("openingHours")
         ? openingHours
         : undefined,
-      description: selectedChip.includes("description")
+      description: selectedChips.includes("description")
         ? description
         : undefined,
-      phone: selectedChip.includes("phone") ? phone : undefined,
-      categoryId: selectedChip.includes("category")
+      phone: selectedChips.includes("phone") ? phone : undefined,
+      categoryId: selectedChips.includes("category")
         ? selectedCategory
         : undefined,
-      subCategoryIds: selectedChip.includes("category")
+      subCategoryIds: selectedChips.includes("category")
         ? selectedSubCategory[selectedCategory] || []
         : undefined,
-      pinLongitude: selectedChip.includes("address")
+      pinLongitude: selectedChips.includes("address")
         ? (pinLocation?.longitude ?? coordinates[0])
         : undefined,
-      pinLatitude: selectedChip.includes("address")
+      pinLatitude: selectedChips.includes("address")
         ? (pinLocation?.latitude ?? coordinates[1])
         : undefined,
       deviceLongitude: selectedChip.includes("address")
@@ -238,7 +277,7 @@ export default function EditLocationScreen({
 
     const changes: EditSuggestionChange[] = [];
 
-    if (selectedChip.includes("openingHours")) {
+    if (selectedChips.includes("openingHours")) {
       if (!openingHours.trim()) {
         Alert.alert("Vui long nhap gio mo cua");
         setLoading(false);
@@ -250,7 +289,7 @@ export default function EditLocationScreen({
       });
     }
 
-    if (selectedChip.includes("phone")) {
+    if (selectedChips.includes("phone")) {
       if (!phone.trim()) {
         Alert.alert("Vui long nhap so dien thoai");
         setLoading(false);
@@ -259,7 +298,7 @@ export default function EditLocationScreen({
       changes.push({ fieldName: "phone", textValue: phone.trim() });
     }
 
-    if (selectedChip.includes("address")) {
+    if (selectedChips.includes("address")) {
       const longitude = pinLocation?.longitude ?? coordinates?.[0];
       const latitude = pinLocation?.latitude ?? coordinates?.[1];
       if (latitude === undefined || longitude === undefined) {
@@ -273,7 +312,7 @@ export default function EditLocationScreen({
       });
     }
 
-    if (selectedChip.includes("flag")) {
+    if (selectedChips.includes("flag")) {
       changes.push({ fieldName: "flag", flagValue });
     }
 
@@ -396,53 +435,59 @@ export default function EditLocationScreen({
         showsHorizontalScrollIndicator={false}
       >
         <View style={{ gap: 2, flexDirection: "row" }}>
-          <Chip
-            onPress={() => setSelectedChip("name")}
-            selected={selectedChip.includes("name")}
-          >
-            Tên địa điểm
-          </Chip>
+          {isOwner ? (
+            <Chip
+              onPress={() => setSelectedChip("name")}
+              selected={selectedChips.includes("name")}
+            >
+              Tên địa điểm
+            </Chip>
+          ) : null}
 
           <Chip
             onPress={() => setSelectedChip("address")}
-            selected={selectedChip.includes("address")}
+            selected={selectedChips.includes("address")}
           >
             Địa chỉ
           </Chip>
 
           <Chip
             onPress={() => setSelectedChip("openingHours")}
-            selected={selectedChip.includes("openingHours")}
+            selected={selectedChips.includes("openingHours")}
           >
             Giờ mở cửa
           </Chip>
 
-          <Chip
-            onPress={() => setSelectedChip("description")}
-            selected={selectedChip.includes("description")}
-          >
-            Mô tả
-          </Chip>
+          {isOwner ? (
+            <Chip
+              onPress={() => setSelectedChip("description")}
+              selected={selectedChips.includes("description")}
+            >
+              Mô tả
+            </Chip>
+          ) : null}
           <Chip
             onPress={() => setSelectedChip("phone")}
-            selected={selectedChip.includes("phone")}
+            selected={selectedChips.includes("phone")}
           >
             Số điện thoại
           </Chip>
           {!isOwner ? (
             <Chip
               onPress={() => setSelectedChip("flag")}
-              selected={selectedChip.includes("flag")}
+              selected={selectedChips.includes("flag")}
             >
               Co trang thai
             </Chip>
           ) : null}
-          <Chip
-            onPress={() => setSelectedChip("category")}
-            selected={selectedChip.includes("category")}
-          >
-            Danh mục
-          </Chip>
+          {isOwner ? (
+            <Chip
+              onPress={() => setSelectedChip("category")}
+              selected={selectedChips.includes("category")}
+            >
+              Danh mục
+            </Chip>
+          ) : null}
         </View>
       </ScrollView>
       <ScrollView
@@ -450,7 +495,7 @@ export default function EditLocationScreen({
         keyboardDismissMode="on-drag"
       >
         <View style={{ marginTop: 12 }}>
-          {selectedChip.includes("name") && (
+          {selectedChips.includes("name") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Tên địa điểm</Text>
               <TextInput
@@ -462,13 +507,14 @@ export default function EditLocationScreen({
             </View>
           )}
 
-          {selectedChip.includes("address") && (
+          {selectedChips.includes("address") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Địa chỉ</Text>
               <TextInput
                 placeholder="Hãy nhập địa chỉ"
                 mode="outlined"
                 value={address}
+                editable={isOwner}
                 style={{ marginBottom: 10 }}
                 onChangeText={setAddress}
               />
@@ -481,9 +527,9 @@ export default function EditLocationScreen({
                   setPinLocation={setPinLocation}
                 />
               )}
-              {selectedChip.length !== 0 &&
+              {selectedChips.length !== 0 &&
                 isOwner &&
-                selectedChip.includes("address") && (
+                selectedChips.includes("address") && (
                   <View
                     style={{ marginTop: 10, gap: 10, flexDirection: "row" }}
                   >
@@ -507,10 +553,20 @@ export default function EditLocationScreen({
                     </Button>
                   </View>
                 )}
+              {!isOwner && (
+                <Button
+                  icon="map-marker"
+                  mode="outlined"
+                  style={{ alignSelf: "flex-start", marginTop: 10 }}
+                  onPress={() => setVisible(true)}
+                >
+                  Kéo pin vị trí
+                </Button>
+              )}
             </View>
           )}
 
-          {selectedChip.includes("openingHours") && (
+          {selectedChips.includes("openingHours") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Giờ mở cửa</Text>
               <TextInput
@@ -553,7 +609,7 @@ export default function EditLocationScreen({
             </View>
           )}
 
-          {selectedChip.includes("description") && (
+          {selectedChips.includes("description") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Mô tả</Text>
               <TextInput
@@ -565,7 +621,7 @@ export default function EditLocationScreen({
               />
             </View>
           )}
-          {selectedChip.includes("phone") && (
+          {selectedChips.includes("phone") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Số điện thoại</Text>
               <View
@@ -629,7 +685,7 @@ export default function EditLocationScreen({
               )}
             </View>
           )}
-          {!isOwner && selectedChip.includes("flag") && (
+          {!isOwner && selectedChips.includes("flag") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Co trang thai</Text>
               <View style={{ gap: 8, marginTop: 8 }}>
@@ -654,7 +710,7 @@ export default function EditLocationScreen({
               </View>
             </View>
           )}
-          {selectedChip.includes("category") && (
+          {selectedChips.includes("category") && (
             <View style={{ marginBottom: 12 }}>
               <Text>Danh mục</Text>
               <Searchbar
@@ -703,7 +759,7 @@ export default function EditLocationScreen({
               )}
             </View>
           )}
-          {!isOwner && selectedChip.length !== 0 && (
+          {!isOwner && selectedChips.length !== 0 && (
             <View style={{ marginBottom: 12 }}>
               <Text>Ghi chu</Text>
               <TextInput
@@ -716,10 +772,10 @@ export default function EditLocationScreen({
             </View>
           )}
         </View>
-        {selectedChip.length !== 0 &&
+        {selectedChips.length !== 0 &&
           isOwner &&
-          selectedChip.includes("name") &&
-          !selectedChip.includes("address") && (
+          selectedChips.includes("name") &&
+          !selectedChips.includes("address") && (
             <View>
               <Button
                 icon={"plus"}
@@ -739,7 +795,7 @@ export default function EditLocationScreen({
           mode="contained"
           icon="file-document-edit-outline"
           onPress={() => handleSubmit()}
-          disabled={loading || selectedChip.length === 0}
+          disabled={loading || selectedChips.length === 0}
         >
           Lưu
         </Button>
