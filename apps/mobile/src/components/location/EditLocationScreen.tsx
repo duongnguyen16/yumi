@@ -7,6 +7,7 @@ import { TimePickerModal } from "react-native-paper-dates";
 import CustomMap from "./ui/CustomMap";
 import GetNewLocation from "./modals/GetNewLocation";
 import {
+  getCurrentLocation,
   sentUpdatePhoneOtp,
   updateLocation,
   verifyUpdatePhoneOtp,
@@ -162,6 +163,11 @@ export default function EditLocationScreen({
       return;
     }
     if (!selectedCategory) return;
+    let deviceLocation = null;
+    if (selectedChip.includes("address")) {
+      const result = await getCurrentLocation();
+      deviceLocation = [result.coords.longitude, result.coords.latitude];
+    }
     const submitData = {
       name: selectedChip.includes("name") ? name : undefined,
       address: selectedChip.includes("address") ? address : undefined,
@@ -185,10 +191,10 @@ export default function EditLocationScreen({
         ? (pinLocation?.latitude ?? coordinates[1])
         : undefined,
       deviceLongitude: selectedChip.includes("address")
-        ? coordinates[0]
+        ? deviceLocation?.[0]
         : undefined,
       deviceLatitude: selectedChip.includes("address")
-        ? coordinates[1]
+        ? deviceLocation?.[1]
         : undefined,
     };
     console.log(submitData);
