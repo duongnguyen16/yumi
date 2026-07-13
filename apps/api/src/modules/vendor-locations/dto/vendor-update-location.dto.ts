@@ -24,8 +24,8 @@ export class UpdateLocationDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
-  phone?: string;
+  @IsNumber()
+  phone?: number;
 
   @IsOptional()
   @IsMongoId()
