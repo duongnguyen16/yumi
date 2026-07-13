@@ -34,6 +34,7 @@ import {
 } from "@/service/contributePlaceService";
 import { getAllCategories, getSubCategory } from "@/service/categoryService";
 import { getSystemCode } from "@/service/locationService";
+import Option from "@/components/ui/Option";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -67,6 +68,8 @@ type TimeValue = {
 };
 
 type TimePickerMode = "start" | "end";
+
+type DuplicateDecision = "continue";
 
 type CategoryOption = {
   _id: string;
@@ -138,6 +141,7 @@ export default function ContributePlaceScreen() {
   const [subCategories, setSubCategories] = useState<SubCategoryOption[]>([]);
   const [subCategoryLoading, setSubCategoryLoading] = useState(false);
   const [subCategoryError, setSubCategoryError] = useState("");
+  const [draftAnalysisError, setDraftAnalysisError] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [openingHours, setOpeningHours] = useState("");
@@ -167,6 +171,9 @@ export default function ContributePlaceScreen() {
   const [videos, setVideos] = useState<SelectedEvidenceFile[]>([]);
   const [licenseFiles, setLicenseFiles] = useState<SelectedEvidenceFile[]>([]);
   const [systemCode, setSystemCode] = useState<string | null>(null);
+  const [duplicateOptionVisible, setDuplicateOptionVisible] = useState(false);
+  const [duplicateDecision, setDuplicateDecision] =
+    useState<DuplicateDecision | null>(null);
   const { type } = useLocalSearchParams();
   const contributionType = getFirstParamValue(type);
   const isVendorRegistration = contributionType === "register";
@@ -185,7 +192,11 @@ export default function ContributePlaceScreen() {
   );
 
   const duplicateWarning = similarLocations.length > 0;
+  const nearestSimilarLocation = similarLocations[0];
   const resolvedAddress = manualAddress.trim() || autoAddress.trim();
+  const duplicateOptionMessage = nearestSimilarLocation
+    ? `Tìm thấy địa điểm gần tên "${nearestSimilarLocation.name}" trong bán kính 50m. Bạn muốn huỷ hay tiếp tục đăng địa điểm riêng?`
+    : "Tìm thấy địa điểm tương tự trong bán kính 50m. Bạn muốn huỷ hay tiếp tục đăng địa điểm riêng?";
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -343,9 +354,15 @@ export default function ContributePlaceScreen() {
           name.trim(),
           selectedCategoryId || undefined,
         );
+        if (!analysis.success) {
+          throw new Error("Không thể kiểm tra địa điểm trùng lặp.");
+        }
         setSimilarLocations(analysis.similarLocations ?? []);
+        setDraftAnalysisError("");
       } catch (error) {
         console.log("Error analyzing draft:", error);
+        setSimilarLocations([]);
+        setDraftAnalysisError("Không thể kiểm tra địa điểm trùng lặp.");
       }
     }, 400);
 
@@ -551,6 +568,7 @@ export default function ContributePlaceScreen() {
       accuracyMeters,
       imageUrls: uploadedUrls,
       suspectedDuplicateLocationIds: similarLocations.map((item) => item.id),
+      isPotentialDuplicate: similarLocations.length > 0,
     };
   };
 
@@ -581,19 +599,8 @@ export default function ContributePlaceScreen() {
       licenseFiles: toPendingEvidenceFiles(licenseFiles),
       imageFiles: toPendingEvidenceFiles(images),
     });
-    if (response.success) {
-      Alert.alert(
-        "Đăng ký vendor thành công",
-        "Hồ sơ của bạn đang chờ phê duyệt.",
-      );
-      return;
-    }
-    if (response.success === false) {
-      Alert.alert(
-        "Đăng ký vendor thất bại",
-        response.message || "Không thể gửi đăng ký vendor.",
-      );
-      return;
+    if (response?.success === false) {
+      throw new Error(response.message || "Không thể gửi đăng ký vendor.");
     }
   };
 
@@ -613,9 +620,10 @@ export default function ContributePlaceScreen() {
         return;
       }
 
+      let checkingDuplicates = false;
       try {
         setSaving(true);
-        await validateContributionPosition({
+        const validatePosition = await validateContributionPosition({
           pinLatitude: pinCoords.latitude,
           pinLongitude: pinCoords.longitude,
           deviceLatitude: deviceCoords.latitude,
@@ -623,49 +631,51 @@ export default function ContributePlaceScreen() {
           accuracyMeters,
           address: resolvedAddress,
         });
-
+        if (!validatePosition.success) {
+          Alert.alert(
+            "Vị trí không hợp lệ",
+            validatePosition?.message ||
+              "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
+          );
+          return;
+        }
+        if (!validatePosition.withinRange) {
+          Alert.alert(
+            "Ngoài phạm vi",
+            "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
+          );
+          return;
+        }
+        checkingDuplicates = true;
         const analysis = await analyzeLocationDraft(
           name.trim(),
           selectedCategoryId || undefined,
           pinCoords.latitude,
           pinCoords.longitude,
         );
+        if (!analysis.success) {
+          throw new Error("Không thể kiểm tra địa điểm trùng lặp.");
+        }
         const duplicates = analysis.similarLocations ?? [];
         setSimilarLocations(duplicates);
 
         if (duplicates.length > 0) {
-          Alert.alert(
-            "Co the bi trung",
-            `Tim thay dia diem gan ten "${duplicates[0].name}" trong pham vi 50m. Ban muon tiep tuc gui dia diem rieng?`,
-          );
-          setStep(2);
-          return;
-
-          Alert.alert(
-            "CĂ³ thá»ƒ bá»‹ trĂ¹ng",
-            `TĂ¬m tháº¥y Ä‘á»‹a Ä‘iá»ƒm gáº§n tĂªn "${duplicates[0].name}" trong pháº¡m vi 50m. Báº¡n muá»‘n tiáº¿p tá»¥c gá»­i Ä‘á»‹a Ä‘iá»ƒm riĂªng?`,
-            [
-              {
-                text: "Xem chá»— cÅ©",
-                onPress: () => router.push(`/location/${duplicates[0].id}`),
-              },
-              {
-                text: "Tiáº¿p tá»¥c",
-                style: "default",
-                onPress: () => setStep(2),
-              },
-            ],
-          );
+          setDuplicateDecision(null);
+          setDuplicateOptionVisible(true);
           return;
         }
 
         setStep(2);
       } catch (error: unknown) {
         Alert.alert(
-          "Ngoài phạm vi",
+          checkingDuplicates
+            ? "Không thể kiểm tra trùng lặp"
+            : "Không thể kiểm tra vị trí",
           getErrorMessage(
             error,
-            "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
+            checkingDuplicates
+              ? "Không thể kiểm tra địa điểm trùng lặp. Vui lòng thử lại."
+              : "Không thể kiểm tra vị trí. Vui lòng thử lại.",
           ),
         );
       } finally {
@@ -736,6 +746,11 @@ export default function ContributePlaceScreen() {
         setSaving(false);
       }
     }
+  };
+
+  const handleDuplicateDecision = (decision: DuplicateDecision) => {
+    setDuplicateDecision(decision);
+    setStep(2);
   };
 
   const handleMapRegionChange = async () => {
@@ -837,6 +852,9 @@ export default function ContributePlaceScreen() {
             placeholder="Com tam Co Ba"
             style={styles.input}
           />
+          {draftAnalysisError ? (
+            <Text style={styles.fieldHint}>{draftAnalysisError}</Text>
+          ) : null}
 
           <Text style={styles.label}>Mô tả ngắn</Text>
           <TextInput
@@ -1368,6 +1386,24 @@ export default function ContributePlaceScreen() {
           )}
         </Pressable>
       </View>
+
+      <Option<DuplicateDecision>
+        visible={duplicateOptionVisible}
+        setVisible={setDuplicateOptionVisible}
+        title="Có thể bị trùng"
+        message={duplicateOptionMessage}
+        options={[
+          {
+            label: "Tiếp tục đăng",
+            value: "continue",
+            icon: "check-circle-outline",
+          },
+        ]}
+        option={duplicateDecision}
+        setOption={setDuplicateDecision}
+        cancelLabel="Huỷ"
+        onDismiss={handleDuplicateDecision}
+      />
     </SafeAreaView>
   );
 }
