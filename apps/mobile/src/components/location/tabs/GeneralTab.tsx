@@ -20,6 +20,7 @@ type GeneralTabProps = {
   data?: {
     _id?: string;
     id?: string;
+    name?: string;
     ownerId?: string | { _id?: string; id?: string } | null;
     address?: string;
     openingHours?: string;
