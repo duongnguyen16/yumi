@@ -10,6 +10,7 @@
     "build": "nest build",
     "seed": "node scripts/seed.js",
     "seed:users": "node scripts/seed-test-users.js",
+    "seed:test": "npm run seed && npm run seed:users",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "prestart": "npm run build --workspace=@wdp301/shared",
     "start": "nest start",

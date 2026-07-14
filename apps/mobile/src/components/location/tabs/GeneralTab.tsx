@@ -91,6 +91,24 @@ export default function GeneralTab({
             </Button>
           </Card.Actions>
         ) : null}
+        {user?.role === "VENDOR" && !data?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="outlined"
+              onPress={() =>
+                router.push({
+                  pathname: "/claim/[locationId]",
+                  params: {
+                    locationId: String(data?._id),
+                    name: data?.name || "",
+                  },
+                } as never)
+              }
+            >
+              Nhận sở hữu địa điểm
+            </Button>
+          </Card.Actions>
+        ) : null}
         {user?.role === "VENDOR" && data?.ownerId && user?._id !== data.ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button

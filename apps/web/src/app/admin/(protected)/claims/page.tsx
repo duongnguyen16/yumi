@@ -90,27 +90,8 @@ export default function ClaimsPage() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-
-    async function loadClaims() {
-      try {
-        const data = await getClaimQueue(1, PAGE_SIZE);
-        if (!active) return;
-        setItems(data.items);
-        setTotal(data.total);
-        setError(null);
-      } catch (err) {
-        if (active) setError(getMessage(err));
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    void loadClaims();
-    return () => {
-      active = false;
-    };
-  }, []);
+    void load();
+  }, [load]);
 
   function show(claim: AdminClaim) {
     setSelected(claim);

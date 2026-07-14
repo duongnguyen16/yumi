@@ -40,8 +40,16 @@ const NAV: NavItem[] = [
     label: 'Tổng quan',
     href: '/admin/dashboard',
   },
-  { icon: <LocationOnOutlinedIcon />, label: 'Duyệt địa điểm' },
-  { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
+  {
+    icon: <LocationOnOutlinedIcon />,
+    label: 'Duyệt địa điểm',
+    href: '/admin/location-requests',
+  },
+  {
+    icon: <HowToRegOutlinedIcon />,
+    label: 'Duyệt Claim',
+    href: '/admin/claims',
+  },
   { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/admin/reports' },
   {
     icon: <GavelOutlinedIcon />,
