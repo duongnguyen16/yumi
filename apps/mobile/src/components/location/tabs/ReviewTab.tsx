@@ -55,7 +55,6 @@ export default function ReviewTab({
   } | null;
   const currentUserId = userState?.user?._id ?? userState?.user?.id;
   const locationId = locationData?._id ?? locationData?.id;
-  console.log(currentUserId);
   const loadReviews = useCallback(
     async (options?: { showLoading?: boolean }) => {
       if (!locationId) {

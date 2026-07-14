@@ -8,7 +8,8 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.minhoa2005.mobile",
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
