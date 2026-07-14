@@ -28,6 +28,7 @@ import { AdminClaimModule } from './modules/admin-claims/admin-claim.module';
 import { RequestAccessModule } from './modules/request-access/request-access.module';
 import { AppealModule } from './modules/appeals/appeal.module';
 import { DisputeModule } from './modules/disputes/dispute.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { DisputeModule } from './modules/disputes/dispute.module';
     RequestAccessModule,
     AppealModule,
     DisputeModule,
+    NotificationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
