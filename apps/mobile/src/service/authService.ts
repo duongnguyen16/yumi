@@ -166,6 +166,55 @@ const clearSession = async () => {
   }
 };
 
+const requestVendorOtp = async (payload: {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
+  business_name: string;
+  business_phone: string;
+  business_address?: string;
+}) => {
+  try {
+    const response = await api.post("/auth/register/vendor/request-otp", payload);
+    return {
+      success: response.data?.success ?? false,
+      message: response.data?.message || "Đã gửi OTP",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "Không thể gửi OTP. Vui lòng thử lại."),
+    };
+  }
+};
+
+const verifyVendorOtp = async (email: string, otp: string) => {
+  try {
+    const response = await api.post("/auth/register/vendor/verify-otp", { email, otp });
+    if (response.data?.success) {
+      setAccessToken(response.data.accessToken);
+      await saveRefreshTokens(response.data.refreshToken);
+      await saveAccessTokens(response.data.accessToken);
+      return {
+        success: true,
+        user: response.data.user,
+        accessToken: response.data.accessToken,
+        message: response.data.message,
+      };
+    }
+    return {
+      success: false,
+      message: response.data?.message || "Xác minh OTP thất bại",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: getErrorMessage(error, "Xác minh OTP thất bại. Vui lòng thử lại."),
+    };
+  }
+};
+
 export {
   authMe,
   clearSession,
@@ -174,4 +223,6 @@ export {
   register,
   resetPassword,
   restoreSession,
+  requestVendorOtp,
+  verifyVendorOtp,
 };
