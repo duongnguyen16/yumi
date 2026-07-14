@@ -1,5 +1,18 @@
-import { Body, Controller, Post, Get, Request, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Request,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { AnalyzeLocationDraftDto } from './dto/analyze-location-draft.dto';
 import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
 import { ValidateLocationPositionDto } from './dto/validate-location-position.dto';
@@ -34,13 +47,36 @@ export class LocationContributionsController {
   }
 
   @Post('submit')
-  submitContribution(
-    @Body() dto: SubmitLocationRequestDto,
+  @UseInterceptors(FilesInterceptor('imageFiles', 5))
+  async submitContribution(
+    @Body('data') data: string,
+    @UploadedFiles() imageFiles: Express.Multer.File[],
     @Request() req: AuthenticatedRequest,
   ) {
+    if (!imageFiles || imageFiles.length === 0) {
+      throw new BadRequestException('Hãy tải lên ít nhất 1 ảnh địa điểm');
+    }
+
+    let parsedData: unknown;
+    try {
+      parsedData = JSON.parse(data);
+    } catch {
+      throw new BadRequestException('Dữ liệu đóng góp không hợp lệ');
+    }
+
+    const dto = plainToInstance(SubmitLocationRequestDto, parsedData);
+    const errors = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    if (errors.length > 0) {
+      throw new BadRequestException(errors);
+    }
+
     return this.locationContributionsService.submitContribution(
       req.user.userId,
       dto,
+      imageFiles,
     );
   }
 }
