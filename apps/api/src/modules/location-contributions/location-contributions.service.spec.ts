@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { BadRequestException } from '@nestjs/common';
 import {
   LocationStatus,
   TrustLevel,
@@ -50,7 +51,10 @@ describe('LocationContributionsService', () => {
   let userModel: { findById: jest.Mock };
   let duplicateDetectionService: { findPossibleDuplicates: jest.Mock };
   let locationGeoService: { validatePinDistance: jest.Mock };
-  let imagesService: { uploadMultiMedia: jest.Mock };
+  let imagesService: {
+    validateImage: jest.Mock;
+    uploadMultiMedia: jest.Mock;
+  };
   let service: LocationContributionsService;
 
   beforeEach(() => {
@@ -96,6 +100,7 @@ describe('LocationContributionsService', () => {
       }),
     };
     imagesService = {
+      validateImage: jest.fn().mockReturnValue({ success: true }),
       uploadMultiMedia: jest.fn().mockResolvedValue([
         { url: 'https://storage/one.jpg', path: 'one.jpg' },
         { url: 'https://storage/two.jpg', path: 'two.jpg' },
@@ -176,5 +181,26 @@ describe('LocationContributionsService', () => {
     ).rejects.toThrow('upload failed');
     expect(locationModel.create).not.toHaveBeenCalled();
     expect(locationRequestModel.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-image contribution files before upload', async () => {
+    const videoFiles = [
+      {
+        originalname: 'place.mp4',
+        mimetype: 'video/mp4',
+        size: 1024,
+        buffer: Buffer.from('video'),
+      },
+    ] as Express.Multer.File[];
+    imagesService.validateImage.mockImplementationOnce(() => {
+      throw new BadRequestException('Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG');
+    });
+    const submitContribution = service.submitContribution.bind(service);
+
+    await expect(
+      submitContribution(userId, validDto, videoFiles),
+    ).rejects.toThrow('Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG');
+    expect(imagesService.uploadMultiMedia).not.toHaveBeenCalled();
+    expect(locationModel.create).not.toHaveBeenCalled();
   });
 });

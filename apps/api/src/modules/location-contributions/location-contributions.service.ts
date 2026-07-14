@@ -185,6 +185,13 @@ export class LocationContributionsService {
     const suspectedDuplicateIds = duplicateCandidates.map(
       (item) => new Types.ObjectId(item.id),
     );
+    imageFiles.forEach((file) =>
+      this.imagesService.validateImage({
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+      }),
+    );
     const uploadedImages = await this.imagesService.uploadMultiMedia(
       'customer-contribution',
       imageFiles,
