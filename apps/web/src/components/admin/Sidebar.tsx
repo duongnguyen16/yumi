@@ -203,7 +203,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               {user?.fullName || user?.email || 'Admin'}
             </Typography>
             <Typography sx={{ color: tokens.color.sidebarMuted, fontSize: 12 }}>
-              Super admin
+              {user?.email}
             </Typography>
           </Box>
           <IconButton
