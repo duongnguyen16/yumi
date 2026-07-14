@@ -14,6 +14,12 @@ export type DisputeDocument = HydratedDocument<Dispute>;
 export class Dispute {
   @Prop({
     type: MongooseSchema.Types.ObjectId,
+    ref: 'RequestAccess',
+  })
+  requestAccessId?: Types.ObjectId;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
     ref: 'Location',
     required: true,
     index: true,
@@ -56,3 +62,10 @@ export class Dispute {
 
 export const DisputeSchema = SchemaFactory.createForClass(Dispute);
 DisputeSchema.index({ locationId: 1, status: 1 });
+DisputeSchema.index(
+  { requestAccessId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { requestAccessId: { $exists: true } },
+  },
+);
