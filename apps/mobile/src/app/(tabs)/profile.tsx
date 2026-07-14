@@ -43,8 +43,8 @@ type ProfileData = {
 };
 
 export default function Profile() {
-  const { user, setUser, handleLogout } = useContext(userContext);
   const router = useRouter();
+  const { user, setUser, handleLogout } = useContext(userContext);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<{
@@ -61,8 +61,8 @@ export default function Profile() {
 
   const displayName =
     profile?.display_name ?? profile?.fullName ?? "Người dùng";
-  const email = profile?.email ?? user?.email ?? "";
-  const phone = profile?.phone ?? user?.phone ?? "";
+  const email = String(profile?.email ?? user?.email ?? "");
+  const phone = String(profile?.phone ?? user?.phone ?? "");
   const phoneVerified =
     profile?.phoneVerified === true || user?.phoneVerified === true;
   const avatarUrl = useMemo(() => {
@@ -210,20 +210,20 @@ export default function Profile() {
       phone: nextPhone,
       phoneVerified: true,
     }));
-    setUser((current) => ({
+    setUser((current: Record<string, unknown> | null) => ({
       ...(current ?? user ?? {}),
       phone: nextPhone,
       phoneVerified: true,
       fullName:
         verifiedUser?.display_name ??
         verifiedUser?.fullName ??
-        current?.fullName ??
-        user?.fullName,
+        (current?.fullName as string | undefined) ??
+        (user?.fullName as string | undefined),
       avatarUrl:
         verifiedUser?.avatar_url ??
         verifiedUser?.avatarUrl ??
-        current?.avatarUrl ??
-        user?.avatarUrl,
+        (current?.avatarUrl as string | undefined) ??
+        (user?.avatarUrl as string | undefined),
     }));
     setPhoneModalVisible(false);
     setMessage("Xác minh số điện thoại thành công.");
@@ -339,6 +339,28 @@ export default function Profile() {
           <MenuItem icon="star" label="Reviews đã viết" />
           <Divider />
           <MenuItem icon="mail" label="Thông báo" />
+          {user?.role === "VENDOR" ? (
+            <>
+              <Divider />
+              <MenuItem
+                icon="repeat"
+                label="Yêu cầu chuyển quyền"
+                onPress={() => router.push("/request-access" as never)}
+              />
+              <Divider />
+              <MenuItem
+                icon="file-text"
+                label="Kháng cáo"
+                onPress={() => router.push("/appeals" as never)}
+              />
+              <Divider />
+              <MenuItem
+                icon="shield"
+                label="Tranh chấp sở hữu"
+                onPress={() => router.push("/disputes" as never)}
+              />
+            </>
+          ) : null}
         </View>
 
         <Button

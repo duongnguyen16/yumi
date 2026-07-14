@@ -21,6 +21,8 @@ import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlin
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
+import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { SidebarItem } from './SidebarItem';
 import { tokens } from '@/theme/admin-tokens';
@@ -38,9 +40,27 @@ const NAV: NavItem[] = [
     label: 'Tổng quan',
     href: '/admin/dashboard',
   },
-  { icon: <LocationOnOutlinedIcon />, label: 'Duyệt địa điểm' },
-  { icon: <HowToRegOutlinedIcon />, label: 'Duyệt Claim' },
+  {
+    icon: <LocationOnOutlinedIcon />,
+    label: 'Duyệt địa điểm',
+    href: '/admin/location-requests',
+  },
+  {
+    icon: <HowToRegOutlinedIcon />,
+    label: 'Duyệt Claim',
+    href: '/admin/claims',
+  },
   { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/admin/reports' },
+  {
+    icon: <GavelOutlinedIcon />,
+    label: 'Tranh chấp',
+    href: '/admin/disputes',
+  },
+  {
+    icon: <RuleOutlinedIcon />,
+    label: 'Kháng cáo',
+    href: '/admin/appeals',
+  },
   { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User', href: '/admin/users' },
   {
     icon: <CategoryOutlinedIcon />,
@@ -183,7 +203,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               {user?.fullName || user?.email || 'Admin'}
             </Typography>
             <Typography sx={{ color: tokens.color.sidebarMuted, fontSize: 12 }}>
-              Super admin
+              {user?.email}
             </Typography>
           </Box>
           <IconButton

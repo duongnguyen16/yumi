@@ -20,6 +20,7 @@ type GeneralTabProps = {
   data?: {
     _id?: string;
     id?: string;
+    name?: string;
     ownerId?: string | { _id?: string; id?: string } | null;
     address?: string;
     openingHours?: string;
@@ -61,7 +62,7 @@ export default function GeneralTab({
           />
           <InfoRow icon="eye" text={`${data?.viewCount || "0"} lượt xem`} />
         </Card.Content>
-        {user?._id === data?.ownerId ? (
+        {userId && userId === ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
@@ -87,6 +88,42 @@ export default function GeneralTab({
               }}
             >
               Đề xuất chỉnh sửa
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?.role === "VENDOR" && !ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="outlined"
+              onPress={() =>
+                router.push({
+                  pathname: "/claim/[locationId]",
+                  params: {
+                    locationId: String(data?._id ?? data?.id ?? ""),
+                    name: data?.name ?? "",
+                  },
+                } as never)
+              }
+            >
+              Nhận sở hữu địa điểm
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?.role === "VENDOR" && ownerId && userId !== ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="outlined"
+              onPress={() =>
+                router.push({
+                  pathname: "/request-access/new/[locationId]",
+                  params: {
+                    locationId: String(data?._id ?? data?.id ?? ""),
+                    name: data?.name ?? "",
+                  },
+                } as never)
+              }
+            >
+              Xin quyền quản lý
             </Button>
           </Card.Actions>
         ) : null}
