@@ -20,6 +20,7 @@ type GeneralTabProps = {
   data?: {
     _id?: string;
     id?: string;
+    name?: string;
     ownerId?: string | { _id?: string; id?: string } | null;
     address?: string;
     openingHours?: string;
@@ -87,6 +88,39 @@ export default function GeneralTab({
               }}
             >
               Bao co trang thai
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?.role === "VENDOR" && !data?.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="outlined"
+              onPress={() =>
+                router.push({
+                  pathname: "/claim/[locationId]",
+                  params: {
+                    locationId: String(data?._id),
+                    name: data?.name || "",
+                  },
+                } as never)
+              }
+            >
+              Nhận sở hữu địa điểm
+            </Button>
+          </Card.Actions>
+        ) : null}
+        {user?.role === "VENDOR" && data?.ownerId && user?._id !== data.ownerId ? (
+          <Card.Actions style={{ justifyContent: "flex-start" }}>
+            <Button
+              mode="outlined"
+              onPress={() =>
+                router.push({
+                  pathname: "/request-access/new/[locationId]",
+                  params: { locationId: String(data?._id), name: data?.name || "" },
+                } as never)
+              }
+            >
+              Xin quyền quản lý
             </Button>
           </Card.Actions>
         ) : null}
