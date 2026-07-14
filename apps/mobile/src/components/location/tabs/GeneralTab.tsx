@@ -62,7 +62,7 @@ export default function GeneralTab({
           />
           <InfoRow icon="eye" text={`${data?.viewCount || "0"} lượt xem`} />
         </Card.Content>
-        {user?._id === data?.ownerId ? (
+        {userId && userId === ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               onPress={() => {
@@ -87,11 +87,11 @@ export default function GeneralTab({
                 });
               }}
             >
-              Bao co trang thai
+              Đề xuất chỉnh sửa
             </Button>
           </Card.Actions>
         ) : null}
-        {user?.role === "VENDOR" && !data?.ownerId ? (
+        {user?.role === "VENDOR" && !ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               mode="outlined"
@@ -99,8 +99,8 @@ export default function GeneralTab({
                 router.push({
                   pathname: "/claim/[locationId]",
                   params: {
-                    locationId: String(data?._id),
-                    name: data?.name || "",
+                    locationId: String(data?._id ?? data?.id ?? ""),
+                    name: data?.name ?? "",
                   },
                 } as never)
               }
@@ -109,14 +109,17 @@ export default function GeneralTab({
             </Button>
           </Card.Actions>
         ) : null}
-        {user?.role === "VENDOR" && data?.ownerId && user?._id !== data.ownerId ? (
+        {user?.role === "VENDOR" && ownerId && userId !== ownerId ? (
           <Card.Actions style={{ justifyContent: "flex-start" }}>
             <Button
               mode="outlined"
               onPress={() =>
                 router.push({
                   pathname: "/request-access/new/[locationId]",
-                  params: { locationId: String(data?._id), name: data?.name || "" },
+                  params: {
+                    locationId: String(data?._id ?? data?.id ?? ""),
+                    name: data?.name ?? "",
+                  },
                 } as never)
               }
             >

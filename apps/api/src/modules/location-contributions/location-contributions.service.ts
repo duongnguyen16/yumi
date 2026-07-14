@@ -25,6 +25,7 @@ import {
 } from 'src/common/schemas/sub-category.schema';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { DuplicateDetectionService } from '../duplicate-detection/duplicate-detection.service';
+import { ImagesService } from '../images/images.service';
 import { LocationGeoService } from '../location-geo/location-geo.service';
 import { AnalyzeLocationDraftDto } from './dto/analyze-location-draft.dto';
 import { SubmitLocationRequestDto } from './dto/submit-location-request.dto';
@@ -48,6 +49,7 @@ export class LocationContributionsService {
     private userModel: Model<UserDocument>,
     private readonly duplicateDetectionService: DuplicateDetectionService,
     private readonly locationGeoService: LocationGeoService,
+    private readonly imagesService: ImagesService,
   ) {}
 
   async getContributionOptions() {
@@ -112,7 +114,11 @@ export class LocationContributionsService {
     });
   }
 
-  async submitContribution(userId: string, dto: SubmitLocationRequestDto) {
+  async submitContribution(
+    userId: string,
+    dto: SubmitLocationRequestDto,
+    imageFiles: Express.Multer.File[],
+  ) {
     const user = await this.userModel.findById(userId).exec();
     if (!user || user.status === UserStatus.BANNED) {
       throw new BadRequestException('Tai khoan khong the gui dia diem');
@@ -179,6 +185,18 @@ export class LocationContributionsService {
     const suspectedDuplicateIds = duplicateCandidates.map(
       (item) => new Types.ObjectId(item.id),
     );
+    imageFiles.forEach((file) =>
+      this.imagesService.validateImage({
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+      }),
+    );
+    const uploadedImages = await this.imagesService.uploadMultiMedia(
+      'customer-contribution',
+      imageFiles,
+    );
+    const imageUrls = uploadedImages.map(({ url }) => url);
 
     const location = await this.locationModel.create({
       submittedBy: new Types.ObjectId(userId),
@@ -197,7 +215,7 @@ export class LocationContributionsService {
       source: LocationSource.CUSTOMER,
       categoryId: category._id,
       subCategoryIds: (dto.tagIds ?? []).map((id) => new Types.ObjectId(id)),
-      imagesUrls: dto.imageUrls.map((url, index) => ({
+      imagesUrls: imageUrls.map((url, index) => ({
         url,
         isCover: index === 0,
         uploadedAt: new Date(),
@@ -214,7 +232,7 @@ export class LocationContributionsService {
       latitude: dto.latitude,
       longitude: dto.longitude,
       address: dto.address,
-      imageUrls: dto.imageUrls,
+      imageUrls,
     };
 
     const request = await this.locationRequestModel.create({
@@ -224,7 +242,7 @@ export class LocationContributionsService {
       status: LocationRequestStatus.PENDING,
       oldData: null,
       newData,
-      imageUrls: dto.imageUrls,
+      imageUrls,
       pinLocation: {
         type: 'Point',
         coordinates: [dto.longitude, dto.latitude],

@@ -49,13 +49,12 @@ export type CustomerContributionPayload = {
   deviceLatitude: number;
   deviceLongitude: number;
   accuracyMeters?: number;
-  imageUrls: string[];
   suspectedDuplicateLocationIds?: string[];
-  isPotentialDuplicate?: boolean;
 };
 
 export type VendorRegistrationPayload = CustomerContributionPayload & {
   systemCode: string;
+  isPotentialDuplicate?: boolean;
   videoFiles: PendingVendorEvidenceFile[];
   licenseFiles: PendingVendorEvidenceFile[];
   imageFiles: PendingContributionImage[];
@@ -83,11 +82,10 @@ const getSupabaseClient = () => {
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const supabasePublishableKey =
     process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  console.log("supabaseUrl:", supabaseUrl);
 
   if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error(
-      "Thieu EXPO_PUBLIC_SUPABASE_URL hoac EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY trong apps/mobile/.env",
+      "Thiếu EXPO_PUBLIC_SUPABASE_URL hoặc EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY trong apps/mobile/.env",
     );
   }
 
@@ -172,10 +170,9 @@ export const uploadContributionImage = async (
     publicUrl: string;
   };
 
-  const supabase = getSupabaseClient();
   const fileBuffer = await fileUriToArrayBuffer(image.uri);
-  const { error } = await supabase.storage
-    .from(upload.bucket)
+  const { error } = await getSupabaseClient()
+    .storage.from(upload.bucket)
     .uploadToSignedUrl(upload.path, upload.token, fileBuffer, {
       contentType: image.mimeType,
       upsert: false,
@@ -190,8 +187,19 @@ export const uploadContributionImage = async (
 
 export const submitCustomerContribution = async (
   payload: CustomerContributionPayload,
+  imageFiles: PendingContributionImage[],
 ) => {
-  const response = await api.post("/location/contribution/submit", payload);
+  const formData = new FormData();
+  formData.append("data", JSON.stringify(payload));
+  imageFiles.forEach((file) =>
+    appendEvidenceFile(formData, "imageFiles", file),
+  );
+
+  const response = await api.post("/location/contribution/submit", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data as {
     success: boolean;
     message: string;
