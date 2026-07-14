@@ -19,6 +19,10 @@ import { TrustEvent, TrustEventSchema } from './trust-event.schema';
 import { LocationView, LocationViewSchema } from './location-view';
 import { LocationRequest, LocationRequestSchema } from './location-request';
 import { Otp, OtpSchema } from './otp.schema';
+import {
+  ClaimVerificationSession,
+  ClaimVerificationSessionSchema,
+} from './claim-verification-session.schema';
 
 @Module({
   imports: [
@@ -42,6 +46,10 @@ import { Otp, OtpSchema } from './otp.schema';
       { name: LocationView.name, schema: LocationViewSchema },
       { name: LocationRequest.name, schema: LocationRequestSchema },
       { name: Otp.name, schema: OtpSchema },
+      {
+        name: ClaimVerificationSession.name,
+        schema: ClaimVerificationSessionSchema,
+      },
     ]),
   ],
   exports: [MongooseModule],

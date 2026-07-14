@@ -16,13 +16,18 @@ import { AuditModule } from './common/services/audit.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
-import { LocationAdminModule } from './modules/location-admin/location-admin.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
 import { LocationReportsModule } from './modules/location-reports/location-reports.module';
 import { AdminReportsModule } from './modules/admin-reports/admin-reports.module';
 import { AdminDashboardModule } from './modules/admin-dashboard/admin-dashboard.module';
 import { VendorDashboardModule } from './modules/vendor-dashboard/vendor-dashboard.module';
 import { EditSuggestionsModule } from './modules/edit-suggestions/edit-suggestions.module';
+import { ClaimModule } from './modules/claims/claim.module';
+import { AdminClaimModule } from './modules/admin-claims/admin-claim.module';
+import { RequestAccessModule } from './modules/request-access/request-access.module';
+import { AppealModule } from './modules/appeals/appeal.module';
+import { DisputeModule } from './modules/disputes/dispute.module';
 
 @Module({
   imports: [
@@ -53,13 +58,18 @@ import { EditSuggestionsModule } from './modules/edit-suggestions/edit-suggestio
     ProductsModule,
     ReviewsModule,
     LocationContributionsModule,
-    LocationAdminModule,
+    AdminModule,
     VendorLocationsModule,
     LocationReportsModule,
     AdminReportsModule,
     AdminDashboardModule,
     VendorDashboardModule,
     EditSuggestionsModule,
+    ClaimModule,
+    AdminClaimModule,
+    RequestAccessModule,
+    AppealModule,
+    DisputeModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
