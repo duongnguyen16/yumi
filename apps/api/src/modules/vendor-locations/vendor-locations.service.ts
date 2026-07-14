@@ -1,13 +1,14 @@
 import {
   BadRequestException,
   HttpException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import bcrypt from 'bcryptjs';
-import { Model, Types } from 'mongoose';
+import { Model, Types, Connection } from 'mongoose';
 import { generateSystemCode } from 'src/common/func/generate-code';
 import {
   LocationSource,
@@ -29,7 +30,7 @@ import {
   OtpPurpose,
   OtpStatus,
 } from 'src/common/schemas/otp.schema';
-import { User, UserDocument } from 'src/common/schemas/user.schema';
+import { User } from 'src/common/schemas/user.schema';
 import { SmsService } from '../auth/services/sms.service';
 import { ImagesService } from '../images/images.service';
 import { DuplicateDetectionService } from '../duplicate-detection/duplicate-detection.service';
@@ -53,14 +54,16 @@ export class VendorLocationsService {
     @InjectModel(LocationRequest.name)
     private locationRequestModel: Model<LocationRequestDocument>,
     @InjectModel(User.name)
-    private userModel: Model<UserDocument>,
+    private userModel: Model<User>,
     @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
     private readonly imagesService: ImagesService,
     private readonly smsService: SmsService,
     private readonly locationGeoService: LocationGeoService,
     private readonly duplicateDetectionService: DuplicateDetectionService,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
+  //kiểm tra số điện thoại đã xác minh otp chưa bằng cách check trong schema otp, thêm validate khoảng cách 50m khi cập nhập vị trí
   async updateLocation(
     id: string,
     updateData: UpdateLocationDto,
@@ -120,9 +123,17 @@ export class VendorLocationsService {
               updateData.pinLatitude ?? 0,
               updateData.pinLongitude ?? 0,
             );
+          if (reviewRequiredData.deviceDistanceMeters > 50) {
+            return {
+              success: false,
+              message:
+                'Bạn phải đứng trong phạm vi 50m mới được cập nhật địa điểm',
+              statusCode: 400,
+            };
+          }
         }
         const cleanData = Object.fromEntries(
-          Object.entries(updateData).filter(
+          Object.entries(reviewRequiredData).filter(
             ([_, value]) => value !== null && value !== undefined,
           ),
         );
@@ -143,8 +154,7 @@ export class VendorLocationsService {
           locationId: id,
           status: LocationRequestStatus.PENDING_RE_APPROVAL,
           oldData,
-          newData: cleanData,
-          changedFields: Object.keys(cleanData),
+          newData: {},
           deviceLocation: reviewRequiredData.deviceLocation ?? null,
           pinLocation: reviewRequiredData.pinLocation ?? null,
           deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
@@ -161,6 +171,21 @@ export class VendorLocationsService {
         subCategoryIds: updateData.subCategoryIds ?? null,
         phone: updateData.phone ?? null,
       };
+      if (nonReviewData.phone) {
+        const checkPhoneVerified = await this.otpModel.findOne({
+          userId: new Types.ObjectId(userId),
+          purpose: OtpPurpose.CHANGE_PHONE,
+          recipient: nonReviewData.phone,
+          status: OtpStatus.VERIFIED,
+        });
+        if (!checkPhoneVerified) {
+          return {
+            success: false,
+            message: 'Số điện thoại chưa được xác minh',
+            statusCode: 400,
+          };
+        }
+      }
       const cleanNonReviewData = Object.fromEntries(
         Object.entries(nonReviewData).filter(
           ([_, value]) => value !== null && value !== undefined,
@@ -279,7 +304,9 @@ export class VendorLocationsService {
         status: LocationRequestStatus.PENDING,
         submittedBy: new Types.ObjectId(userId),
         locationId: location._id,
-        newData: requestDataParsed.newData,
+        newData: {
+          ...locationDataParsed,
+        },
         isPotentialDuplicate: duplicateCandidates.length > 0,
         suspectedDuplicateLocationIds: duplicateCandidates.map(
           (item) => new Types.ObjectId(item.id),
@@ -366,6 +393,16 @@ export class VendorLocationsService {
           statusCode: 404,
         };
       }
+      if (
+        !location.ownerId ||
+        !location.ownerId.equals(new Types.ObjectId(userId))
+      ) {
+        return {
+          success: false,
+          message: 'Bạn không có quyền chỉnh sửa địa điểm này',
+          statusCode: 403,
+        };
+      }
       const twoMinuteAgo = new Date(Date.now() - 2 * 60 * 1000);
       const checkLimit = await this.otpModel.find({
         userId: userId,
@@ -412,6 +449,24 @@ export class VendorLocationsService {
           success: false,
           message: 'Không tìm thấy người dùng',
           statusCode: 404,
+        };
+      }
+      const location = await this.locationModel.findById(locationId);
+      if (!location) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Không tìm thấy địa điểm',
+        };
+      }
+      if (
+        !location.ownerId ||
+        location.ownerId !== new Types.ObjectId(userId)
+      ) {
+        return {
+          success: false,
+          statusCode: 403,
+          message: 'Bạn không có quyền chỉnh sửa địa điểm này',
         };
       }
       const otpRecord = await this.otpModel
