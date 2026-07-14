@@ -172,9 +172,9 @@ export class VendorLocationsController {
   @UseGuards(AuthGuard('jwt-at'))
   @UseInterceptors(
     FileFieldsInterceptor([
-      { name: 'videoFiles', maxCount: 10 },
-      { name: 'licenseFiles', maxCount: 10 },
-      { name: 'imageFiles', maxCount: 10 },
+      { name: 'videoFiles', maxCount: 2 },
+      { name: 'licenseFiles', maxCount: 2 },
+      { name: 'imageFiles', maxCount: 5 },
     ]),
   )
   async registerLocation(
@@ -256,7 +256,21 @@ export class VendorLocationsController {
 
   @Get('register/code')
   @UseGuards(AuthGuard('jwt-at'))
-  generateSystemCode() {
-    return { code: this.vendorLocationsService.generateSystemCode() };
+  async generateSystemCode(@Request() req: AuthenticatedRequest) {
+    const result = await this.vendorLocationsService.generateSystemCode(
+      req.user.userId,
+    );
+    if (!result.success) {
+      if (result.statusCode === 400) {
+        throw new BadRequestException(result.message);
+      }
+      if (result.statusCode === 404) {
+        throw new NotFoundException(result.message);
+      }
+      if (result.statusCode === 500) {
+        throw new InternalServerErrorException(result.message);
+      }
+    }
+    return result;
   }
 }
