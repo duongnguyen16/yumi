@@ -6,7 +6,7 @@ import {
 } from "@/service/locationReportService";
 import { getAllProductsByLocation } from "@/service/product";
 import { Stack, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { View } from "react-native";
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import {
   TextInput,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { userContext } from "@/contexts/userContext";
 
 const REPORT_REASONS: Array<{
   label: string;
@@ -36,12 +37,13 @@ export default function LocationDetail() {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [productData, setProductData] = useState(null);
   const [reportDialogVisible, setReportDialogVisible] = useState(false);
-  const [reportReason, setReportReason] =
-    useState<LocationReportReason>("INCORRECT_INFORMATION");
+  const [reportReason, setReportReason] = useState<LocationReportReason>(
+    "INCORRECT_INFORMATION",
+  );
   const [reportDescription, setReportDescription] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
-
+  const { user } = useContext(userContext);
   const fetchLocationData = async () => {
     if (!id) return;
 
@@ -137,16 +139,21 @@ export default function LocationDetail() {
         options={{
           headerTitle: locationData?.location?.name || "Chi tiết vị trí",
           headerShown: true,
-          headerRight: () => (
-            <Button
-              compact
-              mode="outlined"
-              icon="flag-outline"
-              onPress={() => setReportDialogVisible(true)}
-            >
-              Report
-            </Button>
-          ),
+          headerRight: () => {
+            if (locationData?.ownerId === user?._id) {
+              return null;
+            }
+            return (
+              <Button
+                compact
+                mode="outlined"
+                icon="flag-outline"
+                onPress={() => setReportDialogVisible(true)}
+              >
+                Report
+              </Button>
+            );
+          },
         }}
       />
       <LocationDetailScreen
