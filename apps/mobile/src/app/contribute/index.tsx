@@ -212,7 +212,7 @@ export default function ContributePlaceScreen() {
         if (isVendorRegistration) {
           const response = await getSystemCode();
           if (response.success) {
-            setSystemCode(response.code);
+            setSystemCode(response.systemCode);
           } else {
             Alert.alert(
               "Không tạo được mã",

@@ -154,7 +154,7 @@ export class VendorLocationsService {
           locationId: id,
           status: LocationRequestStatus.PENDING_RE_APPROVAL,
           oldData,
-          newData: {},
+          newData: cleanData,
           deviceLocation: reviewRequiredData.deviceLocation ?? null,
           pinLocation: reviewRequiredData.pinLocation ?? null,
           deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
@@ -208,8 +208,58 @@ export class VendorLocationsService {
     }
   }
 
-  generateSystemCode() {
-    return generateSystemCode();
+  async generateSystemCode(userId: string) {
+    try {
+      const systemCode = generateSystemCode();
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 404,
+        };
+      }
+      const findExits = await this.otpModel.find({
+        userId: new Types.ObjectId(userId),
+        purpose: OtpPurpose.VERIFY_LOCATION,
+        status: OtpStatus.PENDING,
+      });
+      if (findExits.length > 0) {
+        await this.otpModel.updateMany(
+          {
+            userId: new Types.ObjectId(userId),
+            purpose: OtpPurpose.VERIFY_LOCATION,
+            status: OtpStatus.PENDING,
+          },
+          {
+            $set: {
+              status: OtpStatus.CANCELLED,
+            },
+          },
+        );
+      }
+      const otpHash = bcrypt.hashSync(systemCode, 10);
+      const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+      await this.otpModel.create({
+        userId: new Types.ObjectId(userId),
+        purpose: OtpPurpose.VERIFY_LOCATION,
+        channel: OtpChannel.SYSTEM,
+        recipient: user.phone,
+        otpHash,
+        expiresAt: otpExpire,
+      });
+      return {
+        success: true,
+        message: 'Tạo mã hệ thống thành công',
+        systemCode,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi tạo mã hệ thống',
+        statusCode: 500,
+      };
+    }
   }
 
   async registerLocation(
@@ -238,6 +288,34 @@ export class VendorLocationsService {
           statusCode: 400,
         };
       }
+      const checkOtp = await this.otpModel.findOne({
+        userId: new Types.ObjectId(userId),
+        purpose: OtpPurpose.VERIFY_LOCATION,
+        status: OtpStatus.PENDING,
+        expiresAt: { $gt: new Date() },
+      });
+      if (!checkOtp) {
+        return {
+          success: false,
+          message: 'Mã hệ thống không hợp lệ hoặc đã hết hạn',
+          statusCode: 400,
+        };
+      }
+      const isMatch = await bcrypt.compare(
+        requestDataParsed.systemCode,
+        checkOtp.otpHash,
+      );
+      if (!isMatch) {
+        return {
+          success: false,
+          message: 'Mã hệ thống không hợp lệ',
+          statusCode: 400,
+        };
+      }
+      await this.otpModel.updateOne(
+        { _id: checkOtp._id },
+        { verifiedAt: new Date(), status: OtpStatus.VERIFIED },
+      );
       const deviceDistanceMeters = this.locationGeoService.getDistanceMeters(
         requestDataParsed.deviceLatitude,
         requestDataParsed.deviceLongitude,
