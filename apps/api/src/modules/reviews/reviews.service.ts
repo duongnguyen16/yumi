@@ -13,10 +13,7 @@ import {
   UserRole,
   UserStatus,
 } from 'src/common/schemas/common.enums';
-import {
-  Location,
-  LocationDocument,
-} from 'src/common/schemas/location.schema';
+import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
@@ -45,7 +42,10 @@ export class ReviewsService {
   ) {}
 
   async getLocationReviews(locationId: string) {
-    const locationObjectId = this.toObjectId(locationId, 'Địa điểm không hợp lệ');
+    const locationObjectId = this.toObjectId(
+      locationId,
+      'Địa điểm không hợp lệ',
+    );
     const location = await this.locationModel
       .findOne({ _id: locationObjectId, status: LocationStatus.PUBLISHED })
       .lean()
@@ -134,7 +134,9 @@ export class ReviewsService {
       location.ownerId &&
       location.ownerId.equals(user._id)
     ) {
-      throw new ForbiddenException('Vendor không được đánh giá địa điểm của mình');
+      throw new ForbiddenException(
+        'Vendor không được đánh giá địa điểm của mình',
+      );
     }
 
     this.assertOnSiteProof(location, dto);
@@ -185,7 +187,9 @@ export class ReviewsService {
       throw new NotFoundException('Không tìm thấy đánh giá');
     }
 
-    if (!review.userId.equals(this.toObjectId(userId, 'Người dùng không hợp lệ'))) {
+    if (
+      !review.userId.equals(this.toObjectId(userId, 'Người dùng không hợp lệ'))
+    ) {
       throw new ForbiddenException('Bạn chỉ được sửa đánh giá của mình');
     }
 
@@ -217,7 +221,9 @@ export class ReviewsService {
       throw new NotFoundException('Không tìm thấy đánh giá');
     }
 
-    if (!review.userId.equals(this.toObjectId(userId, 'Người dùng không hợp lệ'))) {
+    if (
+      !review.userId.equals(this.toObjectId(userId, 'Người dùng không hợp lệ'))
+    ) {
       throw new ForbiddenException('Bạn chỉ được xóa đánh giá của mình');
     }
 
@@ -252,13 +258,11 @@ export class ReviewsService {
       }
     }
 
-    if ((dto.imageUrls ?? []).length > 0) {
-      return;
-    }
+    // if ((dto.imageUrls ?? []).length > 0) {
+    //   return;
+    // }
 
-    throw new BadRequestException(
-      'Tạo mới đánh giá cần GPS tại chỗ hoặc ảnh tại chỗ hợp lệ',
-    );
+    throw new BadRequestException('Bạn cần đứng tại địa điểm để gửi đánh giá');
   }
 
   private toImages(imageUrls?: string[]) {

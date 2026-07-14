@@ -86,7 +86,7 @@ export default function GeneralTab({
                 });
               }}
             >
-              Bao co trang thai
+              Đề xuất chỉnh sửa
             </Button>
           </Card.Actions>
         ) : null}
