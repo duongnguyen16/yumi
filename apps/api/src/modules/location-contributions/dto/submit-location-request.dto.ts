@@ -1,6 +1,4 @@
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsLatitude,
   IsLongitude,
@@ -9,7 +7,6 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
   MinLength,
@@ -62,12 +59,6 @@ export class SubmitLocationRequestDto {
   @IsNumber()
   @Min(0)
   accuracyMeters?: number;
-
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(5)
-  @IsUrl({}, { each: true })
-  imageUrls!: string[];
 
   @IsArray()
   @IsMongoId({ each: true })

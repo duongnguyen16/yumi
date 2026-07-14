@@ -27,7 +27,6 @@ import {
   analyzeLocationDraft,
   submitCustomerContribution,
   submitVendorRegistration,
-  uploadContributionImage,
   validateContributionPosition,
   type CustomerContributionPayload,
   type PendingVendorEvidenceFile,
@@ -50,7 +49,6 @@ type SelectedImage = {
   fileName: string;
   mimeType: string;
   fileSize: number;
-  uploadedUrl?: string;
 };
 
 type SelectedEvidenceFile = PendingVendorEvidenceFile & {
@@ -135,7 +133,6 @@ export default function ContributePlaceScreen() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategoryOption[]>([]);
@@ -499,60 +496,10 @@ export default function ContributePlaceScreen() {
     );
   };
 
-  const handleUploadImages = async () => {
-    if (images.length < 1) {
-      Alert.alert("Thiếu ảnh", "Hãy chọn ít nhất 1 ảnh.");
-      return false;
-    }
-
-    setUploading(true);
-    try {
-      const uploadedImages: SelectedImage[] = [];
-
-      for (const image of images) {
-        if (image.uploadedUrl) {
-          uploadedImages.push(image);
-          continue;
-        }
-
-        const uploadedUrl = await uploadContributionImage({
-          uri: image.uri,
-          fileName: image.fileName,
-          mimeType: image.mimeType,
-          fileSize: image.fileSize,
-        });
-
-        uploadedImages.push({
-          ...image,
-          uploadedUrl,
-        });
-      }
-
-      setImages(uploadedImages);
-      return true;
-    } catch (error: unknown) {
-      console.log("Error uploading contribution images:", error);
-      Alert.alert(
-        "Upload thất bại",
-        getErrorMessage(
-          error,
-          "Không thể upload ảnh lên Supabase. Thử lại giúp mình.",
-        ),
-      );
-      return false;
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const buildCustomerContributionPayload = (): CustomerContributionPayload => {
     if (!pinCoords || !deviceCoords) {
       throw new Error("Không đủ dữ liệu vị trí để gửi duyệt.");
     }
-
-    const uploadedUrls = images
-      .map((item) => item.uploadedUrl)
-      .filter(Boolean) as string[];
 
     return {
       name: name.trim(),
@@ -566,9 +513,7 @@ export default function ContributePlaceScreen() {
       deviceLatitude: deviceCoords.latitude,
       deviceLongitude: deviceCoords.longitude,
       accuracyMeters,
-      imageUrls: uploadedUrls,
       suspectedDuplicateLocationIds: similarLocations.map((item) => item.id),
-      isPotentialDuplicate: similarLocations.length > 0,
     };
   };
 
@@ -584,7 +529,10 @@ export default function ContributePlaceScreen() {
     }));
 
   const submitCustomerDataToBackend = async () => {
-    await submitCustomerContribution(buildCustomerContributionPayload());
+    await submitCustomerContribution(
+      buildCustomerContributionPayload(),
+      toPendingEvidenceFiles(images),
+    );
   };
 
   const submitVendorRegistrationDataToBackend = async () => {
@@ -596,6 +544,7 @@ export default function ContributePlaceScreen() {
       const response = await submitVendorRegistration({
         ...buildCustomerContributionPayload(),
         systemCode,
+        isPotentialDuplicate: similarLocations.length > 0,
         videoFiles: toPendingEvidenceFiles(videos),
         licenseFiles: toPendingEvidenceFiles(licenseFiles),
         imageFiles: toPendingEvidenceFiles(images),
@@ -719,14 +668,12 @@ export default function ContributePlaceScreen() {
         );
         return;
       }
-      let ok: boolean = true;
-      if (!isVendorRegistration) {
-        ok = await handleUploadImages();
+      if (!isVendorRegistration && images.length < 1) {
+        Alert.alert("Thiếu ảnh", "Hãy chọn ít nhất 1 ảnh.");
+        return;
       }
 
-      if (ok) {
-        setStep(3);
-      }
+      setStep(3);
       return;
     }
 
@@ -1223,7 +1170,7 @@ export default function ContributePlaceScreen() {
       );
     }
 
-    const previewImage = images[0]?.uploadedUrl || images[0]?.uri;
+    const previewImage = images[0]?.uri;
 
     return (
       <View style={styles.section}>
@@ -1387,12 +1334,12 @@ export default function ContributePlaceScreen() {
         <Pressable
           style={[
             styles.primaryButton,
-            (saving || uploading) && styles.primaryButtonDisabled,
+            saving && styles.primaryButtonDisabled,
           ]}
           onPress={handleContinue}
-          disabled={saving || uploading}
+          disabled={saving}
         >
-          {saving || uploading ? (
+          {saving ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.primaryButtonText}>

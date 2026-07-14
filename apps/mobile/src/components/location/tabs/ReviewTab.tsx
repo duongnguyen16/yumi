@@ -55,7 +55,6 @@ export default function ReviewTab({
   } | null;
   const currentUserId = userState?.user?._id ?? userState?.user?.id;
   const locationId = locationData?._id ?? locationData?.id;
-
   const loadReviews = useCallback(
     async (options?: { showLoading?: boolean }) => {
       if (!locationId) {
@@ -164,20 +163,16 @@ export default function ReviewTab({
   };
 
   const handleDeleteReview = (review: LocationReview) => {
-    Alert.alert(
-      "Xóa đánh giá",
-      "Bạn có chắc muốn xóa đánh giá này không?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: () => {
-            void confirmDeleteReview(review.id);
-          },
+    Alert.alert("Xóa đánh giá", "Bạn có chắc muốn xóa đánh giá này không?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: () => {
+          void confirmDeleteReview(review.id);
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const confirmDeleteReview = async (reviewId: string) => {
@@ -240,49 +235,50 @@ export default function ReviewTab({
               </View>
             </Card.Content>
           </Card>
+          {currentUserId !== locationData?.ownerId && (
+            <Card mode="contained" style={styles.formCard}>
+              <Card.Content>
+                <Text variant="titleMedium" style={styles.formTitle}>
+                  {editingReviewId ? "Sửa đánh giá" : "Viết đánh giá"}
+                </Text>
 
-          <Card mode="contained" style={styles.formCard}>
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.formTitle}>
-                {editingReviewId ? "Sửa đánh giá" : "Viết đánh giá"}
-              </Text>
+                <PressableStarRating rating={rating} onChange={setRating} />
 
-              <PressableStarRating rating={rating} onChange={setRating} />
+                <TextInput
+                  mode="outlined"
+                  value={comment}
+                  onChangeText={setComment}
+                  placeholder="Chia sẻ trải nghiệm của bạn..."
+                  multiline
+                  numberOfLines={4}
+                  style={styles.commentInput}
+                />
 
-              <TextInput
-                mode="outlined"
-                value={comment}
-                onChangeText={setComment}
-                placeholder="Chia sẻ trải nghiệm của bạn..."
-                multiline
-                numberOfLines={4}
-                style={styles.commentInput}
-              />
-
-              <View style={styles.formActions}>
-                {editingReviewId ? (
+                <View style={styles.formActions}>
+                  {editingReviewId ? (
+                    <Button
+                      mode="outlined"
+                      onPress={handleCancelEdit}
+                      disabled={submitting}
+                      style={styles.cancelButton}
+                    >
+                      Hủy
+                    </Button>
+                  ) : null}
                   <Button
-                    mode="outlined"
-                    onPress={handleCancelEdit}
+                    mode="contained"
+                    icon={editingReviewId ? "content-save" : "send"}
+                    loading={submitting}
                     disabled={submitting}
-                    style={styles.cancelButton}
+                    onPress={handleSubmitReview}
+                    style={styles.submitButton}
                   >
-                    Hủy
+                    {editingReviewId ? "Cập nhật" : "Gửi đánh giá"}
                   </Button>
-                ) : null}
-                <Button
-                  mode="contained"
-                  icon={editingReviewId ? "content-save" : "send"}
-                  loading={submitting}
-                  disabled={submitting}
-                  onPress={handleSubmitReview}
-                  style={styles.submitButton}
-                >
-                  {editingReviewId ? "Cập nhật" : "Gửi đánh giá"}
-                </Button>
-              </View>
-            </Card.Content>
-          </Card>
+                </View>
+              </Card.Content>
+            </Card>
+          )}
 
           {errorMessage ? (
             <Text style={styles.errorText}>{errorMessage}</Text>
