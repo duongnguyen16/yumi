@@ -461,7 +461,7 @@ export class VendorLocationsService {
       }
       if (
         !location.ownerId ||
-        location.ownerId !== new Types.ObjectId(userId)
+        !location.ownerId.equals(new Types.ObjectId(userId))
       ) {
         return {
           success: false,

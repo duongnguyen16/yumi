@@ -4,7 +4,6 @@ import {
   markOneAsRead,
 } from "@/service/notificationService";
 import type { Notification } from "@/service/notificationService";
-import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
@@ -16,7 +15,6 @@ import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function NotificationsScreen() {
-  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -65,7 +63,6 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      {/* Header */}
       <View
         style={{
           flexDirection: "row",
@@ -77,22 +74,16 @@ export default function NotificationsScreen() {
           borderBottomColor: "#eee",
         }}
       >
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ fontSize: 16, color: "orange" }}>← Quay lại</Text>
-        </TouchableOpacity>
         <Text style={{ fontSize: 18, fontWeight: "bold" }}>
           Thông báo {unreadCount > 0 ? `(${unreadCount})` : ""}
         </Text>
-        {unreadCount > 0 ? (
+        {unreadCount > 0 && (
           <Button mode="text" onPress={handleMarkAllRead} compact>
             Đọc tất cả
           </Button>
-        ) : (
-          <View style={{ width: 80 }} />
         )}
       </View>
 
-      {/* Danh sách */}
       <FlatList
         data={notifications}
         keyExtractor={(item) => item._id}
@@ -119,7 +110,6 @@ export default function NotificationsScreen() {
               gap: 12,
             }}
           >
-            {/* Chấm xanh nếu chưa đọc */}
             <View style={{ paddingTop: 4 }}>
               {!item.isRead && (
                 <View
