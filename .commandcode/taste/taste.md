@@ -4,4 +4,3 @@
 
 # code-style
 - Remove unnecessary comments from production code; prefer clean, self-documenting code. Confidence: 0.70
-
