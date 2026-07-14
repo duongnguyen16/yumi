@@ -73,10 +73,6 @@ export class UsersService {
       user.fullName = dto.name.trim();
     }
 
-    if (dto.phone !== undefined) {
-      user.phone = dto.phone;
-    }
-
     if (avatarFile) {
       user.avatarUrl = await this.saveAvatarFile(
         avatarFile,
@@ -327,6 +323,8 @@ export class UsersService {
       return null;
     }
 
-    return decodeURIComponent(currentAvatarUrl.slice(markerIndex + marker.length));
+    return decodeURIComponent(
+      currentAvatarUrl.slice(markerIndex + marker.length),
+    );
   }
 }
