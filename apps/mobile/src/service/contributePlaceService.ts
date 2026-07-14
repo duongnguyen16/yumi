@@ -49,11 +49,11 @@ export type CustomerContributionPayload = {
   deviceLongitude: number;
   accuracyMeters?: number;
   suspectedDuplicateLocationIds?: string[];
-  isPotentialDuplicate?: boolean;
 };
 
 export type VendorRegistrationPayload = CustomerContributionPayload & {
   systemCode: string;
+  isPotentialDuplicate?: boolean;
   videoFiles: PendingVendorEvidenceFile[];
   licenseFiles: PendingVendorEvidenceFile[];
   imageFiles: PendingContributionImage[];
