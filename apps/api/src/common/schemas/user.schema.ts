@@ -26,8 +26,8 @@ export class User {
   })
   role!: UserRole;
 
-  @Prop({ required: true, trim: true })
-  fullName!: string;
+  @Prop({ trim: true })
+  fullName?: string;
 
   @Prop({ trim: true, index: true })
   phone?: string;
