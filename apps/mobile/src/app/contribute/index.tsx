@@ -537,8 +537,10 @@ export default function ContributePlaceScreen() {
 
   const submitVendorRegistrationDataToBackend = async () => {
     if (!systemCode) {
-      alert("Không thể gửi đăng ký vendor khi chưa có mã xác thực.");
-      return;
+      return {
+        success: false,
+        message: "Không thể gửi đăng ký vendor khi chưa có mã xác thực.",
+      };
     }
     try {
       const response = await submitVendorRegistration({
@@ -550,25 +552,20 @@ export default function ContributePlaceScreen() {
         imageFiles: toPendingEvidenceFiles(images),
       });
       if (response?.success === false) {
-        setImages([]);
-        setVideos([]);
-        setLicenseFiles([]);
-        alert(
-          response?.message ||
-            "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
-        );
-        return;
+        return {
+          success: false,
+          message: response?.message || "Đăng ký địa điểm thất bại",
+        };
       }
+      return {
+        success: true,
+      };
     } catch (error) {
       console.error("Error submitting vendor registration:", error);
-      Alert.alert(
-        "Gửi đăng ký thất bại",
-        "Có lỗi xảy ra khi gửi đăng ký vendor. Vui lòng thử lại.",
-      );
-    } finally {
-      setImages([]);
-      setVideos([]);
-      setLicenseFiles([]);
+      return {
+        success: false,
+        message: error?.response?.data?.message || "Đăng ký địa điểm thất bại",
+      };
     }
   };
 
@@ -681,7 +678,18 @@ export default function ContributePlaceScreen() {
       try {
         setSaving(true);
         if (isVendorRegistration) {
-          await submitVendorRegistrationDataToBackend();
+          const response = await submitVendorRegistrationDataToBackend();
+          if (response?.success === false) {
+            Alert.alert(
+              "Gửi đăng ký thất bại",
+              response?.message ||
+                "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
+            );
+            return;
+          }
+          setImages([]);
+          setVideos([]);
+          setLicenseFiles([]);
         } else {
           await submitCustomerDataToBackend();
         }
@@ -1332,10 +1340,7 @@ export default function ContributePlaceScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={[
-            styles.primaryButton,
-            saving && styles.primaryButtonDisabled,
-          ]}
+          style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
           onPress={handleContinue}
           disabled={saving}
         >
