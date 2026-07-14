@@ -20,9 +20,6 @@ export class CreateLocationRequestDataDto {
   @IsNumber()
   deviceLongitude!: number;
 
-  @IsObject()
-  newData!: object;
-
   @IsBoolean()
   isPotentialDuplicate!: boolean;
 

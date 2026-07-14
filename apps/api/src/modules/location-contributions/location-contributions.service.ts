@@ -224,7 +224,6 @@ export class LocationContributionsService {
       status: LocationRequestStatus.PENDING,
       oldData: null,
       newData,
-      changedFields: Object.keys(newData),
       imageUrls: dto.imageUrls,
       pinLocation: {
         type: 'Point',
