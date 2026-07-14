@@ -126,7 +126,12 @@ const updateLocation = async (formData: FormData, locationId: string) => {
 const getSystemCode = async () => {
   try {
     const response = await api.get("/location/register/code");
-    return { code: response.data.code, success: true };
+    if (response.data?.success) {
+      return {
+        success: true,
+        systemCode: response.data.systemCode,
+      };
+    }
   } catch (error) {
     console.error("Error getting system code:", error);
     return {
