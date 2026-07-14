@@ -1,4 +1,3 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import api from "./aixos";
 
 export type ContributionCategory = {
@@ -49,7 +48,6 @@ export type CustomerContributionPayload = {
   deviceLatitude: number;
   deviceLongitude: number;
   accuracyMeters?: number;
-  imageUrls: string[];
   suspectedDuplicateLocationIds?: string[];
   isPotentialDuplicate?: boolean;
 };
@@ -71,39 +69,6 @@ const appendEvidenceFile = (
     name: file.fileName,
     type: file.mimeType,
   } as unknown as Blob);
-};
-
-let supabaseClient: SupabaseClient | null = null;
-
-const getSupabaseClient = () => {
-  if (supabaseClient) {
-    return supabaseClient;
-  }
-
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  const supabasePublishableKey =
-    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  console.log("supabaseUrl:", supabaseUrl);
-
-  if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error(
-      "Thieu EXPO_PUBLIC_SUPABASE_URL hoac EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY trong apps/mobile/.env",
-    );
-  }
-
-  supabaseClient = createClient(supabaseUrl, supabasePublishableKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  return supabaseClient;
-};
-
-const fileUriToArrayBuffer = async (uri: string) => {
-  const response = await fetch(uri);
-  return response.arrayBuffer();
 };
 
 export const getContributionOptions = async () => {
@@ -151,47 +116,21 @@ export const validateContributionPosition = async (payload: {
   };
 };
 
-export const uploadContributionImage = async (
-  image: PendingContributionImage,
-) => {
-  await api.post("/images/validate", {
-    fileName: image.fileName,
-    mimeType: image.mimeType,
-    fileSize: image.fileSize,
-  });
-
-  const uploadResponse = await api.post("/images/upload-url", {
-    fileName: image.fileName,
-    mimeType: image.mimeType,
-  });
-
-  const upload = uploadResponse.data.upload as {
-    bucket: string;
-    path: string;
-    token: string;
-    publicUrl: string;
-  };
-
-  const supabase = getSupabaseClient();
-  const fileBuffer = await fileUriToArrayBuffer(image.uri);
-  const { error } = await supabase.storage
-    .from(upload.bucket)
-    .uploadToSignedUrl(upload.path, upload.token, fileBuffer, {
-      contentType: image.mimeType,
-      upsert: false,
-    });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return upload.publicUrl;
-};
-
 export const submitCustomerContribution = async (
   payload: CustomerContributionPayload,
+  imageFiles: PendingContributionImage[],
 ) => {
-  const response = await api.post("/location/contribution/submit", payload);
+  const formData = new FormData();
+  formData.append("data", JSON.stringify(payload));
+  imageFiles.forEach((file) =>
+    appendEvidenceFile(formData, "imageFiles", file),
+  );
+
+  const response = await api.post("/location/contribution/submit", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data as {
     success: boolean;
     message: string;
