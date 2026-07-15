@@ -95,7 +95,10 @@ export default function ReviewTab({
     }
 
     const trimmedComment = comment.trim();
-
+    if (!trimmedComment) {
+      setNotice("Vui lòng nhập nội dung đánh giá.");
+      return;
+    }
     setSubmitting(true);
     try {
       if (editingReviewId) {

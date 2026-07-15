@@ -114,7 +114,7 @@ export default function Register() {
   // ─── Bước 3 (vendor): xác minh OTP ──────────────────────────────────────
   const handleVerifyOtp = async () => {
     setError("");
-    if (!otp || otp.length !== 6) {
+    if (!otp || otp.length !== 6 || isNaN(Number(otp))) {
       setError("Vui lòng nhập mã OTP gồm 6 số.");
       return;
     }
@@ -223,8 +223,7 @@ export default function Register() {
 
                 <View style={{ flex: 1, justifyContent: "flex-end" }}>
                   <Text style={{ textAlign: "center", fontSize: 16 }}>
-                    Đã có tài khoản?{" "}
-                    <Link href="/auth/login">Đăng nhập</Link>
+                    Đã có tài khoản? <Link href="/auth/login">Đăng nhập</Link>
                   </Text>
                 </View>
               </View>
@@ -361,7 +360,11 @@ export default function Register() {
                   onPress={handleSubmitForm}
                   loading={loading}
                   disabled={loading}
-                  style={{ justifyContent: "center", height: 50, marginTop: 10 }}
+                  style={{
+                    justifyContent: "center",
+                    height: 50,
+                    marginTop: 10,
+                  }}
                 >
                   {role === "vendor" ? "Tiếp theo — Nhận OTP" : "Đăng ký"}
                 </Button>
@@ -377,8 +380,7 @@ export default function Register() {
                 </Button>
 
                 <Text style={{ textAlign: "center", fontSize: 16 }}>
-                  Đã có tài khoản?{" "}
-                  <Link href="/auth/login">Đăng nhập</Link>
+                  Đã có tài khoản? <Link href="/auth/login">Đăng nhập</Link>
                 </Text>
               </View>
             )}
@@ -410,9 +412,7 @@ export default function Register() {
                   />
                 </View>
 
-                {error ? (
-                  <Text style={{ color: "red" }}>{error}</Text>
-                ) : null}
+                {error ? <Text style={{ color: "red" }}>{error}</Text> : null}
 
                 <Button
                   mode="contained"
