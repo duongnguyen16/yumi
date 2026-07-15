@@ -5,6 +5,7 @@ import {
   sendProfilePhoneOtp,
   verifyProfilePhoneOtp,
 } from "@/service/profileService";
+import { normalizePhoneNumber, validatePhoneNumber } from "@/common/function";
 
 type PhoneVerificationModalProps = {
   visible: boolean;
@@ -27,9 +28,10 @@ export default function PhoneVerificationModal({
   const [message, setMessage] = useState("");
 
   const handleSendOtp = async () => {
-    const normalizedPhone = phone.trim();
-    if (!normalizedPhone) {
-      setMessage("Vui lòng nhập số điện thoại.");
+    const normalizedPhone = normalizePhoneNumber(phone);
+    const validatedPhone = validatePhoneNumber(normalizedPhone);
+    if (validatedPhone.isValid === false) {
+      setMessage(validatedPhone.message);
       return;
     }
 
@@ -46,8 +48,8 @@ export default function PhoneVerificationModal({
   };
 
   const handleVerifyOtp = async () => {
-    if (!otp.trim()) {
-      setMessage("Vui lòng nhập mã OTP.");
+    if (!otp.trim() || otp.trim().length !== 6 || isNaN(Number(otp.trim()))) {
+      setMessage("Vui lòng nhập mã OTP gồm 6 chữ số.");
       return;
     }
 

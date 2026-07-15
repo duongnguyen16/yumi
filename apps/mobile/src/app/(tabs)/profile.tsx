@@ -86,8 +86,7 @@ export default function Profile() {
         setUser((current) => ({
           ...(current ?? {}),
           phone: response.user?.phone ?? current?.phone,
-          phoneVerified:
-            response.user?.phoneVerified ?? current?.phoneVerified,
+          phoneVerified: response.user?.phoneVerified ?? current?.phoneVerified,
         }));
       } else {
         setMessage(response?.message || "Không thể lấy hồ sơ.");
@@ -169,8 +168,8 @@ export default function Profile() {
   };
 
   const saveProfile = async () => {
-    if (!name.trim()) {
-      setMessage("Tên không được để trống.");
+    if (!name.trim() || name.trim().length > 100) {
+      setMessage("Tên không được để trống và không được vượt quá 100 ký tự.");
       return;
     }
 
@@ -306,12 +305,12 @@ export default function Profile() {
         </View>
 
         <View style={styles.menu}>
-          {profile?.role === 'VENDOR' && (
+          {profile?.role === "VENDOR" && (
             <>
               <MenuItem
                 icon="bar-chart-2"
                 label="Dashboard"
-                onPress={() => router.push('/vendor/dashboard')}
+                onPress={() => router.push("/vendor/dashboard")}
               />
               <Divider />
             </>

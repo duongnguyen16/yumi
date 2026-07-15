@@ -19,6 +19,7 @@ import {
 } from "@/service/editSuggestionService";
 import { userContext } from "@/contexts/userContext";
 import { set } from "zod/v3";
+import { normalizePhoneNumber, validatePhoneNumber } from "@/common/function";
 
 type TimeValue = {
   hours: number;
@@ -140,7 +141,17 @@ export default function EditLocationScreen({
 
   const sentOtp = async () => {
     try {
-      const response = await sentUpdatePhoneOtp(data._id, phone);
+      const normalizedPhone = normalizePhoneNumber(phone);
+      const validatedPhone = validatePhoneNumber(normalizedPhone);
+      if (validatedPhone.isValid === false) {
+        Alert.alert(validatedPhone.message);
+        return;
+      }
+      if (data?._id === undefined) {
+        Alert.alert("Không tìm thấy địa điểm");
+        return;
+      }
+      const response = await sentUpdatePhoneOtp(data._id, normalizedPhone);
       if (response.success) {
         setOtpSent(true);
         Alert.alert("Gửi mã OTP thành công");
@@ -156,8 +167,15 @@ export default function EditLocationScreen({
 
   const verifyOtp = async () => {
     try {
-      const response = await verifyUpdatePhoneOtp(data._id, otp);
-      console.log(response);
+      if (data?._id === undefined) {
+        Alert.alert("Không tìm thấy địa điểm");
+        return;
+      }
+      if (!otp.trim() || otp.trim().length !== 6 || isNaN(Number(otp.trim()))) {
+        Alert.alert("Vui lòng nhập mã OTP gồm 6 chữ số.");
+        return;
+      }
+      const response = await verifyUpdatePhoneOtp(data._id, otp.trim());
       if (response.success) {
         setOtpVerified(true);
         Alert.alert("Mã OTP xác nhận thành công");
