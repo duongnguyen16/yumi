@@ -1,13 +1,9 @@
 import { getAllCategories } from "@/service/categoryService";
 import React, { useEffect, useState } from "react";
-import { FlatList, View } from "react-native";
-import {
-  IconButton,
-  Modal,
-  Portal,
-  RadioButton,
-  Text,
-} from "react-native-paper";
+import { FlatList } from "react-native";
+import { Modal, Portal, RadioButton } from "react-native-paper";
+import { AppText, IconButton, Inline, Stack } from "@/ui/components";
+import { colors, radius, spacing } from "@/ui/tokens";
 
 export default function Category({
   setSelectedCategory,
@@ -41,28 +37,18 @@ export default function Category({
         visible={visible}
         onDismiss={() => setVisible(false)}
         contentContainerStyle={{
-          backgroundColor: "white",
-          padding: 20,
-          margin: 20,
-          borderRadius: 12,
+          backgroundColor: colors.surfaceBase,
+          padding: spacing[5],
+          margin: spacing[4],
+          borderRadius: radius.sheet,
           maxHeight: "70%",
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-          }}
-        >
-          <Text variant="titleMedium">Chọn danh mục</Text>
-          <IconButton
-            icon="close"
-            size={24}
-            onPress={() => setVisible(false)}
-          />
-        </View>
+        <Stack>
+        <Inline style={{ justifyContent: "space-between" }}>
+          <AppText variant="title2">Chọn danh mục</AppText>
+          <IconButton icon="close" label="Đóng" onPress={() => setVisible(false)} />
+        </Inline>
 
         <RadioButton.Group
           onValueChange={(value) => {
@@ -82,6 +68,7 @@ export default function Category({
             )}
           />
         </RadioButton.Group>
+        </Stack>
       </Modal>
     </Portal>
   );

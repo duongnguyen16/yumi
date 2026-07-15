@@ -1,22 +1,14 @@
 import React, { useEffect, useState } from "react";
-import {
-  FlatList,
-  Keyboard,
-  TouchableWithoutFeedback,
-  View,
-} from "react-native";
-import { Button, Text } from "react-native-paper";
+import { FlatList, Keyboard, TouchableWithoutFeedback, View } from "react-native";
 import Category from "./modals/Category";
 import SubCategory from "./modals/SubCategory";
 import { searchLocation } from "@/service/locationService";
 import { useLocationContext } from "@/contexts/locationContext";
 import LocationSearchResult from "./ui/LocationSearchResult";
+import { Button, EmptyState, Inline } from "@/ui/components";
+import { colors, spacing } from "@/ui/tokens";
 
-export default function LocationSearchScreen({
-  searchQuery,
-  searchRef,
-  setSearchQuery,
-}) {
+export default function LocationSearchScreen({ searchQuery }) {
   const [visible, setVisible] = useState(false);
   const [subVisible, setSubVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -61,33 +53,31 @@ export default function LocationSearchScreen({
   };
 
   useEffect(() => {
-    if (!searchQuery && !selectedCategory) {
-      setSearchResults([]);
-      return;
-    }
-    setPage(1);
-    setHasMore(true);
-    const fetchSearchResults = async () => {
-      try {
-        const response = await searchLocation(
-          searchQuery,
-          selectedCategory,
-          selectedSubCategory,
-          1,
-          10,
-          location[0],
-          location[1],
-        );
-        if (response.success) {
-          setSearchResults(response.locations);
-        }
-      } catch (error) {
-        console.error("Error fetching search results:", error);
-      }
-    };
     const timer = setTimeout(() => {
-      fetchSearchResults();
-    }, 500);
+      if (!searchQuery && !selectedCategory) {
+        setSearchResults([]);
+        return;
+      }
+      setPage(1);
+      setHasMore(true);
+      const fetchSearchResults = async () => {
+        try {
+          const response = await searchLocation(
+            searchQuery,
+            selectedCategory,
+            selectedSubCategory,
+            1,
+            10,
+            location[0],
+            location[1],
+          );
+          if (response.success) setSearchResults(response.locations);
+        } catch (error) {
+          console.error("Error fetching search results:", error);
+        }
+      };
+      void fetchSearchResults();
+    }, searchQuery || selectedCategory ? 500 : 0);
     return () => clearTimeout(timer);
   }, [searchQuery, selectedCategory, selectedSubCategory, location]);
 
@@ -96,35 +86,15 @@ export default function LocationSearchScreen({
       onPress={() => Keyboard.dismiss()}
       accessible={false}
     >
-      <View style={{ flex: 1, marginTop: 60, paddingHorizontal: 16 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "flex-start",
-            gap: 9,
-          }}
-        >
-          <Button mode="outlined" onPress={() => setVisible(true)}>
-            Danh mục
-          </Button>
+      <View style={{ backgroundColor: colors.surfaceApp, flex: 1, paddingHorizontal: spacing[4], paddingTop: 76 }}>
+        <Inline>
+          <Button label="Danh mục" onPress={() => setVisible(true)} variant="secondary" />
           {selectedCategory && (
-            <Button mode="outlined" onPress={() => setSubVisible(true)}>
-              Danh mục con
-            </Button>
+            <Button label="Danh mục con" onPress={() => setSubVisible(true)} variant="secondary" />
           )}
-        </View>
+        </Inline>
         {searchResults.length === 0 && searchQuery && selectedCategory && (
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Button mode="contained" icon="plus">
-              Thêm địa điểm này
-            </Button>
-          </View>
+          <EmptyState actionLabel="Thêm địa điểm này" icon="map-marker-plus-outline" title="Không tìm thấy địa điểm" />
         )}
         <Category
           setSelectedCategory={setSelectedCategory}
@@ -142,9 +112,9 @@ export default function LocationSearchScreen({
         />
 
         <FlatList
-          style={{ flex: 1, marginTop: 16 }}
+          contentContainerStyle={{ gap: spacing[2], paddingBottom: spacing[6] }}
+          style={{ flex: 1, marginTop: spacing[3] }}
           data={searchResults}
-
           keyExtractor={(item, index) =>
             item._id || item.id || index.toString()
           }

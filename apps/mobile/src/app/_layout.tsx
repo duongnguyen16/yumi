@@ -30,7 +30,7 @@ const appColors = {
 const paperTheme = {
   ...MD3LightTheme,
   dark: false,
-  roundness: 8,
+  roundness: 20,
   fonts: configureFonts({ config: { fontFamily: "Inter_400Regular" } }),
   colors: {
     ...MD3LightTheme.colors,

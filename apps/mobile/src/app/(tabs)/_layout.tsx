@@ -2,22 +2,11 @@ import { getUnreadCount } from "@/service/notificationService";
 import {
   formatUnreadBadge,
   MAIN_TABS,
-  MainTabIcon,
   SHOW_TABS_HEADER,
 } from "@/navigation/mainTabs";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
+import { BottomTabBar } from "@/ui/components";
 import { Tabs } from "expo-router";
 import React, { useEffect, useState } from "react";
-import type { ColorValue } from "react-native";
-
-function TabIcon({ icon, color }: { icon: MainTabIcon; color: ColorValue }) {
-  if (icon === "home") {
-    return <AntDesign name="home" size={24} color={color} />;
-  }
-
-  return <Feather name={icon} size={24} color={color} />;
-}
 
 export default function TabsLayout() {
   const [unread, setUnread] = useState(0);
@@ -42,6 +31,20 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={({ state, navigation }) => {
+        const selected = MAIN_TABS.find((tab) => tab.name === state.routes[state.index]?.name)?.title ?? MAIN_TABS[0].title;
+
+        return (
+          <BottomTabBar
+            items={MAIN_TABS.map((tab) => ({ badge: tab.name === "activity" ? formatUnreadBadge(unread) : undefined, icon: tab.icon, label: tab.title }))}
+            onSelect={(label) => {
+              const tab = MAIN_TABS.find((item) => item.title === label);
+              if (tab) navigation.navigate(tab.name);
+            }}
+            selected={selected}
+          />
+        );
+      }}
       screenOptions={{
         headerShown: SHOW_TABS_HEADER,
       }}
@@ -52,13 +55,6 @@ export default function TabsLayout() {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarBadge:
-              tab.name === "notifications"
-                ? formatUnreadBadge(unread)
-                : undefined,
-            tabBarIcon: ({ color }) => (
-              <TabIcon icon={tab.icon} color={color} />
-            ),
           }}
         />
       ))}
