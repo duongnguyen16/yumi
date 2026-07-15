@@ -1,0 +1,78 @@
+import { getNotifications, markAllAsRead, markOneAsRead, type Notification } from "@/service/notificationService";
+import { ActivityRow, AppText, Button, EmptyState, LoadingState, Page, SectionHeader, Stack } from "@/ui/components";
+import { colors, spacing } from "@/ui/tokens";
+import { useCallback, useEffect, useState } from "react";
+import { FlatList, RefreshControl } from "react-native";
+
+export default function ActivityScreen() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    const response = await getNotifications({ page: 1, limit: 30 });
+    if (response.success) {
+      setNotifications(response.data);
+      setUnreadCount(response.unreadCount);
+    }
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchNotifications).finally(() => setLoading(false));
+  }, [fetchNotifications]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchNotifications();
+    setRefreshing(false);
+  };
+
+  const handleMarkOneRead = async (id: string) => {
+    await markOneAsRead(id);
+    setNotifications((current) => current.map((item) => item._id === id ? { ...item, isRead: true } : item));
+    setUnreadCount((current) => Math.max(0, current - 1));
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllAsRead();
+    setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
+    setUnreadCount(0);
+  };
+
+  if (loading) {
+    return <Page><LoadingState label="Đang tải hoạt động" /></Page>;
+  }
+
+  return (
+    <Page>
+      <FlatList
+        ListEmptyComponent={<EmptyState icon="bell-outline" supportingText="Thông báo và cập nhật quy trình sẽ xuất hiện tại đây." title="Chưa có hoạt động" />}
+        ListHeaderComponent={(
+          <Stack gap={spacing[2]} style={{ paddingBottom: spacing[4] }}>
+            <SectionHeader
+              action={unreadCount > 0 ? <Button label="Đọc tất cả" onPress={handleMarkAllRead} size="small" variant="tertiary" /> : undefined}
+              title="Hoạt động"
+            />
+            <AppText style={{ color: colors.textSecondary }} variant="subhead">Thông báo, kiểm duyệt và các yêu cầu cần theo dõi.</AppText>
+          </Stack>
+        )}
+        contentContainerStyle={{ gap: spacing[2], padding: spacing[4], paddingBottom: spacing[7] }}
+        contentInsetAdjustmentBehavior="automatic"
+        data={notifications}
+        keyExtractor={(item) => item._id}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accentPrimary} />}
+        renderItem={({ item }) => (
+          <ActivityRow
+            icon="bell-outline"
+            onPress={() => item.isRead ? undefined : handleMarkOneRead(item._id)}
+            supportingText={item.body}
+            timestamp={new Date(item.createdAt).toLocaleDateString("vi-VN", { day: "2-digit", hour: "2-digit", minute: "2-digit", month: "2-digit", year: "numeric" })}
+            title={item.title}
+            unread={!item.isRead}
+          />
+        )}
+      />
+    </Page>
+  );
+}

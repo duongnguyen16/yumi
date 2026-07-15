@@ -5,11 +5,18 @@ import {
 } from "./mainTabs";
 
 describe("main tabs navigation", () => {
-  it("places notifications in the bottom tab bar and hides the tabs header", () => {
+  it("uses the four universal destinations and hides the tabs header", () => {
     expect(MAIN_TABS.map((tab) => tab.name)).toEqual([
       "home",
-      "notifications",
+      "mine",
+      "activity",
       "profile",
+    ]);
+    expect(MAIN_TABS.map((tab) => tab.title)).toEqual([
+      "Khám phá",
+      "Của tôi",
+      "Hoạt động",
+      "Tài khoản",
     ]);
     expect(SHOW_TABS_HEADER).toBe(false);
   });
