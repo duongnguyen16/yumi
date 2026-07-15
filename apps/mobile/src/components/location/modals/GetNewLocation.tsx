@@ -1,7 +1,9 @@
 import React, { useRef } from "react";
-import { StyleSheet, View } from "react-native";
-import { Button, Modal, Portal, Text } from "react-native-paper";
+import { View } from "react-native";
+import { Modal, Portal } from "react-native-paper";
 import CustomMap, { CustomMapHandle } from "../ui/CustomMap";
+import { AppText, Button, Inline, Stack } from "@/ui/components";
+import { colors, radius, spacing } from "@/ui/tokens";
 
 export default function GetNewLocation({
   visible,
@@ -23,14 +25,11 @@ export default function GetNewLocation({
       <Modal
         visible={visible}
         onDismiss={() => setVisible(false)}
-        contentContainerStyle={styles.modal}
+        contentContainerStyle={{ backgroundColor: colors.surfaceBase, borderRadius: radius.sheet, marginHorizontal: spacing[4], overflow: "hidden", padding: spacing[4] }}
       >
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text variant="titleMedium">Xác thực vị trí</Text>
-          </View>
-
-          <View style={styles.mapContainer}>
+        <Stack>
+          <AppText variant="title2">Xác thực vị trí</AppText>
+          <View style={{ backgroundColor: colors.canvasMap, borderRadius: radius.large, height: 300, overflow: "hidden" }}>
             {coordinates && (
               <CustomMap
                 ref={mapRef}
@@ -42,52 +41,12 @@ export default function GetNewLocation({
               />
             )}
           </View>
-          <View style={styles.footer}>
-            <Button mode="outlined" onPress={() => setVisible(false)}>
-              Hủy
-            </Button>
-
-            <Button mode="contained" onPress={handleConfirm}>
-              Xác nhận
-            </Button>
-          </View>
-        </View>
+          <Inline style={{ justifyContent: "flex-end" }}>
+            <Button label="Hủy" onPress={() => setVisible(false)} variant="secondary" />
+            <Button label="Xác nhận" onPress={handleConfirm} />
+          </Inline>
+        </Stack>
       </Modal>
     </Portal>
   );
 }
-
-const styles = StyleSheet.create({
-  modal: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: "white",
-    overflow: "hidden",
-  },
-  container: {
-    padding: 16,
-    backgroundColor: "white",
-  },
-  header: {
-    marginBottom: 12,
-  },
-  mapContainer: {
-    height: 300,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#eee",
-  },
-  actionRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 16,
-  },
-});
