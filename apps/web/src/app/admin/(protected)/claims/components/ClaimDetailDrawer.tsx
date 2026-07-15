@@ -24,6 +24,7 @@ interface Props {
   claim: AdminClaim | null;
   saving: boolean;
   error: string | null;
+  readOnly?: boolean;
   onClose: () => void;
   onApprove: (reason?: string) => void;
   onReject: (reason: string) => void;
@@ -35,6 +36,7 @@ export function ClaimDetailDrawer({
   claim,
   saving,
   error,
+  readOnly = false,
   onClose,
   onApprove,
   onReject,
@@ -84,7 +86,11 @@ export function ClaimDetailDrawer({
         )
       }
       footer={
-        mode === 'default' ? (
+        readOnly ? (
+          <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>
+            Đóng
+          </ActionButton>
+        ) : mode === 'default' ? (
           <>
             <ActionButton
               variant="reject"
@@ -179,6 +185,26 @@ export function ClaimDetailDrawer({
           />
         </Box>
 
+        {readOnly && (
+          <Box sx={{ border: `1px solid ${tokens.color.border}` }}>
+            <Meta label="Trạng thái" value={claim?.status ?? '—'} />
+            <Divider />
+            <Meta
+              label="Lý do xử lý"
+              value={claim?.adminDecision?.reason ?? 'Không có'}
+            />
+            <Divider />
+            <Meta
+              label="Xử lý lúc"
+              value={
+                claim?.adminDecision?.decidedAt
+                  ? new Date(claim.adminDecision.decidedAt).toLocaleString('vi-VN')
+                  : '—'
+              }
+            />
+          </Box>
+        )}
+
         <Box>
           <Typography variant="overline">Bằng chứng</Typography>
           <Stack spacing={1} sx={{ mt: 0.75 }}>
@@ -239,7 +265,7 @@ export function ClaimDetailDrawer({
           </Link>
         )}
 
-        {mode !== 'default' && (
+        {!readOnly && mode !== 'default' && (
           <TextField
             autoFocus
             fullWidth

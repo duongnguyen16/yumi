@@ -161,6 +161,39 @@ describe('AppealService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 409 });
   });
 
+  it('lists resolved appeals as newest-first history', async () => {
+    const { service, appealModel } = setup();
+    const find = {
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    };
+    appealModel.find.mockReturnValue(find);
+    appealModel.countDocuments.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(0),
+    });
+
+    await service.getQueue({ page: 1, limit: 20, view: 'history' } as never);
+
+    expect(appealModel.find).toHaveBeenCalledWith({
+      status: {
+        $in: [
+          AppealStatus.ACCEPTED_TO_DISPUTE,
+          AppealStatus.OVERTURNED,
+          AppealStatus.UPHELD,
+        ],
+      },
+    });
+    expect(find.sort).toHaveBeenCalledWith({
+      'adminDecision.decidedAt': -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
+  });
+
   it('accepts a rejected request access into one dispute', async () => {
     const {
       service,

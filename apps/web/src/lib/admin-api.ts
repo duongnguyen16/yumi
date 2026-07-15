@@ -354,6 +354,8 @@ export async function listAuditLogs(params?: {
 
 // ─── Admin Claim Management (WDP-28) ────────────────────────────────────────
 
+export type AdminRequestView = 'queue' | 'history';
+
 export interface AdminClaimLocation {
   _id: string;
   name: string;
@@ -429,9 +431,10 @@ export interface ClaimActionResponse {
 export async function getClaimQueue(
   page = 1,
   limit = 20,
+  view: AdminRequestView = 'queue',
 ): Promise<ClaimQueueResponse> {
   const res = await api.get<ClaimQueueResponse>('/admin/claims/queue', {
-    params: { page, limit },
+    params: { page, limit, view },
   });
   return res.data;
 }
@@ -499,6 +502,9 @@ export interface AdminLocationRequest {
   };
   createdAt: string;
   updatedAt?: string;
+  reviewerId?: string;
+  reviewedAt?: string;
+  reviewNote?: string | null;
 }
 
 export interface LocationRequestQueueResponse {
@@ -517,10 +523,11 @@ export interface LocationRequestActionResponse {
 export async function getLocationRequestQueue(
   page = 1,
   limit = 30,
+  view: AdminRequestView = 'queue',
 ): Promise<LocationRequestQueueResponse> {
   const res = await api.get<LocationRequestQueueResponse>(
     '/admin/location-requests/queue',
-    { params: { page, limit } },
+    { params: { page, limit, view } },
   );
   return res.data;
 }
@@ -588,8 +595,14 @@ export interface DisputeQueueResponse {
   limit: number;
 }
 
-export async function getDisputeQueue(): Promise<DisputeQueueResponse> {
-  const res = await api.get<DisputeQueueResponse>('/admin/disputes');
+export async function getDisputeQueue(
+  page = 1,
+  limit = 20,
+  view: AdminRequestView = 'queue',
+): Promise<DisputeQueueResponse> {
+  const res = await api.get<DisputeQueueResponse>('/admin/disputes', {
+    params: { page, limit, view },
+  });
   return res.data;
 }
 
@@ -637,8 +650,14 @@ export interface AppealQueueResponse {
   limit: number;
 }
 
-export async function getAppealQueue(): Promise<AppealQueueResponse> {
-  const res = await api.get<AppealQueueResponse>('/admin/appeals');
+export async function getAppealQueue(
+  page = 1,
+  limit = 20,
+  view: AdminRequestView = 'queue',
+): Promise<AppealQueueResponse> {
+  const res = await api.get<AppealQueueResponse>('/admin/appeals', {
+    params: { page, limit, view },
+  });
   return res.data;
 }
 
