@@ -1,7 +1,9 @@
 import { Searchbar, TextInput as PaperTextInput, type TextInputProps } from "react-native-paper";
 import { colors, radius } from "../tokens";
+import { useState } from "react";
+import type { IconName } from "./types";
 
-export function TextField({ label, ...props }: TextInputProps & { label: string }) {
+export function TextField({ label, trailingIcon, onTrailingPress, ...props }: TextInputProps & { label: string; trailingIcon?: IconName; onTrailingPress?: () => void }) {
   return (
     <PaperTextInput
       activeOutlineColor={colors.accentPrimary}
@@ -12,8 +14,26 @@ export function TextField({ label, ...props }: TextInputProps & { label: string 
       style={{ backgroundColor: colors.surfaceBase }}
       textColor={colors.textPrimary}
       {...props}
+      right={trailingIcon ? <PaperTextInput.Icon accessibilityLabel={label} icon={trailingIcon} onPress={onTrailingPress} /> : props.right}
     />
   );
+}
+
+export function PasswordField({ label, ...props }: Omit<TextInputProps, "secureTextEntry" | "right"> & { label: string }) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <TextField
+      {...props}
+      label={label}
+      right={<PaperTextInput.Icon accessibilityLabel={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"} icon={visible ? "eye-off" : "eye"} onPress={() => setVisible((current) => !current)} />}
+      secureTextEntry={!visible}
+    />
+  );
+}
+
+export function TextArea({ label, ...props }: TextInputProps & { label: string }) {
+  return <TextField {...props} label={label} multiline numberOfLines={5} style={[{ minHeight: 128 }, props.style]} />;
 }
 
 export function SearchField({ value, onChangeText, placeholder = "Tìm kiếm" }: Pick<TextInputProps, "value" | "onChangeText" | "placeholder">) {

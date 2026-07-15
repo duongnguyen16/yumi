@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import {
   Card as PaperCard,
@@ -7,6 +7,8 @@ import {
   List,
   Surface,
   Text,
+  Modal,
+  Portal,
 } from "react-native-paper";
 import { colors, radius, spacing } from "../tokens";
 import type { IconName } from "./types";
@@ -27,29 +29,74 @@ export function Divider({ inset = false }: { inset?: boolean }) {
   return <PaperDivider style={{ backgroundColor: colors.separator, marginLeft: inset ? 66 : 0 }} />;
 }
 
-export function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
+export function GroupedList({ children }: { children: ReactNode }) {
+  const rows = Children.toArray(children);
+
   return (
-    <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between" }}>
-      <Text variant="titleLarge" style={{ color: colors.textPrimary, fontFamily: "Inter_700Bold" }}>
-        {title}
-      </Text>
+    <Card variant="grouped">
+      {rows.map((row, index) => (
+        <View key={index}>
+          {row}
+          {index < rows.length - 1 ? <Divider inset /> : null}
+        </View>
+      ))}
+    </Card>
+  );
+}
+
+export function SectionHeader({ title, supportingText, action }: { title: string; supportingText?: string; action?: ReactNode }) {
+  return (
+    <View style={{ alignItems: "flex-start", flexDirection: "row", gap: spacing[3], justifyContent: "space-between" }}>
+      <View style={{ flex: 1, gap: spacing[1] }}>
+        <Text variant="titleLarge" style={{ color: colors.textPrimary, fontFamily: "Inter_700Bold" }}>{title}</Text>
+        {supportingText ? <Text style={{ color: colors.textSecondary, fontFamily: "Inter_400Regular" }}>{supportingText}</Text> : null}
+      </View>
       {action}
     </View>
   );
 }
 
-export function ListRow({ icon, label, supportingText, trailing, onPress }: { icon?: IconName; label: string; supportingText?: string; trailing?: ReactNode; onPress?: () => void }) {
+export function ListRow({ icon, label, supportingText, value, trailing, showChevron = true, state = "default", onPress }: { icon?: IconName; label: string; supportingText?: string; value?: string; trailing?: ReactNode; showChevron?: boolean; state?: "default" | "unread" | "disabled" | "danger"; onPress?: () => void }) {
+  const right = trailing
+    ? () => trailing
+    : value
+      ? () => <Text style={{ color: state === "danger" ? colors.accentRed : colors.textSecondary, fontFamily: "Inter_500Medium" }}>{value}</Text>
+      : showChevron
+        ? (props: Parameters<NonNullable<React.ComponentProps<typeof List.Item>["right"]>>[0]) => <List.Icon {...props} color={colors.textTertiary} icon="chevron-right" />
+        : undefined;
+
   return (
     <List.Item
       description={supportingText}
       descriptionStyle={{ color: colors.textSecondary, fontFamily: "Inter_400Regular" }}
       left={icon ? () => <IconButton containerColor={colors.surfaceControl} icon={icon} iconColor={colors.accentPrimary} size={20} style={{ margin: 0 }} /> : undefined}
       onPress={onPress}
-      right={trailing ? () => trailing : (props) => <List.Icon {...props} color={colors.textTertiary} icon="chevron-right" />}
-      style={{ backgroundColor: colors.surfaceBase, minHeight: 66, paddingHorizontal: spacing[2] }}
+      right={right}
+      style={{ backgroundColor: state === "unread" ? colors.surfaceControl : colors.surfaceBase, minHeight: 66, opacity: state === "disabled" ? 0.5 : 1, paddingHorizontal: spacing[2] }}
       title={label}
-      titleStyle={{ color: colors.textPrimary, fontFamily: "Inter_600SemiBold" }}
+      titleStyle={{ color: state === "danger" ? colors.accentRed : colors.textPrimary, fontFamily: state === "unread" ? "Inter_700Bold" : "Inter_600SemiBold" }}
     />
+  );
+}
+
+export function FormSection({ title, supportingText, children }: { title: string; supportingText?: string; children: ReactNode }) {
+  return (
+    <View style={{ gap: spacing[3] }}>
+      <SectionHeader supportingText={supportingText} title={title} />
+      <Card>{children}</Card>
+    </View>
+  );
+}
+
+export function ActionSheet({ visible, title, message, actions, onDismiss }: { visible: boolean; title: string; message?: string; actions: { icon: IconName; label: string; onPress: () => void }[]; onDismiss: () => void }) {
+  return (
+    <Portal>
+      <Modal contentContainerStyle={{ backgroundColor: colors.surfaceBase, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, gap: spacing[2], marginTop: "auto", padding: spacing[5] }} dismissable onDismiss={onDismiss} visible={visible}>
+        <Text variant="titleLarge" style={{ color: colors.textPrimary, fontFamily: "Inter_700Bold" }}>{title}</Text>
+        {message ? <Text style={{ color: colors.textSecondary, fontFamily: "Inter_400Regular" }}>{message}</Text> : null}
+        {actions.map((action) => <ListRow key={action.label} icon={action.icon} label={action.label} onPress={action.onPress} showChevron={false} />)}
+      </Modal>
+    </Portal>
   );
 }
 
