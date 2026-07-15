@@ -1,8 +1,9 @@
-import { Stack, useFocusEffect, useRouter } from "expo-router";
+import { getWorkflowStatus } from "@/components/workflow/status";
+import { listDisputes, type DisputeItem } from "@/service/disputeService";
+import { ActivityRow, AppText, EmptyState, LoadingState, NavigationBar, Page, PageContent, Stack } from "@/ui/components";
+import { colors } from "@/ui/tokens";
+import { Stack as RouterStack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, Text } from "react-native";
-import { ActivityIndicator, HelperText } from "react-native-paper";
-import { DisputeItem, listDisputes } from "@/service/disputeService";
 
 export default function DisputesScreen() {
   const router = useRouter();
@@ -10,47 +11,37 @@ export default function DisputesScreen() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      async function load() {
-        const res = await listDisputes();
-        if (!active) return;
-        setItems(res.items);
-        setMessage(res.success ? "" : res.message || "Không thể lấy tranh chấp.");
-        setLoading(false);
-      }
-      void load();
-      return () => {
-        active = false;
-      };
-    }, []),
-  );
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    listDisputes().then((response) => {
+      if (!active) return;
+      setItems(response.items);
+      setMessage(response.success ? "" : response.message || "Không thể lấy tranh chấp.");
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, []));
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={pageStyle}>
-      <Stack.Screen options={{ title: "Tranh chấp", headerShown: true }} />
-      <Text style={headingStyle}>Tranh chấp sở hữu</Text>
-      {loading ? <ActivityIndicator color="#606C38" /> : null}
-      {!loading && items.length === 0 ? <Text style={bodyStyle}>Bạn chưa tham gia tranh chấp nào.</Text> : null}
-      {items.map((item) => {
-        const loc = typeof item.locationId === "object" ? item.locationId : null;
-        return (
-          <Pressable key={item._id} style={cardStyle} onPress={() => router.push(`/disputes/${item._id}` as never)}>
-            <Text style={titleStyle}>{loc?.name || "Tranh chấp sở hữu"}</Text>
-            <Text style={bodyStyle}>{loc?.address || ""}</Text>
-            <Text style={statusStyle}>{item.status}</Text>
-          </Pressable>
-        );
-      })}
-      {message ? <HelperText type="error">{message}</HelperText> : null}
-    </ScrollView>
+    <Page>
+      <RouterStack.Screen options={{ headerShown: false }} />
+      <NavigationBar onBack={() => router.back()} title="Tranh chấp" />
+      {loading ? <LoadingState /> : (
+        <PageContent>
+          <Stack>
+            <AppText variant="title1">Tranh chấp sở hữu</AppText>
+            <AppText style={{ color: colors.textSecondary }} variant="subhead">Theo dõi bằng chứng, các bên liên quan và quyết định cuối cùng.</AppText>
+          </Stack>
+          {items.length === 0 ? <EmptyState icon="shield-account-outline" supportingText="Hồ sơ tranh chấp mà bạn tham gia sẽ xuất hiện tại đây." title="Chưa có tranh chấp" /> : null}
+          <Stack>
+            {items.map((item) => {
+              const location = typeof item.locationId === "object" ? item.locationId : null;
+              return <ActivityRow icon="shield-account-outline" key={item._id} onPress={() => router.push(`/disputes/${item._id}` as never)} status={getWorkflowStatus(item.status)} supportingText={location?.address} title={location?.name || "Tranh chấp sở hữu"} />;
+            })}
+          </Stack>
+          {message ? <AppText style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
+        </PageContent>
+      )}
+    </Page>
   );
 }
-
-const pageStyle = { flexGrow: 1, backgroundColor: "#E8DCC7", padding: 20, gap: 14 };
-const cardStyle = { backgroundColor: "#D4B895", borderRadius: 24, borderCurve: "continuous" as const, padding: 18, gap: 8 };
-const headingStyle = { color: "#24301D", fontSize: 28, fontWeight: "800" as const };
-const titleStyle = { color: "#24301D", fontSize: 18, fontWeight: "800" as const };
-const bodyStyle = { color: "#3D4A35", fontSize: 15, lineHeight: 22 };
-const statusStyle = { color: "#606C38", fontWeight: "800" as const };

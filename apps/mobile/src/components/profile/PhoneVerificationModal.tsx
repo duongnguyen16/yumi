@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { Button, Modal, Portal, Text, TextInput } from "react-native-paper";
+import { Modal, Portal } from "react-native-paper";
 import {
   sendProfilePhoneOtp,
   verifyProfilePhoneOtp,
 } from "@/service/profileService";
+import { AppText, Button, Stack, TextField } from "@/ui/components";
+import { colors, radius, spacing } from "@/ui/tokens";
 
 type PhoneVerificationModalProps = {
   visible: boolean;
@@ -68,92 +69,54 @@ export default function PhoneVerificationModal({
       <Modal
         visible={visible}
         onDismiss={onDismiss}
-        contentContainerStyle={styles.modal}
+        contentContainerStyle={{ backgroundColor: colors.surfaceBase, borderRadius: radius.sheet, gap: spacing[3], marginHorizontal: spacing[4], padding: spacing[5] }}
       >
-        <Text variant="titleMedium" style={styles.title}>
-          Xác minh số điện thoại
-        </Text>
-        <Text style={styles.description}>
-          Nhập số điện thoại, nhận OTP và xác nhận để có thể đăng ký địa điểm.
-        </Text>
-
-        <View style={styles.fieldGroup}>
-          <TextInput
-            label="Số điện thoại"
-            placeholder="Nhập số điện thoại"
-            mode="outlined"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
+        <AppText variant="title2">Xác minh số điện thoại</AppText>
+        <AppText style={{ color: colors.textSecondary }} variant="subhead">Nhập số điện thoại, nhận OTP và xác nhận để có thể đăng ký địa điểm.</AppText>
+        <Stack>
+          <TextField
             disabled={sending || verifying}
+            keyboardType="phone-pad"
+            label="Số điện thoại"
+            onChangeText={setPhone}
+            placeholder="Nhập số điện thoại"
+            value={phone}
           />
           <Button
-            mode="contained"
-            icon="send"
-            loading={sending}
             disabled={sending || verifying}
+            icon="send"
+            label="Gửi OTP"
+            loading={sending}
             onPress={handleSendOtp}
-          >
-            Gửi OTP
-          </Button>
-        </View>
+            width="full"
+          />
+        </Stack>
 
         {otpSent ? (
-          <View style={styles.fieldGroup}>
-            <TextInput
-              label="OTP"
-              placeholder="Nhập mã OTP"
-              mode="outlined"
-              keyboardType="number-pad"
-              value={otp}
-              onChangeText={setOtp}
+          <Stack>
+            <TextField
               disabled={verifying}
+              keyboardType="number-pad"
+              label="OTP"
+              onChangeText={setOtp}
+              placeholder="Nhập mã OTP"
+              value={otp}
             />
             <Button
-              mode="contained"
-              icon="check"
-              loading={verifying}
               disabled={verifying}
+              icon="check"
+              label="Xác nhận OTP"
+              loading={verifying}
               onPress={handleVerifyOtp}
-            >
-              Xác nhận OTP
-            </Button>
-          </View>
+              width="full"
+            />
+          </Stack>
         ) : null}
 
-        {message ? <Text style={styles.message}>{message}</Text> : null}
+        {message ? <AppText style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
 
-        <Button onPress={onDismiss} disabled={sending || verifying}>
-          Hủy
-        </Button>
+        <Button disabled={sending || verifying} label="Hủy" onPress={onDismiss} variant="tertiary" />
       </Modal>
     </Portal>
   );
 }
-
-const styles = StyleSheet.create({
-  modal: {
-    marginHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    color: "#24211d",
-    fontWeight: "900",
-  },
-  description: {
-    color: "#7e786f",
-    lineHeight: 20,
-    fontWeight: "600",
-  },
-  fieldGroup: {
-    gap: 10,
-  },
-  message: {
-    color: "#d8512e",
-    fontWeight: "700",
-    lineHeight: 20,
-  },
-});

@@ -17,8 +17,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { IconButton, Text } from "react-native-paper";
+import { View } from "react-native";
+import { EmptyState, IconButton, LoadingState } from "@/ui/components";
+import { colors, radius, spacing } from "@/ui/tokens";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_APu ||
@@ -172,41 +173,19 @@ function CustomMap(
     });
   }, [pinLocation, previewMode]);
   if (loading) {
-    return (
-      <View
-        style={{
-          height: 300,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "white",
-        }}
-      >
-        <ActivityIndicator />
-      </View>
-    );
+    return <View style={{ height: 300 }}><LoadingState label="Đang tải bản đồ" /></View>;
   }
 
   if (mapError || !mapStyle) {
-    return (
-      <View
-        style={{
-          height: 300,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#eee",
-        }}
-      >
-        <Text>{mapError || "Không có map style"}</Text>
-      </View>
-    );
+    return <View style={{ height: 300 }}><EmptyState icon="alert-outline" supportingText={mapError || "Không có map style"} title="Không thể tải bản đồ" /></View>;
   }
   return (
     <View
       style={{
         height: 300,
-        borderRadius: 12,
+        borderRadius: radius.large,
         overflow: "hidden",
-        backgroundColor: "white",
+        backgroundColor: colors.canvasMap,
         position: "relative",
       }}
     >
@@ -214,12 +193,6 @@ function CustomMap(
         mapStyle={mapStyle}
         ref={mapRef}
         style={{ flex: 1 }}
-        onDidFinishLoadingMap={() => {
-          console.log("Map loaded");
-        }}
-        onDidFailLoadingMap={() => {
-          console.log("Map load failed");
-        }}
         dragPan={previewMode ? false : true}
         touchZoom={previewMode ? false : true}
         doubleTapZoom={previewMode ? false : true}
@@ -238,30 +211,6 @@ function CustomMap(
             zoom: 16,
           }}
         />
-        {/* <ViewAnnotation
-          id="picked-location"
-          lngLat={coordinates}
-          draggable
-          anchor="bottom"
-          onDragEnd={(event) => {
-            const nextLngLat = event.nativeEvent.lngLat as [number, number];
-            setCoordinates(nextLngLat);
-
-            console.log("longitude:", nextLngLat[0]);
-            console.log("latitude:", nextLngLat[1]);
-          }}
-        >
-          <View
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 14,
-              backgroundColor: "red",
-              borderWidth: 3,
-              borderColor: "white",
-            }}
-          />
-        </ViewAnnotation> */}
       </Map>
       <View
         pointerEvents="none"
@@ -273,21 +222,12 @@ function CustomMap(
           marginTop: -28,
         }}
       >
-        <MaterialCommunityIcons name="map-marker" size={42} color="#ff5a1f" />
+        <MaterialCommunityIcons name="map-marker" size={42} color={colors.accentPrimary} />
       </View>
       {!previewMode && (
-        <IconButton
-          icon="crosshairs-gps"
-          mode="outlined"
-          size={24}
-          onPress={getLocation}
-          style={{
-            position: "absolute",
-            right: 10,
-            bottom: 10,
-            backgroundColor: "white",
-          }}
-        />
+        <View style={{ bottom: spacing[2], position: "absolute", right: spacing[2] }}>
+          <IconButton icon="crosshairs-gps" label="Vị trí hiện tại" onPress={getLocation} />
+        </View>
       )}
     </View>
   );

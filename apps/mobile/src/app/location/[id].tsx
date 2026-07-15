@@ -6,7 +6,7 @@ import {
 } from "@/service/locationReportService";
 import { getAllProductsByLocation } from "@/service/product";
 import { Stack, useLocalSearchParams } from "expo-router";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { View } from "react-native";
 import {
   ActivityIndicator,
@@ -44,7 +44,7 @@ export default function LocationDetail() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const { user } = useContext(userContext);
-  const fetchLocationData = async () => {
+  const fetchLocationData = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -61,7 +61,7 @@ export default function LocationDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   const refreshLocationData = async () => {
     try {
@@ -78,7 +78,7 @@ export default function LocationDetail() {
     }
   };
 
-  const fetchProductData = async () => {
+  const fetchProductData = useCallback(async () => {
     try {
       const response = await getAllProductsByLocation(id as string);
       if (response.success) {
@@ -87,12 +87,11 @@ export default function LocationDetail() {
     } catch (error) {
       console.log("Error fetching product data:", error);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    fetchLocationData();
-    fetchProductData();
-  }, [id]);
+    void Promise.resolve().then(() => Promise.all([fetchLocationData(), fetchProductData()]));
+  }, [fetchLocationData, fetchProductData]);
 
   const handleSubmitReport = async () => {
     const locationId = id as string;

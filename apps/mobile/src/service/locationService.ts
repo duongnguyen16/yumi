@@ -1,6 +1,5 @@
 import * as Location from "expo-location";
 import api from "./aixos";
-import { success } from "zod";
 
 const emptyLocations = {
   type: "FeatureCollection" as const,
