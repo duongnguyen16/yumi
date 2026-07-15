@@ -23,6 +23,7 @@ interface Props {
   startInRejectMode: boolean;
   submitting: boolean;
   error: string | null;
+  readOnly?: boolean;
   onClose: () => void;
   onApprove: () => void;
   onReject: (reason: string, duplicateOfLocationId?: string) => void;
@@ -46,6 +47,7 @@ export function LocationRequestDetailDrawer({
   startInRejectMode,
   submitting,
   error,
+  readOnly = false,
   onClose,
   onApprove,
   onReject,
@@ -99,7 +101,11 @@ export function LocationRequestDetailDrawer({
         </Box>
       }
       footer={
-        !rejecting ? (
+        readOnly ? (
+          <ActionButton variant="neutral" onClick={close} sx={{ flex: 1 }}>
+            Đóng
+          </ActionButton>
+        ) : !rejecting ? (
           <>
             <ActionButton variant="neutral" onClick={close} sx={{ flex: 1 }}>
               Đóng
@@ -235,6 +241,23 @@ export function LocationRequestDetailDrawer({
           />
         </Box>
 
+        {readOnly && (
+          <Box sx={{ border: `1px solid ${tokens.color.border}`, p: 1.5 }}>
+            <MetaRow label="Trạng thái" value={request?.status ?? '—'} />
+            <Divider />
+            <MetaRow label="Lý do xử lý" value={request?.reviewNote ?? 'Không có'} />
+            <Divider />
+            <MetaRow
+              label="Xử lý lúc"
+              value={
+                request?.reviewedAt
+                  ? new Date(request.reviewedAt).toLocaleString('vi-VN')
+                  : '—'
+              }
+            />
+          </Box>
+        )}
+
         {Object.keys(snapshot).length > 0 && (
           <Box>
             <Typography variant="overline" sx={{ display: 'block', mb: 1 }}>
@@ -257,7 +280,7 @@ export function LocationRequestDetailDrawer({
           </Box>
         )}
 
-        {rejecting && (
+        {!readOnly && rejecting && (
           <Box>
             <TextField
               label="Lý do từ chối"

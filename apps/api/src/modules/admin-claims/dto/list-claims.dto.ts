@@ -1,8 +1,13 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 import { ClaimRequestStatus } from 'src/common/schemas/common.enums';
+import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
 export class ListClaimsDTO {
+  @IsOptional()
+  @IsEnum(AdminListView)
+  view: AdminListView = AdminListView.QUEUE;
+
   @IsOptional()
   @IsEnum(ClaimRequestStatus)
   status?: ClaimRequestStatus;
