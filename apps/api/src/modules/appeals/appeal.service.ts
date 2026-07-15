@@ -21,6 +21,7 @@ import {
 import { AppealRestoreService } from './appeal-restore.service';
 import { AppealSourceService } from './appeal-source.service';
 import { ListAppealsDTO } from './dto/list-appeals.dto';
+import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { ResolveAppealDTO } from './dto/resolve-appeal.dto';
 import { SubmitAppealDTO } from './dto/submit-appeal.dto';
 
@@ -126,13 +127,31 @@ export class AppealService {
   async getQueue(query: ListAppealsDTO) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter: Record<string, unknown> = {};
-    if (query.status) filter.status = query.status;
+    const isHistory = query.view === AdminListView.HISTORY;
+    const historyStatuses = [
+      AppealStatus.ACCEPTED_TO_DISPUTE,
+      AppealStatus.OVERTURNED,
+      AppealStatus.UPHELD,
+    ];
+    const filter: Record<string, unknown> = {
+      status: query.status
+        ? query.status
+        : isHistory
+          ? { $in: historyStatuses }
+          : AppealStatus.PENDING,
+    };
     if (query.type) filter.type = query.type;
+    const sort: Record<string, 1 | -1> = isHistory
+      ? {
+          'adminDecision.decidedAt': -1 as const,
+          updatedAt: -1 as const,
+          createdAt: -1 as const,
+        }
+      : { createdAt: 1 as const };
     const [items, total] = await Promise.all([
       this.appealModel
         .find(filter)
-        .sort({ createdAt: 1 })
+        .sort(sort)
         .skip((page - 1) * limit)
         .limit(limit)
         .populate('appellantId', 'fullName email')

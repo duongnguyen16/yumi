@@ -15,11 +15,12 @@ interface Props {
   item: AdminAppeal | null;
   saving: boolean;
   error: string | null;
+  readOnly?: boolean;
   onClose: () => void;
   onResolve: (decision: Decision, reason: string) => void;
 }
 
-export function AppealDetailDrawer({ open, item, saving, error, onClose, onResolve }: Props) {
+export function AppealDetailDrawer({ open, item, saving, error, readOnly = false, onClose, onResolve }: Props) {
   const requestAppeal = item?.type === 'REQUEST_ACCESS_REJECTED';
   const decisions: Decision[] = requestAppeal
     ? ['ACCEPTED_TO_DISPUTE', 'UPHELD']
@@ -38,7 +39,9 @@ export function AppealDetailDrawer({ open, item, saving, error, onClose, onResol
       width={500}
       preview={<RuleOutlinedIcon sx={{ fontSize: 64, color: tokens.color.orange }} />}
       footer={
-        <>
+        readOnly ? (
+          <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>Đóng</ActionButton>
+        ) : <>
           <ActionButton variant="neutral" onClick={onClose} disabled={saving} sx={{ flex: 1 }}>Đóng</ActionButton>
           <ActionButton variant="approve" disabled={saving || reason.trim().length < 5} onClick={() => onResolve(decision, reason.trim())} sx={{ flex: 1.5 }}>
             {saving ? 'Đang xử lý' : 'Xác nhận'}
@@ -69,12 +72,22 @@ export function AppealDetailDrawer({ open, item, saving, error, onClose, onResol
             ))}
           </Stack>
         </Box>
-        <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+        {!readOnly && <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
           {decisions.map((value) => (
             <Chip key={value} label={value} onClick={() => setDecision(value)} sx={{ borderRadius: 0, bgcolor: decision === value ? tokens.color.orange : tokens.color.inputBg, color: decision === value ? '#fff' : tokens.color.textPrimary, fontWeight: 700 }} />
           ))}
-        </Stack>
-        <TextField fullWidth multiline minRows={3} label="Lý do xử lý" value={reason} onChange={(event) => setReason(event.target.value)} helperText="Tối thiểu 5 ký tự" />
+        </Stack>}
+        {!readOnly && <TextField fullWidth multiline minRows={3} label="Lý do xử lý" value={reason} onChange={(event) => setReason(event.target.value)} helperText="Tối thiểu 5 ký tự" />}
+        {readOnly && (
+          <Box sx={{ border: `1px solid ${tokens.color.border}`, p: 1.5 }}>
+            <Typography variant="overline">Kết quả</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{item?.status ?? '—'}</Typography>
+            <Typography sx={{ color: tokens.color.textSecondary, fontSize: 13 }}>{item?.adminDecision?.reason ?? 'Không có lý do'}</Typography>
+            <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
+              {item?.adminDecision?.decidedAt ? new Date(item.adminDecision.decidedAt).toLocaleString('vi-VN') : '—'}
+            </Typography>
+          </Box>
+        )}
         {error && <Alert severity="error">{error}</Alert>}
       </Stack>
     </DetailDrawer>
