@@ -226,6 +226,13 @@ export default function EditLocationScreen({
     let deviceLocation = null;
     if (selectedChip.includes("address")) {
       const result = await getCurrentLocation();
+      if (!result) {
+        Alert.alert(
+          "Không thể lấy vị trí thiết bị. Vui lòng kiểm tra quyền truy cập vị trí.",
+        );
+        setLoading(false);
+        return;
+      }
       deviceLocation = [result.coords.longitude, result.coords.latitude];
     }
     const submitData = {
