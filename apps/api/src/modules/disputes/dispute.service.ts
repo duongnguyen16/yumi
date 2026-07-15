@@ -11,6 +11,7 @@ import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
+import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { DisputeOutcome, ResolveDisputeDTO } from './dto/resolve-dispute.dto';
 
 @Injectable()
@@ -78,11 +79,30 @@ export class DisputeService {
   async getQueue(query: ListDisputesDTO) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const filter = { status: query.status ?? DisputeStatus.OPEN };
+    const isHistory = query.view === AdminListView.HISTORY;
+    const historyStatuses = [
+      DisputeStatus.RESOLVED_KEEP,
+      DisputeStatus.RESOLVED_TRANSFER,
+      DisputeStatus.RESOLVED_REVOKE,
+    ];
+    const filter = query.status
+      ? { status: query.status }
+      : {
+          status: isHistory
+            ? { $in: historyStatuses }
+            : DisputeStatus.OPEN,
+        };
+    const sort: Record<string, 1 | -1> = isHistory
+      ? {
+          'adminDecision.decidedAt': -1 as const,
+          updatedAt: -1 as const,
+          createdAt: -1 as const,
+        }
+      : { createdAt: 1 as const };
     const [items, total] = await Promise.all([
       this.disputeModel
         .find(filter)
-        .sort({ createdAt: 1 })
+        .sort(sort)
         .skip((page - 1) * limit)
         .limit(limit)
         .populate('locationId', 'name address ownerId')

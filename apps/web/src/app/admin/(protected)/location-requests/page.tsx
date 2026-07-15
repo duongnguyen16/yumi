@@ -14,6 +14,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TablePagination,
   Tooltip,
   Typography,
   type SxProps,
@@ -29,7 +30,9 @@ import {
   getLocationRequestQueue,
   rejectLocationRequest,
   type AdminLocationRequest,
+  type AdminRequestView,
 } from '@/lib/admin-api';
+import { AdminRequestTabs } from '@/components/admin/AdminRequestTabs';
 import { Topbar } from '@/components/admin/Topbar';
 import { AdminCard } from '@/components/admin/AdminCard';
 import { ActionButton } from '@/components/admin/ActionButton';
@@ -64,6 +67,7 @@ export default function LocationRequestsPage() {
   const [items, setItems] = useState<AdminLocationRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<AdminRequestView>('queue');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AdminLocationRequest | null>(null);
@@ -72,9 +76,9 @@ export default function LocationRequestsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const fetchQueue = useCallback(async (p: number) => {
+  const fetchQueue = useCallback(async (p: number, nextView: AdminRequestView) => {
     try {
-      const data = await getLocationRequestQueue(p, PAGE_SIZE);
+      const data = await getLocationRequestQueue(p, PAGE_SIZE, nextView);
       setItems(data.items);
       setTotal(data.total);
       setPage(data.page);
@@ -91,7 +95,7 @@ export default function LocationRequestsPage() {
 
     async function loadQueue() {
       try {
-        const data = await getLocationRequestQueue(1, PAGE_SIZE);
+        const data = await getLocationRequestQueue(1, PAGE_SIZE, view);
         if (!active) return;
         setItems(data.items);
         setTotal(data.total);
@@ -110,7 +114,7 @@ export default function LocationRequestsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [view]);
 
   function openDetail(req: AdminLocationRequest, reject = false) {
     setSelected(req);
@@ -132,7 +136,7 @@ export default function LocationRequestsPage() {
     try {
       await approveLocationRequest(selected._id);
       setDrawerOpen(false);
-      await fetchQueue(page);
+      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -147,7 +151,7 @@ export default function LocationRequestsPage() {
     try {
       await rejectLocationRequest(selected._id, reason, duplicateOfLocationId);
       setDrawerOpen(false);
-      await fetchQueue(page);
+      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -167,16 +171,26 @@ export default function LocationRequestsPage() {
     >
       <Topbar
         title="Duyệt địa điểm"
-        subtitle={`${total} phiếu chờ xử lý`}
+        subtitle={view === 'queue' ? `${total} phiếu chờ xử lý` : `${total} phiếu trong lịch sử`}
         actions={
           <ActionButton
             variant="neutral"
-            onClick={() => fetchQueue(page)}
+            onClick={() => fetchQueue(page, view)}
             sx={{ borderRadius: 0, height: 44 }}
           >
             Tải lại
           </ActionButton>
         }
+      />
+
+      <AdminRequestTabs
+        value={view}
+        onChange={(nextView) => {
+          closeDrawer();
+          setLoading(true);
+          setPage(1);
+          setView(nextView);
+        }}
       />
 
       {error && (
@@ -202,6 +216,7 @@ export default function LocationRequestsPage() {
                   <TableCell sx={headSx}>Loại</TableCell>
                   <TableCell sx={headSx}>Cờ cảnh báo</TableCell>
                   <TableCell sx={headSx}>Gửi lúc</TableCell>
+                  <TableCell sx={headSx}>Trạng thái</TableCell>
                   <TableCell sx={headSx} align="right">
                     Hành động
                   </TableCell>
@@ -210,11 +225,11 @@ export default function LocationRequestsPage() {
               <TableBody>
                 {items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ borderBottom: 'none' }}>
+                    <TableCell colSpan={7} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
-                        title="Không có phiếu chờ duyệt"
-                        subtitle="Hàng đợi trống."
+                        title={view === 'queue' ? 'Không có phiếu chờ duyệt' : 'Chưa có lịch sử duyệt'}
+                        subtitle={view === 'queue' ? 'Hàng đợi trống.' : 'Chưa có phiếu nào đã xử lý.'}
                       />
                     </TableCell>
                   </TableRow>
@@ -296,6 +311,9 @@ export default function LocationRequestsPage() {
                           {formatTime(req.createdAt)}
                         </Typography>
                       </TableCell>
+                      <TableCell>
+                        <Chip size="small" label={req.status} sx={{ borderRadius: 0 }} />
+                      </TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
                           <Tooltip title="Xem chi tiết">
@@ -307,7 +325,7 @@ export default function LocationRequestsPage() {
                               <VisibilityOutlinedIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Duyệt">
+                          {view === 'queue' && <Tooltip title="Duyệt">
                             <IconButton
                               size="small"
                               onClick={() => openDetail(req)}
@@ -315,8 +333,8 @@ export default function LocationRequestsPage() {
                             >
                               <CheckOutlinedIcon fontSize="small" />
                             </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Từ chối">
+                          </Tooltip>}
+                          {view === 'queue' && <Tooltip title="Từ chối">
                             <IconButton
                               size="small"
                               onClick={() => openDetail(req, true)}
@@ -324,7 +342,7 @@ export default function LocationRequestsPage() {
                             >
                               <BlockOutlinedIcon fontSize="small" />
                             </IconButton>
-                          </Tooltip>
+                          </Tooltip>}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -333,6 +351,17 @@ export default function LocationRequestsPage() {
               </TableBody>
             </Table>
           </Box>
+          <TablePagination
+            component="div"
+            count={total}
+            page={Math.max(0, page - 1)}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[PAGE_SIZE]}
+            onPageChange={(_, nextPage) => {
+              setLoading(true);
+              void fetchQueue(nextPage + 1, view);
+            }}
+          />
         </AdminCard>
       )}
 
@@ -343,6 +372,7 @@ export default function LocationRequestsPage() {
         startInRejectMode={startInRejectMode}
         submitting={submitting}
         error={drawerError}
+        readOnly={view === 'history'}
         onClose={closeDrawer}
         onApprove={handleApprove}
         onReject={handleReject}

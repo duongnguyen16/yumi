@@ -338,6 +338,12 @@ export default function Profile() {
           <MenuItem icon="star" label="Reviews đã viết" />
           <Divider />
           <MenuItem icon="mail" label="Thông báo" />
+          <Divider />
+          <MenuItem
+            icon="layout"
+            label="UI foundation"
+            onPress={() => router.push("/ui-preview" as never)}
+          />
           {user?.role === "VENDOR" ? (
             <>
               <Divider />
