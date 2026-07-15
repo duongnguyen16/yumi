@@ -98,8 +98,8 @@ export default function LocationDetail() {
     const locationId = id as string;
     const description = reportDescription.trim();
 
-    if (description.length < 10) {
-      setNotice("Mô tả báo cáo cần ít nhất 10 ký tự.");
+    if (description.length < 10 || description.length > 1000) {
+      setNotice("Mô tả báo cáo cần từ 10 đến 1000 ký tự.");
       return;
     }
 

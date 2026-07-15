@@ -119,7 +119,7 @@ export class ImagesService {
     return this.supabaseClient;
   }
 
-  async updateMedia(path: string, file: Express.Multer.File) {
+  async updateMedia(folderPath: string, file: Express.Multer.File) {
     const supabase = this.getSupabaseClient();
     const bucket = this.getBucket();
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
@@ -133,7 +133,9 @@ export class ImagesService {
         `File ${fileType} phải nhỏ hơn hoặc bằng ${maxSize / (1024 * 1024)}MB`,
       );
     }
-    const filePath = `${path}/${randomUUID()}/${fileType}/${file.filename || file.originalname}`;
+    const fileExtension = extname(file.originalname).toLowerCase();
+    const objectName = `${randomUUID()}${fileExtension}`;
+    const filePath = `${folderPath}/${fileType}/${objectName}`;
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file.buffer, {
@@ -153,11 +155,12 @@ export class ImagesService {
     };
   }
 
-  async uploadMultiMedia(path: string, files: Express.Multer.File[]) {
+  async uploadMultiMedia(baseFolder: string, files: Express.Multer.File[]) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Không có tệp nào được tải lên');
     }
-    return Promise.all(files.map((file) => this.updateMedia(path, file)));
+    const folderPath = `${baseFolder}/${randomUUID()}`;
+    return Promise.all(files.map((file) => this.updateMedia(folderPath, file)));
   }
   private getBucket() {
     return (

@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsMongoId,
   IsNotEmpty,
   IsNumber,
@@ -35,5 +36,6 @@ export class CreateLocationRequestDataDto {
   pinLongitude!: number;
 
   @IsString()
+  @IsDateString({}, { message: 'Thời gian chụp không hợp lệ' })
   captureAt!: string;
 }
