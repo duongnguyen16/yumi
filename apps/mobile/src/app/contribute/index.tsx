@@ -34,6 +34,11 @@ import {
 import { getAllCategories, getSubCategory } from "@/service/categoryService";
 import { getSystemCode } from "@/service/locationService";
 import Option from "@/components/ui/Option";
+import {
+  validateDescription,
+  validateOpeningHours,
+  validateTimeRange,
+} from "@/common/function";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -212,7 +217,7 @@ export default function ContributePlaceScreen() {
         if (isVendorRegistration) {
           const response = await getSystemCode();
           if (response.success) {
-            setSystemCode(response.code);
+            setSystemCode(response.systemCode);
           } else {
             Alert.alert(
               "Không tạo được mã",
@@ -446,13 +451,27 @@ export default function ContributePlaceScreen() {
       return;
     }
 
-    const newVideos = result.assets.map((asset, index) => ({
-      id: `video-${Date.now()}-${index}`,
-      uri: asset.uri,
-      fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
-      mimeType: asset.mimeType ?? "video/mp4",
-      fileSize: asset.fileSize ?? 1024,
-    }));
+    const newVideos = result.assets.map((asset, index) => {
+      if (asset.fileSize > 50 * 1024 * 1024) {
+        Alert.alert("Video quá lớn", "Vui lòng chọn video nhỏ hơn 50MB.");
+        return null;
+      }
+      if (typeof asset.fileSize !== "number") {
+        Alert.alert("Dữ liệu video không hợp lệ", "Vui lòng chọn video khác.");
+        return null;
+      }
+      if (asset.duration > 60 * 1000) {
+        Alert.alert("Video quá dài", "Vui lòng chọn video ngắn hơn 60 giây.");
+        return null;
+      }
+      return {
+        id: `video-${Date.now()}-${index}`,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
+        mimeType: asset.mimeType ?? "video/mp4",
+        fileSize: asset.fileSize,
+      };
+    });
 
     setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
   };
@@ -573,6 +592,16 @@ export default function ContributePlaceScreen() {
     if (step === 0) {
       if (!name.trim() || !description.trim() || !selectedCategoryId) {
         Alert.alert("Thiếu thông tin", "Hãy nhập tên, mô tả và chọn danh mục.");
+        return;
+      }
+      const validateDesc = validateDescription(description.trim());
+      if (validateDesc.isValid === false) {
+        Alert.alert(validateDesc.message);
+        return;
+      }
+      const validateClock = validateTimeRange(openHours, closeHours);
+      if (validateClock.isValid === false) {
+        Alert.alert(validateClock.message);
         return;
       }
       setStep(1);
