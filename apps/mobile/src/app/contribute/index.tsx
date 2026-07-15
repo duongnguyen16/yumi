@@ -454,15 +454,15 @@ export default function ContributePlaceScreen() {
     const newVideos = result.assets.map((asset, index) => {
       if (asset.fileSize > 50 * 1024 * 1024) {
         Alert.alert("Video quá lớn", "Vui lòng chọn video nhỏ hơn 50MB.");
-        return null;
+        return;
       }
       if (typeof asset.fileSize !== "number") {
         Alert.alert("Dữ liệu video không hợp lệ", "Vui lòng chọn video khác.");
-        return null;
+        return;
       }
       if (asset.duration > 60 * 1000) {
         Alert.alert("Video quá dài", "Vui lòng chọn video ngắn hơn 60 giây.");
-        return null;
+        return;
       }
       return {
         id: `video-${Date.now()}-${index}`,
@@ -473,7 +473,12 @@ export default function ContributePlaceScreen() {
       };
     });
 
-    setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
+    setVideos((current) =>
+      [
+        ...current,
+        ...newVideos.filter((vid) => vid !== null && vid !== undefined),
+      ].slice(0, MAX_VIDEOS),
+    );
   };
 
   const handlePickLicenseFiles = async () => {
