@@ -708,7 +708,7 @@ imports: [
 
 ---
 
-## 6. Seed data để test (không cần WDP-27 xong)
+## 6. Dữ liệu mẫu để kiểm thử (không cần WDP-27 hoàn thành)
 
 Vì WDP-27 (tạo claim) chưa xong, **seed tay** bằng **MongoDB Compass / mongosh**. Cần: 1 `Location`, 1 user `VENDOR` (người claim), 1 user `ADMIN` (để login), và 1 `ClaimRequest` PENDING.
 
@@ -762,7 +762,7 @@ db.users.insertOne({
 
 ---
 
-## 7. Chạy & test
+## 7. Chạy và kiểm thử
 
 ```bash
 # từ thư mục gốc repo (repo đã chuyển pnpm → npm)

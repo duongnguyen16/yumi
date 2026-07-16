@@ -49,16 +49,19 @@ function handle<T extends ServiceResult>(result: T) {
 export class DisputeController {
   constructor(private readonly service: DisputeService) {}
 
+  // list disputes
   @Get('mine')
   async mine(@NestRequest() req: UserRequest) {
     return handle(await this.service.listMine(req.user.userId));
   }
 
+  // get detail
   @Get(':id')
   async detail(@Param('id') id: string, @NestRequest() req: UserRequest) {
     return handle(await this.service.getForUser(id, req.user.userId));
   }
 
+   // add bằng chứng
   @Post(':id/evidence')
   async evidence(
     @Param('id') id: string,
@@ -75,17 +78,19 @@ export class DisputeController {
 @UseGuards(AuthGuard('jwt-at'), AdminGuard)
 export class AdminDisputeController {
   constructor(private readonly service: DisputeService) {}
-
+  // list disputes
   @Get()
   async queue(@Query() query: ListDisputesDTO) {
     return handle(await this.service.getQueue(query));
   }
 
+  // get detail
   @Get(':id')
   async detail(@Param('id') id: string) {
     return handle(await this.service.getDetail(id));
   }
 
+  // giải quyết tranh chấp
   @Patch(':id/resolve')
   async resolve(
     @Param('id') id: string,

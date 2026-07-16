@@ -81,7 +81,7 @@ apps/web/src/
 - Audit ghi trực tiếp vào `audit_logs` vì chưa có utility chung.
 - `LocationContributionsService` và `VendorLocationsService` là hai flow đang tạo `LocationRequest`; không đổi contract `newData` mà không đồng bộ hai module này.
 
-## 7. Kiểm thử hiện có và E2E cần chạy
+## 7. Kiểm thử hiện có và kiểm thử đầu-cuối cần chạy
 
 Unit test: `apps/api/src/modules/admin/admin-location.service.spec.ts` kiểm queue flags, approve re-approval và reject không có lý do.
 
