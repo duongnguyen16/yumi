@@ -5,35 +5,42 @@ import dayjs from 'dayjs';
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
-  IconButton,
   Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
+  TablePagination,
   Tooltip,
   Typography,
   type SxProps,
   type Theme,
 } from '@mui/material';
-import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import {
   approveLocationRequest,
   getLocationRequestQueue,
   rejectLocationRequest,
   type AdminLocationRequest,
+  type AdminRequestView,
 } from '@/lib/admin-api';
+import { AdminRequestTabs } from '@/components/admin/AdminRequestTabs';
 import { Topbar } from '@/components/admin/Topbar';
 import { AdminCard } from '@/components/admin/AdminCard';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { EmptyState } from '@/components/admin/EmptyState';
+import {
+  locationRequestStatusLabel,
+  locationRequestTypeLabel,
+} from '@/components/admin/admin-review-labels';
 import { tilePalette, tokens } from '@/theme/admin-tokens';
 import { LocationRequestDetailDrawer } from './components/LocationRequestDetailDrawer';
 
@@ -48,7 +55,7 @@ function formatTime(value?: string): string {
   return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—';
 }
 
-const headSx: SxProps<Theme> = {
+const headSx = {
   fontFamily: tokens.font.mono,
   fontSize: 11,
   fontWeight: 700,
@@ -58,12 +65,30 @@ const headSx: SxProps<Theme> = {
   borderBottom: `1px solid ${tokens.color.border}`,
   py: 2,
   whiteSpace: 'nowrap',
+} satisfies SxProps<Theme>;
+
+const stickyActionHeadSx: SxProps<Theme> = {
+  ...headSx,
+  position: 'sticky',
+  right: 0,
+  zIndex: 2,
+  bgcolor: tokens.color.card,
+  boxShadow: '-8px 0 12px rgba(25, 28, 33, 0.04)',
+};
+
+const stickyActionCellSx: SxProps<Theme> = {
+  position: 'sticky',
+  right: 0,
+  zIndex: 1,
+  bgcolor: tokens.color.card,
+  boxShadow: '-8px 0 12px rgba(25, 28, 33, 0.04)',
 };
 
 export default function LocationRequestsPage() {
   const [items, setItems] = useState<AdminLocationRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<AdminRequestView>('queue');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AdminLocationRequest | null>(null);
@@ -72,9 +97,9 @@ export default function LocationRequestsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const fetchQueue = useCallback(async (p: number) => {
+  const fetchQueue = useCallback(async (p: number, nextView: AdminRequestView) => {
     try {
-      const data = await getLocationRequestQueue(p, PAGE_SIZE);
+      const data = await getLocationRequestQueue(p, PAGE_SIZE, nextView);
       setItems(data.items);
       setTotal(data.total);
       setPage(data.page);
@@ -91,7 +116,7 @@ export default function LocationRequestsPage() {
 
     async function loadQueue() {
       try {
-        const data = await getLocationRequestQueue(1, PAGE_SIZE);
+        const data = await getLocationRequestQueue(1, PAGE_SIZE, view);
         if (!active) return;
         setItems(data.items);
         setTotal(data.total);
@@ -110,7 +135,7 @@ export default function LocationRequestsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [view]);
 
   function openDetail(req: AdminLocationRequest, reject = false) {
     setSelected(req);
@@ -132,7 +157,7 @@ export default function LocationRequestsPage() {
     try {
       await approveLocationRequest(selected._id);
       setDrawerOpen(false);
-      await fetchQueue(page);
+      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -147,7 +172,7 @@ export default function LocationRequestsPage() {
     try {
       await rejectLocationRequest(selected._id, reason, duplicateOfLocationId);
       setDrawerOpen(false);
-      await fetchQueue(page);
+      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -167,16 +192,26 @@ export default function LocationRequestsPage() {
     >
       <Topbar
         title="Duyệt địa điểm"
-        subtitle={`${total} phiếu chờ xử lý`}
+        subtitle={view === 'queue' ? `${total} phiếu chờ xử lý` : `${total} phiếu trong lịch sử`}
         actions={
           <ActionButton
             variant="neutral"
-            onClick={() => fetchQueue(page)}
+            onClick={() => fetchQueue(page, view)}
             sx={{ borderRadius: 0, height: 44 }}
           >
             Tải lại
           </ActionButton>
         }
+      />
+
+      <AdminRequestTabs
+        value={view}
+        onChange={(nextView) => {
+          closeDrawer();
+          setLoading(true);
+          setPage(1);
+          setView(nextView);
+        }}
       />
 
       {error && (
@@ -194,7 +229,7 @@ export default function LocationRequestsPage() {
           sx={{ flex: 1, borderRadius: 0, animation: 'admin-fade-in 320ms ease both' }}
         >
           <Box sx={{ overflowX: 'auto' }}>
-            <Table size="small">
+            <Table size="small" sx={{ minWidth: 1080 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: tokens.color.card }}>
                   <TableCell sx={headSx}>Tên địa điểm</TableCell>
@@ -202,7 +237,8 @@ export default function LocationRequestsPage() {
                   <TableCell sx={headSx}>Loại</TableCell>
                   <TableCell sx={headSx}>Cờ cảnh báo</TableCell>
                   <TableCell sx={headSx}>Gửi lúc</TableCell>
-                  <TableCell sx={headSx} align="right">
+                  <TableCell sx={headSx}>Trạng thái</TableCell>
+                  <TableCell sx={stickyActionHeadSx} align="right">
                     Hành động
                   </TableCell>
                 </TableRow>
@@ -210,11 +246,11 @@ export default function LocationRequestsPage() {
               <TableBody>
                 {items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ borderBottom: 'none' }}>
+                    <TableCell colSpan={7} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
-                        title="Không có phiếu chờ duyệt"
-                        subtitle="Hàng đợi trống."
+                        title={view === 'queue' ? 'Không có phiếu chờ duyệt' : 'Chưa có lịch sử duyệt'}
+                        subtitle={view === 'queue' ? 'Hàng đợi trống.' : 'Chưa có phiếu nào đã xử lý.'}
                       />
                     </TableCell>
                   </TableRow>
@@ -259,7 +295,7 @@ export default function LocationRequestsPage() {
                               flexShrink: 0,
                             }}
                           >
-                            <WarningAmberOutlinedIcon sx={{ fontSize: 20 }} />
+                            <LocationOnOutlinedIcon sx={{ fontSize: 20 }} />
                           </Box>
                           <Typography
                             sx={{ fontWeight: 700, fontSize: 15, color: tokens.color.textPrimary }}
@@ -268,17 +304,17 @@ export default function LocationRequestsPage() {
                           </Typography>
                         </Stack>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 150 }}>
                         <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
                           {submitter?.fullName ?? submitter?.email ?? '—'}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 150 }}>
                         <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
-                          {req.type === 'UPDATE' ? 'Sửa' : req.type === 'CREATE' ? 'Tạo mới' : '—'}
+                          {locationRequestTypeLabel(req.type)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>
                         <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                           {flags?.suspectedDuplicate && (
                             <Chip label="Nghi trùng" size="small" sx={flagChipSx(tokens.color.red, tokens.color.redSoftBg, tokens.color.redSoftBorder)} />
@@ -296,35 +332,55 @@ export default function LocationRequestsPage() {
                           {formatTime(req.createdAt)}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={locationRequestStatusLabel(req.status)}
+                          sx={requestStatusChipSx(req.status)}
+                        />
+                      </TableCell>
+                      <TableCell align="right" sx={stickyActionCellSx}>
                         <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
                           <Tooltip title="Xem chi tiết">
-                            <IconButton
+                            <Button
                               size="small"
+                              variant="outlined"
+                              aria-label="Xem chi tiết địa điểm"
                               onClick={() => openDetail(req)}
-                              sx={{ color: tokens.color.textSecondary }}
+                              startIcon={<VisibilityOutlinedIcon fontSize="small" />}
+                              sx={quickActionSx(tokens.color.textSecondary)}
                             >
-                              <VisibilityOutlinedIcon fontSize="small" />
-                            </IconButton>
+                              <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Xem</Box>
+                            </Button>
                           </Tooltip>
-                          <Tooltip title="Duyệt">
-                            <IconButton
-                              size="small"
-                              onClick={() => openDetail(req)}
-                              sx={{ color: tokens.color.green, '&:hover': { bgcolor: 'rgba(46,125,50,0.08)' } }}
-                            >
-                              <CheckOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Từ chối">
-                            <IconButton
-                              size="small"
-                              onClick={() => openDetail(req, true)}
-                              sx={{ color: tokens.color.red, '&:hover': { bgcolor: tokens.color.redSoftBg } }}
-                            >
-                              <BlockOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          {view === 'queue' ? (
+                            <Tooltip title="Duyệt địa điểm">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                aria-label="Duyệt địa điểm"
+                                onClick={() => openDetail(req)}
+                                startIcon={<CheckOutlinedIcon fontSize="small" />}
+                                sx={quickActionSx(tokens.color.green, 'rgba(46,125,50,0.08)')}
+                              >
+                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Duyệt</Box>
+                              </Button>
+                            </Tooltip>
+                          ) : null}
+                          {view === 'queue' ? (
+                            <Tooltip title="Từ chối địa điểm">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                aria-label="Từ chối địa điểm"
+                                onClick={() => openDetail(req, true)}
+                                startIcon={<BlockOutlinedIcon fontSize="small" />}
+                                sx={quickActionSx(tokens.color.red, tokens.color.redSoftBg)}
+                              >
+                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Từ chối</Box>
+                              </Button>
+                            </Tooltip>
+                          ) : null}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -333,6 +389,17 @@ export default function LocationRequestsPage() {
               </TableBody>
             </Table>
           </Box>
+          <TablePagination
+            component="div"
+            count={total}
+            page={Math.max(0, page - 1)}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[PAGE_SIZE]}
+            onPageChange={(_, nextPage) => {
+              setLoading(true);
+              void fetchQueue(nextPage + 1, view);
+            }}
+          />
         </AdminCard>
       )}
 
@@ -343,6 +410,7 @@ export default function LocationRequestsPage() {
         startInRejectMode={startInRejectMode}
         submitting={submitting}
         error={drawerError}
+        readOnly={view === 'history'}
         onClose={closeDrawer}
         onApprove={handleApprove}
         onReject={handleReject}
@@ -359,5 +427,40 @@ function flagChipSx(color: string, bg: string, border: string) {
     fontWeight: 600,
     fontSize: 11,
     height: 22,
+  };
+}
+
+function requestStatusChipSx(status: string) {
+  if (status === 'APPROVED') {
+    return {
+      bgcolor: tokens.color.sage,
+      color: tokens.color.sageText,
+      border: '1px solid transparent',
+    };
+  }
+  if (status === 'REJECTED' || status === 'CANCELLED') {
+    return {
+      bgcolor: tokens.color.redSoftBg,
+      color: tokens.color.red,
+      border: `1px solid ${tokens.color.redSoftBorder}`,
+    };
+  }
+  return {
+    bgcolor: tokens.color.pendingBg,
+    color: tokens.color.pendingText,
+    border: `1px solid ${tokens.color.border}`,
+  };
+}
+
+function quickActionSx(color: string, hoverBg: string = tokens.color.rowHover) {
+  return {
+    minWidth: { xs: 44, lg: 'auto' },
+    minHeight: 44,
+    px: { xs: 1.25, lg: 1.5 },
+    color,
+    borderColor: tokens.color.border,
+    whiteSpace: 'nowrap',
+    '& .MuiButton-startIcon': { m: { xs: 0, lg: '0 8px 0 -4px' } },
+    '&:hover': { color, borderColor: color, bgcolor: hoverBg },
   };
 }

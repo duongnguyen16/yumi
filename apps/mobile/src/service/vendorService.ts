@@ -1,9 +1,16 @@
-import api from './aixos';
+import axios from "axios";
+import api from "./aixos";
+
+const getVendorError = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error) && typeof error.response?.data?.message === "string") return error.response.data.message;
+  return fallback;
+};
 
 export interface VendorLocation {
   _id: string;
   name: string;
   address: string;
+  status: string;
   viewCount: number;
   categoryId: string;
   reviewCount: number;
@@ -18,30 +25,6 @@ export interface VendorDashboardOverview {
   avgRating: number;
 }
 
-const getOwnedLocations = async () => {
-  try {
-    const response = await api.get('/location/owned');
-    if (response.data?.success) {
-      return {
-        success: true,
-        data: response.data.data as VendorLocation[],
-      };
-    }
-    return {
-      success: false,
-      message: response.data?.message || 'Không thể lấy danh sách địa điểm',
-    };
-  } catch (error: any) {
-    console.error('Error fetching owned locations:', error);
-    return {
-      success: false,
-      message:
-        error.response?.data?.message ||
-        'Không thể lấy danh sách địa điểm',
-    };
-  }
-};
-
 const getDashboardOverview = async () => {
   try {
     const response = await api.get('/vendor/dashboard/overview');
@@ -55,13 +38,11 @@ const getDashboardOverview = async () => {
       success: false,
       message: response.data?.message || 'Không thể tải tổng quan',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching dashboard overview:', error);
     return {
       success: false,
-      message:
-        error.response?.data?.message ||
-        'Không thể tải tổng quan',
+      message: getVendorError(error, 'Không thể tải tổng quan'),
     };
   }
 };
@@ -80,15 +61,13 @@ const getLocationStats = async (days?: number) => {
       success: false,
       message: response.data?.message || 'Không thể tải thống kê',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching location stats:', error);
     return {
       success: false,
-      message:
-        error.response?.data?.message ||
-        'Không thể tải thống kê',
+      message: getVendorError(error, 'Không thể tải thống kê'),
     };
   }
 };
 
-export { getOwnedLocations, getDashboardOverview, getLocationStats };
+export { getDashboardOverview, getLocationStats };

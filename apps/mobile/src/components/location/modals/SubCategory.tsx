@@ -1,7 +1,9 @@
 import { getSubCategory } from "@/service/categoryService";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { Chip, Modal, Portal, Text } from "react-native-paper";
+import { Modal, Portal } from "react-native-paper";
+import { AppText, Chip, Stack } from "@/ui/components";
+import { colors, radius, spacing } from "@/ui/tokens";
 
 export default function SubCategory({
   selectedSubCategory,
@@ -12,7 +14,6 @@ export default function SubCategory({
 }) {
   const [subCategory, setSubCategory] = useState([]);
   const handleSelect = (subCategoryId) => {
-    console.log(selectedSubCategory);
     setSelectedSubCategory((prev) => {
       if (prev.includes(subCategoryId)) {
         return prev.filter((id) => id !== subCategoryId);
@@ -33,31 +34,23 @@ export default function SubCategory({
   return (
     <Portal>
       <Modal visible={subVisible} onDismiss={() => setSubVisible(false)}>
-        <View
-          style={{
-            backgroundColor: "white",
-            padding: 20,
-            margin: 20,
-            borderRadius: 12,
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
+        <Stack style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.sheet, margin: spacing[4], padding: spacing[5] }}>
+          <AppText variant="title2">Danh mục con</AppText>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing[2] }}>
           {subCategory.length > 0 ? (
-            subCategory.map((item, index) => (
+            subCategory.map((item) => (
               <Chip
                 key={item._id}
+                label={item.name}
                 selected={selectedSubCategory.includes(item._id)}
                 onPress={() => handleSelect(item._id)}
-              >
-                {item.name}
-              </Chip>
+              />
             ))
           ) : (
-            <Text>Không có danh mục con</Text>
+            <AppText style={{ color: colors.textSecondary }} variant="subhead">Không có danh mục con</AppText>
           )}
-        </View>
+          </View>
+        </Stack>
       </Modal>
     </Portal>
   );

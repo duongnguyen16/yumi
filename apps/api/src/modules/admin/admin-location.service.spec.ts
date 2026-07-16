@@ -95,6 +95,37 @@ describe('AdminLocationService', () => {
     });
   });
 
+  it('lists completed requests as newest-first history', async () => {
+    const { service, reqModel } = createService();
+    const findChain = {
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    };
+    reqModel.find.mockReturnValue(findChain);
+    reqModel.countDocuments.mockReturnValue(query(0));
+
+    await service.getList({ page: 1, limit: 20, view: 'history' } as never);
+
+    expect(reqModel.find).toHaveBeenCalledWith({
+      status: {
+        $in: [
+          LocationRequestStatus.APPROVED,
+          LocationRequestStatus.REJECTED,
+          LocationRequestStatus.CANCELLED,
+        ],
+      },
+    });
+    expect(findChain.sort).toHaveBeenCalledWith({
+      reviewedAt: -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
+  });
+
   it('approves a re-approval request and publishes its snapshot', async () => {
     const { service, reqModel, locModel, trust, notification, logModel } =
       createService();

@@ -14,6 +14,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TablePagination,
   Tooltip,
   Typography,
   type SxProps,
@@ -29,7 +30,9 @@ import {
   rejectClaim,
   requestClaimEvidence,
   type AdminClaim,
+  type AdminRequestView,
 } from '@/lib/admin-api';
+import { AdminRequestTabs } from '@/components/admin/AdminRequestTabs';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { AdminCard } from '@/components/admin/AdminCard';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -68,6 +71,8 @@ function getTime(value?: string) {
 export default function ClaimsPage() {
   const [items, setItems] = useState<AdminClaim[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [view, setView] = useState<AdminRequestView>('queue');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -76,11 +81,12 @@ export default function ClaimsPage() {
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (nextPage: number, nextView: AdminRequestView) => {
     try {
-      const data = await getClaimQueue(1, PAGE_SIZE);
+      const data = await getClaimQueue(nextPage, PAGE_SIZE, nextView);
       setItems(data.items);
       setTotal(data.total);
+      setPage(data.page);
       setError(null);
     } catch (err) {
       setError(getMessage(err));
@@ -90,8 +96,9 @@ export default function ClaimsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    setLoading(true);
+    void load(1, view);
+  }, [load, view]);
 
   function show(claim: AdminClaim) {
     setSelected(claim);
@@ -114,7 +121,7 @@ export default function ClaimsPage() {
       setNotice(result.message);
       setOpen(false);
       setSelected(null);
-      await load();
+      await load(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(getMessage(err));
     } finally {
@@ -134,16 +141,25 @@ export default function ClaimsPage() {
     >
       <Topbar
         title="Duyệt Claim"
-        subtitle={`${total} yêu cầu đang chờ`}
+        subtitle={view === 'queue' ? `${total} yêu cầu đang chờ` : `${total} yêu cầu trong lịch sử`}
         actions={
           <ActionButton
             variant="neutral"
-            onClick={() => void load()}
+            onClick={() => void load(page, view)}
             sx={{ borderRadius: 0, height: 44 }}
           >
             Tải lại
           </ActionButton>
         }
+      />
+
+      <AdminRequestTabs
+        value={view}
+        onChange={(nextView) => {
+          close();
+          setPage(1);
+          setView(nextView);
+        }}
       />
 
       {notice && (
@@ -172,6 +188,7 @@ export default function ClaimsPage() {
                   <TableCell sx={headSx}>Xác minh</TableCell>
                   <TableCell sx={headSx}>Bằng chứng</TableCell>
                   <TableCell sx={headSx}>Gửi lúc</TableCell>
+                  <TableCell sx={headSx}>Trạng thái</TableCell>
                   <TableCell sx={headSx} align="right">
                     Hành động
                   </TableCell>
@@ -180,11 +197,11 @@ export default function ClaimsPage() {
               <TableBody>
                 {items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ borderBottom: 'none' }}>
+                    <TableCell colSpan={7} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
-                        title="Không có claim chờ duyệt"
-                        subtitle="Hàng đợi hiện đang trống."
+                        title={view === 'queue' ? 'Không có claim chờ duyệt' : 'Chưa có lịch sử claim'}
+                        subtitle={view === 'queue' ? 'Hàng đợi hiện đang trống.' : 'Chưa có claim nào đã xử lý.'}
                       />
                     </TableCell>
                   </TableRow>
@@ -293,6 +310,9 @@ export default function ClaimsPage() {
                           {getTime(claim.createdAt)}
                         </Typography>
                       </TableCell>
+                      <TableCell>
+                        <Chip size="small" label={claim.status} sx={{ borderRadius: 0 }} />
+                      </TableCell>
                       <TableCell align="right">
                         <Stack
                           direction="row"
@@ -304,7 +324,7 @@ export default function ClaimsPage() {
                               <VisibilityOutlinedIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip
+                          {view === 'queue' && <Tooltip
                             title={
                               flags.eligibleForApprove
                                 ? 'Đủ điều kiện duyệt'
@@ -321,7 +341,7 @@ export default function ClaimsPage() {
                                 <CheckOutlinedIcon fontSize="small" />
                               </IconButton>
                             </span>
-                          </Tooltip>
+                          </Tooltip>}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -330,6 +350,17 @@ export default function ClaimsPage() {
               </TableBody>
             </Table>
           </Box>
+          <TablePagination
+            component="div"
+            count={total}
+            page={Math.max(0, page - 1)}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[PAGE_SIZE]}
+            onPageChange={(_, nextPage) => {
+              setLoading(true);
+              void load(nextPage + 1, view);
+            }}
+          />
         </AdminCard>
       )}
 
@@ -339,6 +370,7 @@ export default function ClaimsPage() {
         claim={selected}
         saving={saving}
         error={drawerError}
+        readOnly={view === 'history'}
         onClose={close}
         onApprove={(reason) =>
           selected && run(() => approveClaim(selected._id, reason))

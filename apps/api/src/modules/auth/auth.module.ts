@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AppealAccessStrategy } from 'src/common/guard/appeal-access.strategy';
 import { AtStrategy } from 'src/common/guard/at.strategy';
 import { RtStrategy } from 'src/common/guard/rt.strategy';
 import { UserSchema } from 'src/common/schemas/user.schema';
@@ -23,6 +24,7 @@ import { SmsService } from './services/sms.service';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AppealAccessStrategy,
     AtStrategy,
     RtStrategy,
     SmsService,

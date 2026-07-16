@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import { Alert, Box, CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Chip, CircularProgress, IconButton, Table, TableBody, TableCell, TableHead, TablePagination, TableRow, Tooltip, Typography } from '@mui/material';
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { AdminCard } from '@/components/admin/AdminCard';
 import { EmptyState } from '@/components/admin/EmptyState';
 import { Topbar } from '@/components/admin/Topbar';
-import { getDisputeDetail, getDisputeQueue, resolveDispute, type AdminDispute } from '@/lib/admin-api';
+import { getDisputeDetail, getDisputeQueue, resolveDispute, type AdminDispute, type AdminRequestView } from '@/lib/admin-api';
+import { AdminRequestTabs } from '@/components/admin/AdminRequestTabs';
 import { tokens } from '@/theme/admin-tokens';
 import { DisputeDetailDrawer } from './components/DisputeDetailDrawer';
+
+const PAGE_SIZE = 20;
 
 function message(err: unknown) {
   const data = err as { response?: { data?: { message?: string | string[] } }; message?: string };
@@ -21,6 +24,9 @@ function message(err: unknown) {
 
 export default function DisputesPage() {
   const [items, setItems] = useState<AdminDispute[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [view, setView] = useState<AdminRequestView>('queue');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -28,10 +34,12 @@ export default function DisputesPage() {
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (nextPage: number, nextView: AdminRequestView) => {
     try {
-      const data = await getDisputeQueue();
+      const data = await getDisputeQueue(nextPage, PAGE_SIZE, nextView);
       setItems(data.items);
+      setTotal(data.total);
+      setPage(data.page);
       setError(null);
     } catch (err) {
       setError(message(err));
@@ -41,24 +49,9 @@ export default function DisputesPage() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    async function init() {
-      try {
-        const data = await getDisputeQueue();
-        if (!active) return;
-        setItems(data.items);
-        setError(null);
-      } catch (err) {
-        if (active) setError(message(err));
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    void init();
-    return () => {
-      active = false;
-    };
-  }, []);
+    setLoading(true);
+    void load(1, view);
+  }, [load, view]);
 
   async function show(id: string) {
     try {
@@ -76,7 +69,7 @@ export default function DisputesPage() {
       const result = await resolveDispute(selected._id, outcome, reason);
       setNotice(result.message);
       setSelected(null);
-      await load();
+      await load(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(message(err));
     } finally {
@@ -86,7 +79,8 @@ export default function DisputesPage() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, flex: 1, minWidth: 0 }}>
-      <Topbar title="Tranh chấp sở hữu" subtitle={`${items.length} hồ sơ đang chờ`} actions={<ActionButton variant="neutral" onClick={() => void load()}>Tải lại</ActionButton>} />
+      <Topbar title="Tranh chấp sở hữu" subtitle={view === 'queue' ? `${total} hồ sơ đang chờ` : `${total} hồ sơ trong lịch sử`} actions={<ActionButton variant="neutral" onClick={() => void load(page, view)}>Tải lại</ActionButton>} />
+      <AdminRequestTabs value={view} onChange={(nextView) => { setSelected(null); setPage(1); setView(nextView); }} />
       {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice}</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {loading ? (
@@ -95,21 +89,22 @@ export default function DisputesPage() {
         <AdminCard>
           <Box sx={{ overflowX: 'auto' }}>
             <Table size="small">
-              <TableHead><TableRow><TableCell>Địa điểm</TableCell><TableCell>Vendor A</TableCell><TableCell>Vendor B</TableCell><TableCell>Bằng chứng</TableCell><TableCell>Ngày tạo</TableCell><TableCell align="right">Xem</TableCell></TableRow></TableHead>
+              <TableHead><TableRow><TableCell>Địa điểm</TableCell><TableCell>Vendor A</TableCell><TableCell>Vendor B</TableCell><TableCell>Bằng chứng</TableCell><TableCell>Ngày tạo</TableCell><TableCell>Trạng thái</TableCell><TableCell align="right">Xem</TableCell></TableRow></TableHead>
               <TableBody>
-                {items.length === 0 && <TableRow><TableCell colSpan={6}><EmptyState icon={<InboxOutlinedIcon />} title="Không có tranh chấp" subtitle="Hàng đợi hiện đang trống." /></TableCell></TableRow>}
+                {items.length === 0 && <TableRow><TableCell colSpan={7}><EmptyState icon={<InboxOutlinedIcon />} title={view === 'queue' ? 'Không có tranh chấp' : 'Chưa có lịch sử tranh chấp'} subtitle={view === 'queue' ? 'Hàng đợi hiện đang trống.' : 'Chưa có tranh chấp nào đã xử lý.'} /></TableCell></TableRow>}
                 {items.map((item) => {
                   const loc = typeof item.locationId === 'object' ? item.locationId : null;
                   const a = typeof item.vendorAId === 'object' ? item.vendorAId : null;
                   const b = typeof item.vendorBId === 'object' ? item.vendorBId : null;
-                  return <TableRow key={item._id} hover><TableCell><Typography sx={{ fontWeight: 700 }}>{loc?.name ?? 'Không rõ'}</Typography><Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>{loc?.address ?? '—'}</Typography></TableCell><TableCell>{a?.fullName ?? a?.email ?? '—'}</TableCell><TableCell>{b?.fullName ?? b?.email ?? '—'}</TableCell><TableCell>{item.evidenceA.length} / {item.evidenceB.length}</TableCell><TableCell>{item.createdAt ? dayjs(item.createdAt).format('DD/MM/YYYY HH:mm') : '—'}</TableCell><TableCell align="right"><Tooltip title="Xem hồ sơ"><IconButton onClick={() => void show(item._id)}><VisibilityOutlinedIcon /></IconButton></Tooltip></TableCell></TableRow>;
+                  return <TableRow key={item._id} hover><TableCell><Typography sx={{ fontWeight: 700 }}>{loc?.name ?? 'Không rõ'}</Typography><Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>{loc?.address ?? '—'}</Typography></TableCell><TableCell>{a?.fullName ?? a?.email ?? '—'}</TableCell><TableCell>{b?.fullName ?? b?.email ?? '—'}</TableCell><TableCell>{item.evidenceA.length} / {item.evidenceB.length}</TableCell><TableCell>{item.createdAt ? dayjs(item.createdAt).format('DD/MM/YYYY HH:mm') : '—'}</TableCell><TableCell><Chip size="small" label={item.status} sx={{ borderRadius: 0 }} /></TableCell><TableCell align="right"><Tooltip title="Xem hồ sơ"><IconButton onClick={() => void show(item._id)}><VisibilityOutlinedIcon /></IconButton></Tooltip></TableCell></TableRow>;
                 })}
               </TableBody>
             </Table>
           </Box>
+          <TablePagination component="div" count={total} page={Math.max(0, page - 1)} rowsPerPage={PAGE_SIZE} rowsPerPageOptions={[PAGE_SIZE]} onPageChange={(_, nextPage) => { setLoading(true); void load(nextPage + 1, view); }} />
         </AdminCard>
       )}
-      <DisputeDetailDrawer open={Boolean(selected)} item={selected} saving={saving} error={drawerError} onClose={() => setSelected(null)} onResolve={(outcome, reason) => void run(outcome, reason)} />
+      <DisputeDetailDrawer open={Boolean(selected)} item={selected} saving={saving} error={drawerError} readOnly={view === 'history'} onClose={() => setSelected(null)} onResolve={(outcome, reason) => void run(outcome, reason)} />
     </Box>
   );
 }

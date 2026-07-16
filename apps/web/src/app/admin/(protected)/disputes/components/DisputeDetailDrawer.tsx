@@ -15,6 +15,7 @@ interface Props {
   item: AdminDispute | null;
   saving: boolean;
   error: string | null;
+  readOnly?: boolean;
   onClose: () => void;
   onResolve: (outcome: Outcome, reason: string) => void;
 }
@@ -24,6 +25,7 @@ export function DisputeDetailDrawer({
   item,
   saving,
   error,
+  readOnly = false,
   onClose,
   onResolve,
 }: Props) {
@@ -41,7 +43,11 @@ export function DisputeDetailDrawer({
       width={520}
       preview={<GavelOutlinedIcon sx={{ fontSize: 64, color: tokens.color.orange }} />}
       footer={
-        <>
+        readOnly ? (
+          <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>
+            Đóng
+          </ActionButton>
+        ) : <>
           <ActionButton variant="neutral" onClick={onClose} disabled={saving} sx={{ flex: 1 }}>
             Đóng
           </ActionButton>
@@ -68,7 +74,7 @@ export function DisputeDetailDrawer({
           <Party title="Vendor A · Chủ hiện tại" user={a} files={item?.evidenceA ?? []} />
           <Party title="Vendor B · Người yêu cầu" user={b} files={item?.evidenceB ?? []} />
         </Stack>
-        <Box>
+        {!readOnly && <Box>
           <Typography variant="overline">Phán quyết</Typography>
           <Stack direction="row" sx={{ gap: 1, mt: 1, flexWrap: 'wrap' }}>
             {(['KEEP', 'TRANSFER', 'REVOKE'] as Outcome[]).map((value) => (
@@ -85,8 +91,8 @@ export function DisputeDetailDrawer({
               />
             ))}
           </Stack>
-        </Box>
-        <TextField
+        </Box>}
+        {!readOnly && <TextField
           fullWidth
           multiline
           minRows={3}
@@ -94,7 +100,21 @@ export function DisputeDetailDrawer({
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           helperText="Tối thiểu 5 ký tự"
-        />
+        />}
+        {readOnly && (
+          <Box sx={{ border: `1px solid ${tokens.color.border}`, p: 1.5 }}>
+            <Typography variant="overline">Kết quả</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{item?.status ?? '—'}</Typography>
+            <Typography sx={{ color: tokens.color.textSecondary, fontSize: 13 }}>
+              {item?.adminDecision?.reason ?? 'Không có lý do'}
+            </Typography>
+            <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
+              {item?.adminDecision?.decidedAt
+                ? new Date(item.adminDecision.decidedAt).toLocaleString('vi-VN')
+                : '—'}
+            </Typography>
+          </Box>
+        )}
         {error && <Alert severity="error">{error}</Alert>}
       </Stack>
     </DetailDrawer>

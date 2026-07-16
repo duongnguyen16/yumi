@@ -66,7 +66,7 @@ export function DetailDrawer({
           >
             {title}
           </Typography>
-          <IconButton size="small" onClick={onClose}>
+          <IconButton size="small" aria-label="Đóng bảng chi tiết" onClick={onClose}>
             <CloseOutlinedIcon fontSize="small" />
           </IconButton>
         </Box>
