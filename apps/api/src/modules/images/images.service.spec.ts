@@ -25,6 +25,7 @@ describe('ImagesService', () => {
     mockFrom.mockReturnValue({
       upload: mockUpload,
       getPublicUrl: mockGetPublicUrl,
+      remove: jest.fn().mockResolvedValue({ error: null }),
     });
   });
 
@@ -105,5 +106,51 @@ describe('ImagesService', () => {
     expect(firstFileName).not.toBe(secondFileName);
     expect(firstFileName).toMatch(/\.jpg$/);
     expect(secondFileName).toMatch(/\.jpg$/);
+  });
+
+  it('uploads product images to a generated location-product path', async () => {
+    const result = await createService().uploadProductImage(
+      'location-id',
+      'product-id',
+      {
+        originalname: 'coffee.png',
+        mimetype: 'image/png',
+        size: 1024,
+        buffer: Buffer.from('image'),
+      } as Express.Multer.File,
+    );
+
+    expect(mockUpload).toHaveBeenCalledWith(
+      expect.stringMatching(/^location-products\/location-id\/product-id\/.+\.png$/),
+      expect.any(Buffer),
+      expect.objectContaining({ contentType: 'image/png', upsert: false }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        path: expect.stringMatching(/^location-products\/location-id\/product-id\//),
+      }),
+    );
+  });
+
+  it('rejects unsupported product image extensions and oversized product images', async () => {
+    const service = createService();
+
+    await expect(
+      service.uploadProductImage('location-id', 'product-id', {
+        originalname: 'coffee.gif',
+        mimetype: 'image/gif',
+        size: 1024,
+        buffer: Buffer.from('image'),
+      } as Express.Multer.File),
+    ).rejects.toThrow('Định dạng tệp không hợp lệ');
+
+    await expect(
+      service.uploadProductImage('location-id', 'product-id', {
+        originalname: 'coffee.jpg',
+        mimetype: 'image/jpeg',
+        size: 5 * 1024 * 1024 + 1,
+        buffer: Buffer.from('image'),
+      } as Express.Multer.File),
+    ).rejects.toThrow('Ảnh sản phẩm phải nhỏ hơn hoặc bằng 5MB');
   });
 });
