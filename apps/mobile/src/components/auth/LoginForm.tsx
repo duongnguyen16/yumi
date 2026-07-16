@@ -13,13 +13,18 @@ import { spacing } from "@/ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import { ScrollView } from "react-native";
+import { validateLoginCredentials } from "./login-validation";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { passwordReset } = useLocalSearchParams<{ passwordReset?: string }>();
-  const [error, setError] = useState(passwordReset === "success" ? "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới." : "");
+  const [error, setError] = useState(
+    passwordReset === "success"
+      ? "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."
+      : "",
+  );
   const { setUser, setAccessToken } = useContext(userContext);
   const router = useRouter();
 
@@ -28,6 +33,12 @@ export default function LoginForm() {
     setError("");
     if (!email || !password) {
       setError("Vui lòng nhập đầy đủ thông tin.");
+      setLoading(false);
+      return;
+    }
+    const validation = validateLoginCredentials({ email, password });
+    if (!validation.isValid) {
+      setError(validation.message || "Thông tin đăng nhập không hợp lệ.");
       setLoading(false);
       return;
     }
@@ -53,27 +64,45 @@ export default function LoginForm() {
 
   return (
     <>
-      <ScrollView contentContainerStyle={{ gap: spacing[3], padding: spacing[4] }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
-        <TextField autoCapitalize="none" keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
-        <PasswordField label="Mật khẩu" onChangeText={setPassword} value={password} />
-        <Button label="Quên mật khẩu?" onPress={() => router.push("/auth/forgot-password")} variant="tertiary" />
+      <ScrollView
+        contentContainerStyle={{ gap: spacing[3], padding: spacing[4] }}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+      >
+        <TextField
+          autoCapitalize="none"
+          keyboardType="email-address"
+          label="Email"
+          onChangeText={setEmail}
+          value={email}
+        />
+        <PasswordField
+          label="Mật khẩu"
+          onChangeText={setPassword}
+          value={password}
+        />
+        <Button
+          label="Quên mật khẩu?"
+          onPress={() => router.push("/auth/forgot-password")}
+          variant="tertiary"
+        />
       </ScrollView>
       <BottomActionBar>
         <Stack gap={spacing[2]}>
-        <Button
-          disabled={loading}
-          label="Đăng nhập"
-          loading={loading}
-          onPress={handleLogin}
-          width="full"
-        />
-        <Button
-          label="Tạo tài khoản"
-          onPress={() => router.push("/auth/register")}
-          variant="secondary"
-          width="full"
-        />
-      </Stack>
+          <Button
+            disabled={loading}
+            label="Đăng nhập"
+            loading={loading}
+            onPress={handleLogin}
+            width="full"
+          />
+          <Button
+            label="Tạo tài khoản"
+            onPress={() => router.push("/auth/register")}
+            variant="secondary"
+            width="full"
+          />
+        </Stack>
       </BottomActionBar>
       <NoticeSnackbar message={error} onDismiss={() => setError("")} />
     </>

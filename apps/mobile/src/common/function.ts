@@ -179,10 +179,7 @@ const validateDescription = (
     ...options,
   });
 
-const validateAddress = (
-  value: unknown,
-  options: TextValidationOptions = {},
-) =>
+const validateAddress = (value: unknown, options: TextValidationOptions = {}) =>
   validateRequiredText(value, {
     fieldName: "Địa chỉ",
     minLength: 5,
@@ -354,7 +351,9 @@ const validateTimeRange = (
 ) => {
   const { allowOvernight = false, allowSameTime = false } = options;
   const startResult =
-    typeof start === "string" ? validateClockTime(start) : validateTimeValue(start);
+    typeof start === "string"
+      ? validateClockTime(start)
+      : validateTimeValue(start);
   const endResult =
     typeof end === "string" ? validateClockTime(end) : validateTimeValue(end);
 
@@ -462,7 +461,11 @@ const validateFileCount = (
   files: unknown,
   options: FileValidationOptions = {},
 ) => {
-  const { required = false, minCount = required ? 1 : 0, maxCount = 5 } = options;
+  const {
+    required = false,
+    minCount = required ? 1 : 0,
+    maxCount = 5,
+  } = options;
   const fileCount = Array.isArray(files) ? files.length : 0;
 
   if (fileCount < minCount) {
