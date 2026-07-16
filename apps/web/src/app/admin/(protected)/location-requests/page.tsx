@@ -435,7 +435,7 @@ function requestStatusChipSx(status: string) {
   };
 }
 
-function quickActionSx(color: string, hoverBg = tokens.color.rowHover) {
+function quickActionSx(color: string, hoverBg: string = tokens.color.rowHover) {
   return {
     minWidth: { xs: 44, lg: 'auto' },
     minHeight: 44,
