@@ -1,67 +1,32 @@
-import { getUnreadCount } from "@/service/notificationService";
-import {
-  formatUnreadBadge,
-  MAIN_TABS,
-  MainTabIcon,
-  SHOW_TABS_HEADER,
-} from "@/navigation/mainTabs";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import Feather from "@expo/vector-icons/Feather";
+import { userContext } from "@/contexts/userContext";
+import { invokeExploreLocationAction } from "@/navigation/exploreTabAction";
+import { getMainTabs, SHOW_TABS_HEADER } from "@/navigation/mainTabs";
+import { BottomTabBar } from "@/ui/components";
 import { Tabs } from "expo-router";
-import React, { useEffect, useState } from "react";
-import type { ColorValue } from "react-native";
+import React, { useContext } from "react";
+import { StyleSheet } from "react-native";
 
-function TabIcon({ icon, color }: { icon: MainTabIcon; color: ColorValue }) {
-  if (icon === "home") {
-    return <AntDesign name="home" size={24} color={color} />;
-  }
-
-  return <Feather name={icon} size={24} color={color} />;
-}
+const routeNames = ["home", "mine", "manage", "activity", "profile"] as const;
 
 export default function TabsLayout() {
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const refreshUnreadCount = () => {
-      getUnreadCount().then((res) => {
-        if (isMounted && res.success) setUnread(res.count);
-      });
-    };
-
-    refreshUnreadCount();
-    const interval = setInterval(refreshUnreadCount, 60000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+  const { user } = useContext(userContext);
+  const tabs = getMainTabs(typeof user?.role === "string" ? user.role : null);
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: SHOW_TABS_HEADER,
+      tabBar={({ state, navigation, descriptors }) => {
+        const route = state.routes[state.index];
+        const activeTabStyle = StyleSheet.flatten(descriptors[route.key]?.options.tabBarStyle) as { display?: string } | undefined;
+        if (activeTabStyle?.display === "none") return null;
+        const selected = tabs.find((tab) => tab.name === state.routes[state.index]?.name)?.title ?? tabs[0].title;
+        return <BottomTabBar action={route.name === "home" ? { accessibilityLabel: "Vị trí hiện tại", icon: "crosshairs-gps", onPress: invokeExploreLocationAction } : undefined} items={tabs.map((tab) => ({ icon: tab.icon, label: tab.title }))} onSelect={(label) => { const tab = tabs.find((item) => item.title === label); if (tab) navigation.navigate(tab.name); }} selected={selected} />;
       }}
+      screenOptions={{ headerShown: SHOW_TABS_HEADER }}
     >
-      {MAIN_TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.title,
-            tabBarBadge:
-              tab.name === "notifications"
-                ? formatUnreadBadge(unread)
-                : undefined,
-            tabBarIcon: ({ color }) => (
-              <TabIcon icon={tab.icon} color={color} />
-            ),
-          }}
-        />
-      ))}
+      {routeNames.map((name) => {
+        const activeTab = tabs.find((tab) => tab.name === name);
+        return <Tabs.Screen key={name} name={name} options={{ href: activeTab ? undefined : null, title: activeTab?.title ?? name }} />;
+      })}
     </Tabs>
   );
 }

@@ -115,6 +115,38 @@ describe('AdminClaimService', () => {
     });
   });
 
+  it('lists completed claims as newest-first history', async () => {
+    const { service, claimModel } = createService();
+    const find = {
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    };
+    claimModel.find.mockReturnValue(find);
+    claimModel.countDocuments.mockReturnValue(query(0));
+
+    await service.getQueue({ page: 1, limit: 20, view: 'history' } as never);
+
+    expect(claimModel.find).toHaveBeenCalledWith({
+      status: {
+        $in: [
+          ClaimRequestStatus.APPROVED,
+          ClaimRequestStatus.REJECTED,
+          ClaimRequestStatus.RELEASED,
+          ClaimRequestStatus.REVOKED,
+        ],
+      },
+    });
+    expect(find.sort).toHaveBeenCalledWith({
+      'adminDecision.decidedAt': -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
+  });
+
   it('allows no-phone claims with admin scrutiny proof', async () => {
     const { service, claimModel, locModel } = createService();
     const req = claim({
