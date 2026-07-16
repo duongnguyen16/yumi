@@ -93,9 +93,9 @@ function CustomMap(
         if (!Array.isArray(styleJson.layers)) {
           throw new Error("Map style response is missing layers");
         }
-        styleJson.glyphs =
-          styleJson.glyphs ||
-          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        // styleJson.glyphs =
+        //   styleJson.glyphs ||
+        //   "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
@@ -174,11 +174,23 @@ function CustomMap(
     });
   }, [pinLocation, previewMode]);
   if (loading) {
-    return <View style={{ height: 300 }}><LoadingState label="Đang tải bản đồ" /></View>;
+    return (
+      <View style={{ height: 300 }}>
+        <LoadingState label="Đang tải bản đồ" />
+      </View>
+    );
   }
 
   if (mapError || !mapStyle) {
-    return <View style={{ height: 300 }}><EmptyState icon="alert-outline" supportingText={mapError || "Không có map style"} title="Không thể tải bản đồ" /></View>;
+    return (
+      <View style={{ height: 300 }}>
+        <EmptyState
+          icon="alert-outline"
+          supportingText={mapError || "Không có map style"}
+          title="Không thể tải bản đồ"
+        />
+      </View>
+    );
   }
   return (
     <View
@@ -223,11 +235,25 @@ function CustomMap(
           marginTop: -28,
         }}
       >
-        <MaterialCommunityIcons name="map-marker" size={42} color={colors.accentPrimary} />
+        <MaterialCommunityIcons
+          name="map-marker"
+          size={42}
+          color={colors.accentPrimary}
+        />
       </View>
       {!previewMode && (
-        <View style={{ bottom: spacing[2], position: "absolute", right: spacing[2] }}>
-          <IconButton icon="crosshairs-gps" label="Vị trí hiện tại" onPress={getLocation} />
+        <View
+          style={{
+            bottom: spacing[2],
+            position: "absolute",
+            right: spacing[2],
+          }}
+        >
+          <IconButton
+            icon="crosshairs-gps"
+            label="Vị trí hiện tại"
+            onPress={getLocation}
+          />
         </View>
       )}
     </View>

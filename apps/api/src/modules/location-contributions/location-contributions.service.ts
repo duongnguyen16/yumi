@@ -121,12 +121,12 @@ export class LocationContributionsService {
   ) {
     const user = await this.userModel.findById(userId).exec();
     if (!user || user.status === UserStatus.BANNED) {
-      throw new BadRequestException('Tai khoan khong the gui dia diem');
+      throw new BadRequestException('Tài khoản không thể gửi địa điểm');
     }
 
     if (user.trustLevel === TrustLevel.RESTRICTED) {
       throw new BadRequestException(
-        'Tai khoan dang bi gioi han nen khong the gui dia diem',
+        'Tài khoản đang bị giới hạn nên không thể gửi địa điểm',
       );
     }
 
@@ -138,7 +138,7 @@ export class LocationContributionsService {
     });
     if (submittedToday >= CONTRIBUTION_DAILY_LIMIT) {
       throw new BadRequestException(
-        'Ban chi duoc gui toi da 3 dia diem moi ngay',
+        'Bạn chỉ được gửi tối đa 3 địa điểm mỗi ngày',
       );
     }
 

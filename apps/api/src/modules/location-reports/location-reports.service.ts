@@ -65,7 +65,7 @@ export class LocationReportsService {
       String(location.ownerId) === String(reporterObjectId)
     ) {
       throw new ForbiddenException(
-        'Chá»§ sá»Ÿ há»¯u khĂ´ng thá»ƒ tá»± bĂ¡o cĂ¡o Ä‘á»‹a Ä‘iá»ƒm cá»§a mĂ¬nh',
+        'Chủ sở hữu không thể tự báo cáo địa điểm của mình',
       );
     }
 
