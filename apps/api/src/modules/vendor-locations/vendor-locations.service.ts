@@ -38,6 +38,7 @@ import { LocationGeoService } from '../location-geo/location-geo.service';
 import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
+import { isUnderHold } from 'src/common/ownership/hold.util';
 
 type ReviewRequiredData = {
   name?: string | null;
@@ -71,6 +72,14 @@ export class VendorLocationsService {
     files?: Express.Multer.File[],
   ) {
     try {
+      const user = await this.userModel.findById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'Người dùng không tồn tại',
+          statusCode: 404,
+        };
+      }
       const location = await this.locationModel.findById(id).exec();
       if (!location) {
         return {
@@ -86,6 +95,14 @@ export class VendorLocationsService {
         return {
           success: false,
           message: 'Bạn không có quyền chỉnh sửa địa điểm này',
+          statusCode: 403,
+        };
+      }
+      const isHold = isUnderHold(location.toObject());
+      if (isHold) {
+        return {
+          success: false,
+          message: 'Địa điểm đang bị tạm giữ, không thể chỉnh sửa',
           statusCode: 403,
         };
       }
