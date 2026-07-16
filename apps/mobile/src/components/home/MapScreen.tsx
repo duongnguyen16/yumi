@@ -1,14 +1,13 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Keyboard, View, type TextInput } from "react-native";
 import { Camera, type CameraRef, GeoJSONSource, Layer, Map, NativeUserLocation } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useLocationContext } from "@/contexts/locationContext";
-import { userContext } from "@/contexts/userContext";
 import { getMapLocationPreview, mapSelectionZoom, type MapLocationPreview } from "@/common/map-location";
 import { getAllLocations, getCurrentLocation, getLocationById } from "@/service/locationService";
 import { getUnreadCount } from "@/service/notificationService";
-import { ActionSheet, EmptyState, LoadingState, MapCanvas, MapControls, MapSearchDock } from "@/ui/components";
+import { EmptyState, LoadingState, MapCanvas, MapControls, MapSearchDock } from "@/ui/components";
 import { colors } from "@/ui/tokens";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 import { MapLocationDrawer } from "./MapLocationDrawer";
@@ -22,7 +21,6 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & { glyphs?: string; l
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
   const { locationId } = useLocalSearchParams<{ locationId?: string }>();
-  const { user } = useContext(userContext);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -30,7 +28,6 @@ export default function MapScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScreen, setSearchScreen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<MapLocationPreview | null>(null);
-  const [actionVisible, setActionVisible] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const cameraRef = useRef<CameraRef>(null);
   const searchInputRef = useRef<TextInput>(null);
@@ -129,15 +126,6 @@ export default function MapScreen() {
     cameraRef.current?.setStop({ center: coordinates, zoom: 15, duration: 1000, easing: "ease" });
   };
 
-  const openContribution = (type: "add" | "register") => {
-    setActionVisible(false);
-    if (type === "register" && user?.phoneVerified !== true) {
-      router.push({ pathname: "/profile/verify-phone", params: { redirect: "/contribute?type=register" } });
-      return;
-    }
-    router.push({ pathname: "/contribute", params: { type } });
-  };
-
   if (loading) return <LoadingState label="Đang tải bản đồ" />;
   if (!mapStyle || !location) return <EmptyState icon="alert-outline" title="Không hiện được bản đồ" supportingText={mapError || "Không có dữ liệu vị trí hiện tại."} />;
 
@@ -174,19 +162,10 @@ export default function MapScreen() {
               <Layer filter={["!", ["has", "point_count"]]} id="locations-label" layout={{ "text-allow-overlap": false, "text-anchor": "top", "text-field": ["get", "name"], "text-ignore-placement": false, "text-offset": [0, 1.5], "text-size": 12 }} paint={{ "text-color": colors.textPrimary, "text-halo-color": colors.surfaceBase, "text-halo-width": 1.5 }} source="geojson" type="symbol" />
             </GeoJSONSource>
           </Map>
-          {!selectedLocation ? <MapControls onAdd={user?.role === "VENDOR" ? () => setActionVisible(true) : undefined} onLocate={setCurrentLocation} /> : null}
+          {!selectedLocation ? <MapControls onLocate={setCurrentLocation} /> : null}
           {selectedLocation ? <MapLocationDrawer key={selectedLocation.id} location={selectedLocation} onDismiss={() => setSelectedLocation(null)} /> : null}
         </View>
       )}
-      <ActionSheet
-        actions={[
-          { icon: "file-document-edit-outline", label: "Đăng ký địa điểm", onPress: () => openContribution("register") },
-          { icon: "map-marker-plus-outline", label: "Đóng góp địa điểm", onPress: () => openContribution("add") },
-        ]}
-        onDismiss={() => setActionVisible(false)}
-        title="Bạn muốn làm gì?"
-        visible={actionVisible}
-      />
     </MapCanvas>
   );
 }
