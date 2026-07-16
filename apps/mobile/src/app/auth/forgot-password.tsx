@@ -1,3 +1,4 @@
+import { validateEmail } from "@/common/function";
 import { forgotPassword } from "@/service/authService";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
@@ -12,15 +13,15 @@ export default function ForgotPassword() {
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !normalizedEmail.includes("@")) {
-      setError("Vui lòng nhập email hợp lệ.");
+    const validatedEmail = validateEmail(email);
+    if (validatedEmail.isValid === false) {
+      setError(validatedEmail.message);
       return;
     }
 
     setLoading(true);
     setError("");
-    const result = await forgotPassword(normalizedEmail);
+    const result = await forgotPassword(email);
     setLoading(false);
 
     if (!result.success) {
@@ -30,15 +31,13 @@ export default function ForgotPassword() {
 
     router.push({
       pathname: "/auth/reset-password",
-      params: { email: normalizedEmail },
+      params: { email },
     });
   };
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 16 }}>
-      <Stack.Screen
-        options={{ headerShown: true, title: "Quên mật khẩu" }}
-      />
+      <Stack.Screen options={{ headerShown: true, title: "Quên mật khẩu" }} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}

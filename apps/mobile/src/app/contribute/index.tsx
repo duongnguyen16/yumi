@@ -34,6 +34,11 @@ import {
 import { getAllCategories, getSubCategory } from "@/service/categoryService";
 import { getSystemCode } from "@/service/locationService";
 import Option from "@/components/ui/Option";
+import {
+  validateDescription,
+  validateOpeningHours,
+  validateTimeRange,
+} from "@/common/function";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -212,7 +217,7 @@ export default function ContributePlaceScreen() {
         if (isVendorRegistration) {
           const response = await getSystemCode();
           if (response.success) {
-            setSystemCode(response.code);
+            setSystemCode(response.systemCode);
           } else {
             Alert.alert(
               "Không tạo được mã",
@@ -446,15 +451,34 @@ export default function ContributePlaceScreen() {
       return;
     }
 
-    const newVideos = result.assets.map((asset, index) => ({
-      id: `video-${Date.now()}-${index}`,
-      uri: asset.uri,
-      fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
-      mimeType: asset.mimeType ?? "video/mp4",
-      fileSize: asset.fileSize ?? 1024,
-    }));
+    const newVideos = result.assets.map((asset, index) => {
+      if (asset.fileSize > 50 * 1024 * 1024) {
+        Alert.alert("Video quá lớn", "Vui lòng chọn video nhỏ hơn 50MB.");
+        return;
+      }
+      if (typeof asset.fileSize !== "number") {
+        Alert.alert("Dữ liệu video không hợp lệ", "Vui lòng chọn video khác.");
+        return;
+      }
+      if (asset.duration > 60 * 1000) {
+        Alert.alert("Video quá dài", "Vui lòng chọn video ngắn hơn 60 giây.");
+        return;
+      }
+      return {
+        id: `video-${Date.now()}-${index}`,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
+        mimeType: asset.mimeType ?? "video/mp4",
+        fileSize: asset.fileSize,
+      };
+    });
 
-    setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
+    setVideos((current) =>
+      [
+        ...current,
+        ...newVideos.filter((vid) => vid !== null && vid !== undefined),
+      ].slice(0, MAX_VIDEOS),
+    );
   };
 
   const handlePickLicenseFiles = async () => {
@@ -537,8 +561,10 @@ export default function ContributePlaceScreen() {
 
   const submitVendorRegistrationDataToBackend = async () => {
     if (!systemCode) {
-      alert("Không thể gửi đăng ký vendor khi chưa có mã xác thực.");
-      return;
+      return {
+        success: false,
+        message: "Không thể gửi đăng ký vendor khi chưa có mã xác thực.",
+      };
     }
     try {
       const response = await submitVendorRegistration({
@@ -550,25 +576,20 @@ export default function ContributePlaceScreen() {
         imageFiles: toPendingEvidenceFiles(images),
       });
       if (response?.success === false) {
-        setImages([]);
-        setVideos([]);
-        setLicenseFiles([]);
-        alert(
-          response?.message ||
-            "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
-        );
-        return;
+        return {
+          success: false,
+          message: response?.message || "Đăng ký địa điểm thất bại",
+        };
       }
+      return {
+        success: true,
+      };
     } catch (error) {
       console.error("Error submitting vendor registration:", error);
-      Alert.alert(
-        "Gửi đăng ký thất bại",
-        "Có lỗi xảy ra khi gửi đăng ký vendor. Vui lòng thử lại.",
-      );
-    } finally {
-      setImages([]);
-      setVideos([]);
-      setLicenseFiles([]);
+      return {
+        success: false,
+        message: error?.response?.data?.message || "Đăng ký địa điểm thất bại",
+      };
     }
   };
 
@@ -576,6 +597,16 @@ export default function ContributePlaceScreen() {
     if (step === 0) {
       if (!name.trim() || !description.trim() || !selectedCategoryId) {
         Alert.alert("Thiếu thông tin", "Hãy nhập tên, mô tả và chọn danh mục.");
+        return;
+      }
+      const validateDesc = validateDescription(description.trim());
+      if (validateDesc.isValid === false) {
+        Alert.alert(validateDesc.message);
+        return;
+      }
+      const validateClock = validateTimeRange(openHours, closeHours);
+      if (validateClock.isValid === false) {
+        Alert.alert(validateClock.message);
         return;
       }
       setStep(1);
@@ -681,7 +712,18 @@ export default function ContributePlaceScreen() {
       try {
         setSaving(true);
         if (isVendorRegistration) {
-          await submitVendorRegistrationDataToBackend();
+          const response = await submitVendorRegistrationDataToBackend();
+          if (response?.success === false) {
+            Alert.alert(
+              "Gửi đăng ký thất bại",
+              response?.message ||
+                "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
+            );
+            return;
+          }
+          setImages([]);
+          setVideos([]);
+          setLicenseFiles([]);
         } else {
           await submitCustomerDataToBackend();
         }
@@ -1332,10 +1374,7 @@ export default function ContributePlaceScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={[
-            styles.primaryButton,
-            saving && styles.primaryButtonDisabled,
-          ]}
+          style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
           onPress={handleContinue}
           disabled={saving}
         >
