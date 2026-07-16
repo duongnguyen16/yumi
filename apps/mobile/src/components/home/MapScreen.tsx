@@ -2,22 +2,26 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from "rea
 import { BackHandler, Keyboard, View, type TextInput } from "react-native";
 import { Camera, type CameraRef, GeoJSONSource, Layer, Map, NativeUserLocation } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useLocationContext } from "@/contexts/locationContext";
 import { userContext } from "@/contexts/userContext";
-import { getAllLocations, getCurrentLocation } from "@/service/locationService";
+import { getMapLocationPreview, mapSelectionZoom, type MapLocationPreview } from "@/common/map-location";
+import { getAllLocations, getCurrentLocation, getLocationById } from "@/service/locationService";
+import { getUnreadCount } from "@/service/notificationService";
 import { ActionSheet, EmptyState, LoadingState, MapCanvas, MapControls, MapSearchDock } from "@/ui/components";
 import { colors } from "@/ui/tokens";
 import LocationSearchScreen from "../location/LocationSearchScreen";
+import { MapLocationDrawer } from "./MapLocationDrawer";
 
 const MAP_API = process.env.EXPO_PUBLIC_MAP_APu || "https://demotiles.maplibre.org/style.json";
 const emptyGeoJson = { type: "FeatureCollection" as const, features: [] };
 
-type MapStyleLayer = { id: string | number; type?: string; layout?: Record<string, unknown>; [key: string]: unknown };
+type MapStyleLayer = { id: string | number; type?: string; layout?: Record<string, unknown>;[key: string]: unknown };
 type MutableMapStyle = Omit<StyleSpecification, "layers"> & { glyphs?: string; layers: MapStyleLayer[] };
 
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
+  const { locationId } = useLocalSearchParams<{ locationId?: string }>();
   const { user } = useContext(userContext);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,10 +29,12 @@ export default function MapScreen() {
   const [geoJson, setGeoJson] = useState(emptyGeoJson);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScreen, setSearchScreen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<MapLocationPreview | null>(null);
   const [actionVisible, setActionVisible] = useState(false);
-  const [phoneSheetVisible, setPhoneSheetVisible] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const cameraRef = useRef<CameraRef>(null);
   const searchInputRef = useRef<TextInput>(null);
+  const navigation = useNavigation();
   const router = useRouter();
 
   useEffect(() => {
@@ -38,13 +44,21 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const refresh = () => getUnreadCount().then((response) => { if (active && response.success) setUnreadCount(response.count); });
+    refresh();
+    const interval = setInterval(refresh, 60000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
+
+  useEffect(() => {
     const loadStyle = async () => {
       try {
         const response = await fetch(MAP_API);
         if (!response.ok) throw new Error(`Map style request failed: ${response.status}`);
         const styleJson = (await response.json()) as MutableMapStyle;
         if (!Array.isArray(styleJson.layers)) throw new Error("Map style response is missing layers");
-        styleJson.glyphs = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        styleJson.glyphs = styleJson.glyphs || "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide = layer.type === "symbol" && ["poi", "business", "shop", "restaurant", "cafe", "hotel", "school", "hospital", "bank", "atm", "parking"].some((value) => id.includes(value));
@@ -68,6 +82,36 @@ export default function MapScreen() {
     setSearchScreen(false);
   }, []);
 
+  const focusLocation = useCallback((preview: MapLocationPreview) => {
+    searchInputRef.current?.blur();
+    Keyboard.dismiss();
+    setSearchQuery("");
+    setSearchScreen(false);
+    setSelectedLocation(preview);
+    cameraRef.current?.setStop({ center: preview.coordinates, duration: 700, easing: "ease", zoom: mapSelectionZoom });
+  }, []);
+
+  const openSearch = useCallback(() => {
+    setSelectedLocation(null);
+    setSearchScreen(true);
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    if (!locationId) return;
+    let active = true;
+    getLocationById(locationId).then((response) => {
+      const preview = response?.success ? getMapLocationPreview(response.data) : null;
+      if (active && preview) focusLocation(preview);
+    });
+    return () => { active = false; };
+  }, [focusLocation, locationId]);
+
+  useEffect(() => {
+    navigation.setOptions({ tabBarStyle: selectedLocation ? { display: "none" } : undefined });
+    return () => navigation.setOptions({ tabBarStyle: undefined });
+  }, [navigation, selectedLocation]);
+
   useFocusEffect(useCallback(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (!searchScreen) return false;
@@ -88,7 +132,7 @@ export default function MapScreen() {
   const openContribution = (type: "add" | "register") => {
     setActionVisible(false);
     if (type === "register" && user?.phoneVerified !== true) {
-      setPhoneSheetVisible(true);
+      router.push({ pathname: "/profile/verify-phone", params: { redirect: "/contribute?type=register" } });
       return;
     }
     router.push({ pathname: "/contribute", params: { type } });
@@ -99,9 +143,13 @@ export default function MapScreen() {
 
   return (
     <MapCanvas>
-      <MapSearchDock inputRef={searchInputRef} onBack={searchScreen ? closeSearch : undefined} onChangeText={setSearchQuery} onFocus={() => setSearchScreen(true)} value={searchQuery} />
+      <MapSearchDock inputRef={searchInputRef} isSearchOpen={searchScreen} notificationCount={unreadCount} onChangeText={setSearchQuery} onNotifications={() => router.push("/notifications")} onSearchClose={closeSearch} onSearchOpen={openSearch} value={searchQuery} />
       {searchScreen ? (
-        <LocationSearchScreen searchQuery={searchQuery} />
+        <LocationSearchScreen onSelectLocation={(item) => {
+          const preview = getMapLocationPreview(item);
+          if (preview) focusLocation(preview);
+          else if (item?._id) router.push(`/location/${item._id}` as never);
+        }} searchQuery={searchQuery} />
       ) : (
         <View style={{ flex: 1 }}>
           <Map mapStyle={mapStyle} style={{ flex: 1 }}>
@@ -109,14 +157,15 @@ export default function MapScreen() {
             <NativeUserLocation />
             <GeoJSONSource
               cluster
-              clusterMaxZoom={14}
+              clusterMaxZoom={12}
               clusterRadius={20}
               data={geoJson}
               id="geojson"
               onPress={(event) => {
                 event.stopPropagation();
                 const feature = event.nativeEvent.features?.[0];
-                if (feature?.properties.id) router.push({ pathname: "/location/[id]", params: { id: feature.properties.id } });
+                const preview = getMapLocationPreview(feature);
+                if (preview) focusLocation(preview);
               }}
             >
               <Layer filter={["has", "point_count"]} id="locations-cluster" paint={{ "circle-color": colors.textPrimary, "circle-radius": 18, "circle-stroke-color": colors.surfaceBase, "circle-stroke-width": 2 }} source="geojson" type="circle" />
@@ -125,7 +174,8 @@ export default function MapScreen() {
               <Layer filter={["!", ["has", "point_count"]]} id="locations-label" layout={{ "text-allow-overlap": false, "text-anchor": "top", "text-field": ["get", "name"], "text-ignore-placement": false, "text-offset": [0, 1.5], "text-size": 12 }} paint={{ "text-color": colors.textPrimary, "text-halo-color": colors.surfaceBase, "text-halo-width": 1.5 }} source="geojson" type="symbol" />
             </GeoJSONSource>
           </Map>
-          <MapControls onAdd={() => setActionVisible(true)} onLocate={setCurrentLocation} />
+          {!selectedLocation ? <MapControls onAdd={user?.role === "VENDOR" ? () => setActionVisible(true) : undefined} onLocate={setCurrentLocation} /> : null}
+          {selectedLocation ? <MapLocationDrawer key={selectedLocation.id} location={selectedLocation} onDismiss={() => setSelectedLocation(null)} /> : null}
         </View>
       )}
       <ActionSheet
@@ -136,16 +186,6 @@ export default function MapScreen() {
         onDismiss={() => setActionVisible(false)}
         title="Bạn muốn làm gì?"
         visible={actionVisible}
-      />
-      <ActionSheet
-        actions={[
-          { icon: "account-check-outline", label: "Đến tài khoản", onPress: () => { setPhoneSheetVisible(false); router.push("/profile"); } },
-          { icon: "close", label: "Để sau", onPress: () => setPhoneSheetVisible(false) },
-        ]}
-        message="Bạn cần xác minh số điện thoại trước khi đăng ký địa điểm."
-        onDismiss={() => setPhoneSheetVisible(false)}
-        title="Cần xác minh số điện thoại"
-        visible={phoneSheetVisible}
       />
     </MapCanvas>
   );

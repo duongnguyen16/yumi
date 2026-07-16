@@ -1,11 +1,12 @@
 import { userContext } from "@/contexts/userContext";
+import { locationProductsExpandedByDefault } from "@/common/map-location";
 import { createProduct, deleteProduct, updateProduct, type ProductPayload } from "@/service/productService";
 import { toAbsoluteUrl } from "@/service/url";
-import { AppText, Button, Card, EmptyState, IconButton, Inline, Stack, TextArea, TextField } from "@/ui/components";
+import { AppText, Button, Card, EmptyState, IconButton, Inline, NoticeSnackbar, Stack, TextArea, TextField } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 import React, { useContext, useMemo, useState } from "react";
 import { Alert, Image } from "react-native";
-import { Modal, Portal, Snackbar } from "react-native-paper";
+import { Modal, Portal } from "react-native-paper";
 
 type Product = { _id?: string; id?: string; name?: string; description?: string | null; imageUrl?: string | null; price?: number | null; priceDisclaimer?: string };
 type ProductSectionProps = { locationId?: string; ownerId?: string | { _id?: string; id?: string } | null; products?: Product[]; onChanged?: () => Promise<void> | void };
@@ -18,6 +19,7 @@ export default function ProductSection({ locationId, ownerId, products = [], onC
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [expanded, setExpanded] = useState(locationProductsExpandedByDefault);
   const canManage = user?.role === "VENDOR" && Boolean(getId(ownerId)) && getId(ownerId) === getId(user);
   const sortedProducts = useMemo(() => products ?? [], [products]);
 
@@ -78,9 +80,9 @@ export default function ProductSection({ locationId, ownerId, products = [], onC
           <AppText variant="title2">Sản phẩm</AppText>
           <AppText style={{ color: colors.textSecondary }} variant="caption">Giá chỉ mang tính tham khảo</AppText>
         </Stack>
-        {canManage ? <IconButton icon="plus" label="Thêm sản phẩm" onPress={openCreate} /> : null}
+        <Inline>{canManage ? <IconButton icon="plus" label="Thêm sản phẩm" onPress={openCreate} /> : null}<IconButton icon={expanded ? "chevron-up" : "chevron-down"} label={expanded ? "Thu gọn sản phẩm" : "Mở rộng sản phẩm"} onPress={() => setExpanded((current) => !current)} /></Inline>
       </Inline>
-      {sortedProducts.length === 0 ? <EmptyState icon="shopping-outline" title="Chưa có sản phẩm" /> : sortedProducts.map((product, index) => (
+      {expanded && (sortedProducts.length === 0 ? <EmptyState icon="shopping-outline" title="Chưa có sản phẩm" /> : sortedProducts.map((product, index) => (
         <Card key={getId(product) || product.name || index}>
           <Stack>
             {renderProductImage(product.imageUrl)}
@@ -95,8 +97,8 @@ export default function ProductSection({ locationId, ownerId, products = [], onC
             </Inline>
           </Stack>
         </Card>
-      ))}
-      {canManage && sortedProducts.length >= 50 ? <AppText style={{ color: colors.accentRed }} variant="caption">Đã đạt giới hạn 50 sản phẩm.</AppText> : null}
+      )))}
+      {expanded && canManage && sortedProducts.length >= 50 ? <AppText style={{ color: colors.accentRed }} variant="caption">Đã đạt giới hạn 50 sản phẩm.</AppText> : null}
       <Portal>
         <Modal contentContainerStyle={{ backgroundColor: colors.surfaceBase, borderRadius: radius.sheet, gap: spacing[3], marginHorizontal: spacing[4], padding: spacing[5] }} onDismiss={() => setModalVisible(false)} visible={modalVisible}>
           <AppText variant="title2">{editingProduct ? "Sửa sản phẩm" : "Thêm sản phẩm"}</AppText>
@@ -108,7 +110,7 @@ export default function ProductSection({ locationId, ownerId, products = [], onC
           <Inline style={{ justifyContent: "flex-end" }}><Button label="Hủy" onPress={() => setModalVisible(false)} variant="secondary" /><Button label="Lưu" loading={saving} onPress={saveProduct} /></Inline>
         </Modal>
       </Portal>
-      <Snackbar onDismiss={() => setMessage("")} visible={Boolean(message)}>{message}</Snackbar>
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Stack>
   );
 }

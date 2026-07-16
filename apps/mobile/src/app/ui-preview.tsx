@@ -102,8 +102,7 @@ export default function UiPreviewScreen() {
       <BottomTabBar
         items={[
           { icon: "compass-outline", label: "Khám phá" },
-          { icon: "bookmark-outline", label: "Của tôi" },
-          { badge: "3", icon: "bell-outline", label: "Hoạt động" },
+          { icon: "bookmark-outline", label: "Đã lưu" },
           { icon: "account-outline", label: "Tài khoản" },
         ]}
         selected="Khám phá"

@@ -11,7 +11,6 @@ import * as ImagePicker from "expo-image-picker";
 import * as ExpoLocation from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useEffect, useState } from "react";
-import { Alert } from "react-native";
 
 type Proof = { uri: string; fileName: string; mimeType: string; fileSize: number };
 
@@ -57,7 +56,11 @@ export default function AccessDetailScreen() {
     const response = await respondAccess(id, action, reason.trim() || undefined);
     setLoading(false);
     if (!response.success) setMessage(response.message || "Không thể phản hồi.");
-    else Alert.alert("Đã xử lý", response.message, [{ text: "Đóng", onPress: () => router.back() }]);
+    else {
+      const refreshed = await getAccess(id);
+      if (refreshed.success) setItem(refreshed.request || item);
+      setMessage(response.message || "Yêu cầu đã được xử lý.");
+    }
   };
 
   const takeProof = async () => {
@@ -88,7 +91,11 @@ export default function AccessDetailScreen() {
       const url = await uploadContributionImage(proof);
       const response = await verifyAccess(id, [{ url, fileType: "IMAGE", geo: { type: "Point", coordinates: [position.coords.longitude, position.coords.latitude] }, accuracyMeters: position.coords.accuracy || undefined, capturedAt: new Date(position.timestamp).toISOString() }]);
       if (!response.success) setMessage(response.message || "Không thể xác minh.");
-      else Alert.alert("Đã chuyển quyền", response.message, [{ text: "Đóng", onPress: () => router.back() }]);
+      else {
+        const refreshed = await getAccess(id);
+        if (refreshed.success) setItem(refreshed.request || item);
+        setMessage(response.message || "Quyền quản lý đã được cập nhật.");
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tải bằng chứng.");
     } finally {
@@ -97,7 +104,7 @@ export default function AccessDetailScreen() {
   };
 
   return (
-    <WorkflowDetailScreen loading={loading && !item} message={message} navigationTitle="Chi tiết chuyển quyền" onBack={() => router.back()} status={getWorkflowStatus(item?.effectiveState)} supportingText={location?.address} title={location?.name || "Yêu cầu chuyển quyền"}>
+    <WorkflowDetailScreen loading={loading && !item} message={message} navigationTitle="Chi tiết chuyển quyền" onBack={() => router.back()} onMessageDismiss={() => setMessage("")} status={getWorkflowStatus(item?.effectiveState)} supportingText={location?.address} title={location?.name || "Yêu cầu chuyển quyền"}>
       {item ? <Timeline items={[{ title: "Đã gửi yêu cầu", detail: "Chủ hiện tại có 3 ngày để phản hồi", active: item.effectiveState === "PENDING_OPEN" }, { title: getWorkflowStatus(item.effectiveState).label, timestamp: new Date(item.timeoutAt).toLocaleString("vi-VN") }]} /> : null}
 
       {isOwner && item?.effectiveState === "PENDING_OPEN" ? (

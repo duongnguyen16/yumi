@@ -22,8 +22,8 @@ import { EmptyState, IconButton, LoadingState } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_APu ||
-  "https://demotiles.maplibre.org/style.json";
+  process.env.EXPO_PUBLIC_MAP_API ||
+  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
 type MapStyleLayer = {
   id: string | number;
@@ -94,6 +94,7 @@ function CustomMap(
           throw new Error("Map style response is missing layers");
         }
         styleJson.glyphs =
+          styleJson.glyphs ||
           "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();

@@ -1,9 +1,8 @@
 import { createAccess } from "@/service/requestAccessService";
-import { AppText, Button, FormSection, NavigationBar, Page, PageContent, TextArea } from "@/ui/components";
+import { AppText, BottomActionBar, Button, FormSection, NavigationBar, NoticeSnackbar, Page, PageContent, TextArea } from "@/ui/components";
 import { colors } from "@/ui/tokens";
 import { Stack as RouterStack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert } from "react-native";
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -17,6 +16,7 @@ export default function NewAccessScreen() {
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const submit = async () => {
     if (!locationId) return;
@@ -25,7 +25,10 @@ export default function NewAccessScreen() {
     const response = await createAccess(locationId, reason.trim() || undefined);
     setLoading(false);
     if (!response.success) setMessage(response.message || "Không thể gửi yêu cầu.");
-    else Alert.alert("Đã gửi yêu cầu", "Chủ địa điểm có 3 ngày để phản hồi.", [{ text: "Xem yêu cầu", onPress: () => router.replace("/request-access" as never) }]);
+    else {
+      setSubmitted(true);
+      setMessage("Yêu cầu đã gửi. Chủ địa điểm có 3 ngày để phản hồi.");
+    }
   };
 
   return (
@@ -37,9 +40,9 @@ export default function NewAccessScreen() {
           <TextArea label="Lý do yêu cầu" onChangeText={setReason} placeholder="Mô tả mối liên hệ của bạn với địa điểm" value={reason} />
           <AppText style={{ color: colors.textSecondary }} variant="caption">Nếu chủ không phản hồi sau 3 ngày, bạn cần chụp bằng chứng tại chỗ để tiếp tục.</AppText>
         </FormSection>
-        {message ? <AppText style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
-        <Button disabled={loading} label="Gửi yêu cầu" loading={loading} onPress={submit} width="full" />
       </PageContent>
+      <BottomActionBar><Button disabled={loading} label="Gửi yêu cầu" loading={loading} onPress={submit} width="full" /></BottomActionBar>
+      <NoticeSnackbar action={submitted ? { label: "Xem", onPress: () => router.replace("/request-access" as never) } : undefined} message={message} onDismiss={() => setMessage("")} />
     </Page>
   );
 }

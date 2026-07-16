@@ -3,12 +3,16 @@ import { PlaceRow } from "@/ui/components";
 import { useRouter } from "expo-router";
 import React from "react";
 
-export default function LocationSearchResult({ item }) {
+export default function LocationSearchResult({ item, onSelect }) {
   const router = useRouter();
   return <PlaceRow
       address={item.address}
       metadata={distanceText(item.distance)}
       onPress={() => {
+        if (onSelect) {
+          onSelect(item);
+          return;
+        }
         router.push({
           pathname: "/location/[id]",
           params: { id: item._id },

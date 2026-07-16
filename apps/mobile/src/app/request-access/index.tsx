@@ -1,14 +1,15 @@
 import { getWorkflowStatus } from "@/components/workflow/status";
+import { requestAccessTabs } from "@/navigation/request-access-tabs";
 import { listAccess, type AccessRequest, type AccessSide } from "@/service/requestAccessService";
-import { ActivityRow, AppText, EmptyState, LoadingState, NavigationBar, Page, PageContent, SegmentedControl, Stack } from "@/ui/components";
-import { colors } from "@/ui/tokens";
+import { ActivityRow, EmptyState, LoadingState, NavigationBar, NoticeSnackbar, Page, PageContent, Stack } from "@/ui/components";
+import { colors, fontFamily } from "@/ui/tokens";
 import { Stack as RouterStack, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { RefreshControl } from "react-native";
+import { RefreshControl, View } from "react-native";
+import { TabScreen, Tabs, TabsProvider } from "react-native-paper-tabs";
 
-export default function AccessListScreen() {
+function AccessTabContent({ side }: { side: AccessSide }) {
   const router = useRouter();
-  const [side, setSide] = useState<AccessSide>("owner");
   const [items, setItems] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -24,16 +25,9 @@ export default function AccessListScreen() {
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
 
   return (
-    <Page>
-      <RouterStack.Screen options={{ headerShown: false }} />
-      <NavigationBar onBack={() => router.back()} title="Chuyển quyền" />
+    <View style={{ backgroundColor: colors.surfaceApp, flex: 1 }}>
       {loading && items.length === 0 ? <LoadingState /> : (
         <PageContent refreshControl={<RefreshControl onRefresh={load} refreshing={loading} tintColor={colors.accentPrimary} />}>
-          <Stack>
-            <AppText variant="title1">Yêu cầu quản lý</AppText>
-            <AppText style={{ color: colors.textSecondary }} variant="subhead">Các yêu cầu chuyển quyền địa điểm đã gửi và đã nhận.</AppText>
-          </Stack>
-          <SegmentedControl onChange={(value) => setSide(value as AccessSide)} options={[{ value: "owner", label: "Tôi nhận" }, { value: "requester", label: "Tôi gửi" }]} value={side} />
           {items.length === 0 ? <EmptyState icon="account-switch-outline" supportingText={side === "owner" ? "Yêu cầu gửi đến bạn sẽ xuất hiện tại đây." : "Yêu cầu bạn đã gửi sẽ xuất hiện tại đây."} title="Chưa có yêu cầu" /> : null}
           <Stack>
             {items.map((item) => {
@@ -42,9 +36,37 @@ export default function AccessListScreen() {
               return <ActivityRow icon="account-switch-outline" key={item._id} onPress={() => router.push(`/request-access/${item._id}` as never)} status={getWorkflowStatus(item.effectiveState)} supportingText={relatedUser?.fullName || relatedUser?.email || location?.address} title={location?.name || "Địa điểm"} />;
             })}
           </Stack>
-          {message ? <AppText style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
         </PageContent>
       )}
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
+    </View>
+  );
+}
+
+export default function AccessListScreen() {
+  const router = useRouter();
+
+  return (
+    <Page>
+      <RouterStack.Screen options={{ headerShown: false }} />
+      <NavigationBar onBack={() => router.back()} title="Chuyển quyền" />
+      <View style={{ flex: 1 }}>
+        <TabsProvider defaultIndex={0}>
+          <Tabs
+            mode="fixed"
+            style={{ backgroundColor: colors.surfaceApp }}
+            tabHeaderStyle={{ borderBottomColor: colors.separator, borderBottomWidth: 1 }}
+            tabLabelStyle={{ fontFamily: fontFamily.semibold, fontSize: 14 }}
+            uppercase={false}
+          >
+            {requestAccessTabs.map((tab) => (
+              <TabScreen key={tab.side} label={tab.label}>
+                <AccessTabContent side={tab.side} />
+              </TabScreen>
+            ))}
+          </Tabs>
+        </TabsProvider>
+      </View>
     </Page>
   );
 }
