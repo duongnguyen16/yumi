@@ -17,6 +17,14 @@ export interface VendorLocation {
   updatedAt: string;
 }
 
+export interface OwnedLocation {
+  _id: string;
+  name: string;
+  address: string;
+  status: string;
+  updatedAt?: string;
+}
+
 export interface VendorDashboardOverview {
   totalLocations: number;
   totalViews: number;
@@ -30,7 +38,7 @@ const getOwnedLocations = async () => {
     if (response.data?.success) {
       return {
         success: true,
-        data: response.data.data as VendorLocation[],
+        data: response.data.data as OwnedLocation[],
       };
     }
     return {

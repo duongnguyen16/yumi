@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 import { Stack as RouterStack, useLocalSearchParams, useRouter } from "expo-router";
 import * as ExpoLocation from "expo-location";
 import * as ImagePicker from "expo-image-picker";
@@ -25,12 +25,12 @@ import { getSystemCode } from "@/service/locationService";
 import LocationBasicFields from "@/components/location-form/location-basic-fields";
 import LocationCategoryFields from "@/components/location-form/location-category-fields";
 import LocationScheduleFields from "@/components/location-form/location-schedule-fields";
-import { ActionSheet, AppText, Button, Card, Chip, FormSection, GroupedList, ListRow, LoadingState, MediaPicker, Page, Stack, TextField, WizardScreen } from "@/ui/components";
+import { ActionSheet, AppText, Button, Card, Chip, FormSection, GroupedList, ListRow, LoadingState, MediaPicker, NoticeSnackbar, Page, Stack, TextField, WizardScreen } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
-  "https://demotiles.maplibre.org/style.json";
+  "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 2;
@@ -160,6 +160,8 @@ export default function ContributePlaceScreen() {
   const [licenseFiles, setLicenseFiles] = useState<SelectedEvidenceFile[]>([]);
   const [systemCode, setSystemCode] = useState<string | null>(null);
   const [duplicateOptionVisible, setDuplicateOptionVisible] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [noticeAction, setNoticeAction] = useState<{ label: string; onPress: () => void } | undefined>();
   const { type } = useLocalSearchParams();
   const contributionType = getFirstParamValue(type);
   const isVendorRegistration = contributionType === "register";
@@ -203,10 +205,7 @@ export default function ContributePlaceScreen() {
           if (response.success) {
             setSystemCode(response.code);
           } else {
-            Alert.alert(
-              "Không tạo được mã",
-              response.message || "Không lấy được mã xác thực đăng ký.",
-            );
+            setNotice(response.message || "Không lấy được mã xác thực đăng ký.");
           }
         }
         setCategories(
@@ -217,7 +216,7 @@ export default function ContributePlaceScreen() {
         setMapStyle(styleJson);
       } catch (error) {
         console.log("Error bootstrapping contribute place:", error);
-        Alert.alert("Lỗi", "Không tải được dữ liệu đóng góp địa điểm.");
+        setNotice("Không tải được dữ liệu đóng góp địa điểm.");
       } finally {
         setLoading(false);
       }
@@ -284,10 +283,7 @@ export default function ContributePlaceScreen() {
         const permission =
           await ExpoLocation.requestForegroundPermissionsAsync();
         if (permission.status !== "granted") {
-          Alert.alert(
-            "Cần quyền vị trí",
-            "Hãy cấp quyền vị trí để đóng góp địa điểm.",
-          );
+          setNotice("Hãy cấp quyền vị trí để đóng góp địa điểm.");
           return;
         }
 
@@ -318,7 +314,7 @@ export default function ContributePlaceScreen() {
         }
       } catch (error) {
         console.log("Error loading device location:", error);
-        Alert.alert("Lỗi", "Không lấy được vị trí hiện tại.");
+        setNotice("Không lấy được vị trí hiện tại.");
       }
     };
 
@@ -386,7 +382,7 @@ export default function ContributePlaceScreen() {
 
   const handlePickImages = async () => {
     if (images.length >= MAX_IMAGES) {
-      Alert.alert("Đã đủ 5 ảnh", "Bạn chỉ được chọn tối đa 5 ảnh.");
+      setNotice("Bạn chỉ được chọn tối đa 5 ảnh.");
       return;
     }
 
@@ -420,7 +416,7 @@ export default function ContributePlaceScreen() {
 
   const handlePickVideos = async () => {
     if (videos.length >= MAX_VIDEOS) {
-      Alert.alert("Đã đủ video", "Bạn chỉ được chọn tối đa 2 video.");
+      setNotice("Bạn chỉ được chọn tối đa 2 video.");
       return;
     }
 
@@ -448,10 +444,7 @@ export default function ContributePlaceScreen() {
 
   const handlePickLicenseFiles = async () => {
     if (licenseFiles.length >= MAX_LICENSES) {
-      Alert.alert(
-        "Đã đủ giấy phép",
-        "Bạn chỉ được chọn tối đa 3 ảnh giấy phép.",
-      );
+      setNotice("Bạn chỉ được chọn tối đa 3 ảnh giấy phép.");
       return;
     }
 
@@ -561,7 +554,7 @@ export default function ContributePlaceScreen() {
   const handleContinue = async () => {
     if (step === 0) {
       if (!name.trim() || !description.trim() || !selectedCategoryId) {
-        Alert.alert("Thiếu thông tin", "Hãy nhập tên, mô tả và chọn danh mục.");
+        setNotice("Hãy nhập tên, mô tả và chọn danh mục.");
         return;
       }
       setStep(1);
@@ -570,7 +563,7 @@ export default function ContributePlaceScreen() {
 
     if (step === 1) {
       if (!pinCoords || !deviceCoords) {
-        Alert.alert("Thiếu vị trí", "Không lấy được vị trí để kiểm tra 50m.");
+        setNotice("Không lấy được vị trí để kiểm tra 50m.");
         return;
       }
 
@@ -586,18 +579,11 @@ export default function ContributePlaceScreen() {
           address: resolvedAddress,
         });
         if (!validatePosition.success) {
-          Alert.alert(
-            "Vị trí không hợp lệ",
-            validatePosition?.message ||
-              "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
-          );
+          setNotice(validatePosition?.message || "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.");
           return;
         }
         if (!validatePosition.withinRange) {
-          Alert.alert(
-            "Ngoài phạm vi",
-            "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
-          );
+          setNotice("Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.");
           return;
         }
         checkingDuplicates = true;
@@ -620,17 +606,12 @@ export default function ContributePlaceScreen() {
 
         setStep(2);
       } catch (error: unknown) {
-        Alert.alert(
-          checkingDuplicates
-            ? "Không thể kiểm tra trùng lặp"
-            : "Không thể kiểm tra vị trí",
-          getErrorMessage(
+        setNotice(getErrorMessage(
             error,
             checkingDuplicates
               ? "Không thể kiểm tra địa điểm trùng lặp. Vui lòng thử lại."
               : "Không thể kiểm tra vị trí. Vui lòng thử lại.",
-          ),
-        );
+          ));
       } finally {
         setSaving(false);
       }
@@ -639,22 +620,16 @@ export default function ContributePlaceScreen() {
 
     if (step === 2) {
       if (isVendorRegistration && !systemCode) {
-        Alert.alert(
-          "Thiếu mã xác thực",
-          "Không thể gửi đăng ký vendor khi chưa có mã xác thực.",
-        );
+        setNotice("Không thể gửi đăng ký vendor khi chưa có mã xác thực.");
         return;
       }
 
       if (isVendorRegistration && videos.length < 1) {
-        Alert.alert(
-          "Thiếu video",
-          "Hãy thêm ít nhất 1 video có chứa mã xác thực.",
-        );
+        setNotice("Hãy thêm ít nhất 1 video có chứa mã xác thực.");
         return;
       }
       if (!isVendorRegistration && images.length < 1) {
-        Alert.alert("Thiếu ảnh", "Hãy chọn ít nhất 1 ảnh.");
+        setNotice("Hãy chọn ít nhất 1 ảnh.");
         return;
       }
 
@@ -668,11 +643,7 @@ export default function ContributePlaceScreen() {
         if (isVendorRegistration) {
           const response = await submitVendorRegistrationDataToBackend();
           if (response?.success === false) {
-            Alert.alert(
-              "Gửi đăng ký thất bại",
-              response?.message ||
-                "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
-            );
+            setNotice(response?.message || "Không thể gửi đăng ký vendor. Vui lòng thử lại.");
             return;
           }
           setImages([]);
@@ -682,28 +653,17 @@ export default function ContributePlaceScreen() {
           await submitCustomerDataToBackend();
         }
 
-        Alert.alert(
-          isVendorRegistration ? "Đã gửi đăng ký" : "Đã gửi để duyệt",
-          isVendorRegistration
+        setNotice(isVendorRegistration
             ? "Hồ sơ vendor của bạn đang chờ phê duyệt."
-            : "Địa điểm của bạn đang chờ phê duyệt.",
-          [
-            {
-              text: "OK",
-              onPress: () => router.replace("/(tabs)/home"),
-            },
-          ],
-        );
+            : "Địa điểm của bạn đang chờ phê duyệt.");
+        setNoticeAction({ label: "Đóng", onPress: () => router.replace("/(tabs)/home") });
       } catch (error: unknown) {
-        Alert.alert(
-          isVendorRegistration ? "Gửi đăng ký thất bại" : "Gửi thất bại",
-          getErrorMessage(
+        setNotice(getErrorMessage(
             error,
             isVendorRegistration
               ? "Không thể gửi đăng ký vendor."
               : "Không thể gửi địa điểm để duyệt.",
-          ),
-        );
+          ));
       } finally {
         setSaving(false);
       }
@@ -885,6 +845,7 @@ export default function ContributePlaceScreen() {
         title="Có thể bị trùng"
         visible={duplicateOptionVisible}
       />
+      <NoticeSnackbar action={noticeAction} message={notice} onDismiss={() => { setNotice(""); setNoticeAction(undefined); }} />
     </>
   );
 }

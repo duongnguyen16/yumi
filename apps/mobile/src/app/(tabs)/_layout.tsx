@@ -1,63 +1,31 @@
-import { getUnreadCount } from "@/service/notificationService";
-import {
-  formatUnreadBadge,
-  MAIN_TABS,
-  SHOW_TABS_HEADER,
-} from "@/navigation/mainTabs";
+import { userContext } from "@/contexts/userContext";
+import { getMainTabs, SHOW_TABS_HEADER } from "@/navigation/mainTabs";
 import { BottomTabBar } from "@/ui/components";
 import { Tabs } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useContext } from "react";
+import { StyleSheet } from "react-native";
+
+const routeNames = ["home", "mine", "manage", "activity", "profile"] as const;
 
 export default function TabsLayout() {
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const refreshUnreadCount = () => {
-      getUnreadCount().then((res) => {
-        if (isMounted && res.success) setUnread(res.count);
-      });
-    };
-
-    refreshUnreadCount();
-    const interval = setInterval(refreshUnreadCount, 60000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, []);
+  const { user } = useContext(userContext);
+  const tabs = getMainTabs(typeof user?.role === "string" ? user.role : null);
 
   return (
     <Tabs
-      tabBar={({ state, navigation }) => {
-        const selected = MAIN_TABS.find((tab) => tab.name === state.routes[state.index]?.name)?.title ?? MAIN_TABS[0].title;
-
-        return (
-          <BottomTabBar
-            items={MAIN_TABS.map((tab) => ({ badge: tab.name === "activity" ? formatUnreadBadge(unread) : undefined, icon: tab.icon, label: tab.title }))}
-            onSelect={(label) => {
-              const tab = MAIN_TABS.find((item) => item.title === label);
-              if (tab) navigation.navigate(tab.name);
-            }}
-            selected={selected}
-          />
-        );
+      tabBar={({ state, navigation, descriptors }) => {
+        const route = state.routes[state.index];
+        const activeTabStyle = StyleSheet.flatten(descriptors[route.key]?.options.tabBarStyle) as { display?: string } | undefined;
+        if (activeTabStyle?.display === "none") return null;
+        const selected = tabs.find((tab) => tab.name === state.routes[state.index]?.name)?.title ?? tabs[0].title;
+        return <BottomTabBar items={tabs.map((tab) => ({ icon: tab.icon, label: tab.title }))} onSelect={(label) => { const tab = tabs.find((item) => item.title === label); if (tab) navigation.navigate(tab.name); }} selected={selected} />;
       }}
-      screenOptions={{
-        headerShown: SHOW_TABS_HEADER,
-      }}
+      screenOptions={{ headerShown: SHOW_TABS_HEADER }}
     >
-      {MAIN_TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.title,
-          }}
-        />
-      ))}
+      {routeNames.map((name) => {
+        const activeTab = tabs.find((tab) => tab.name === name);
+        return <Tabs.Screen key={name} name={name} options={{ href: activeTab ? undefined : null, title: activeTab?.title ?? name }} />;
+      })}
     </Tabs>
   );
 }

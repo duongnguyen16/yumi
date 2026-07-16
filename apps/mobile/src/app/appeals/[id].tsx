@@ -38,6 +38,7 @@ export default function AppealDetailScreen() {
       message={message}
       navigationTitle="Chi tiết kháng cáo"
       onBack={() => router.back()}
+      onMessageDismiss={() => setMessage("")}
       status={getWorkflowStatus(item?.status)}
       supportingText={item?.argument}
       title={item?.type ?? "Kháng cáo"}
