@@ -22,6 +22,7 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 
 const REVIEW_ON_SITE_DISTANCE_METERS = 50;
 const REVIEW_ON_SITE_ACCURACY_METERS = 50;
+const MIN_REVIEW_COMMENT_LENGTH = 20;
 
 type RatingSummary = {
   _id: Types.ObjectId;
@@ -140,6 +141,7 @@ export class ReviewsService {
     }
 
     this.assertOnSiteProof(location, dto);
+    const comment = this.normalizeComment(dto.comment);
 
     const existingReview = await this.reviewModel
       .findOne({
@@ -158,7 +160,7 @@ export class ReviewsService {
       locationId: location._id,
       userId: user._id,
       rating: dto.rating,
-      comment: dto.comment.trim(),
+      comment,
       images: this.toImages(dto.imageUrls),
       status: ReviewStatus.PUBLISHED,
     });
@@ -197,7 +199,7 @@ export class ReviewsService {
       review.rating = dto.rating;
     }
     if (dto.comment !== undefined) {
-      review.comment = dto.comment.trim();
+      review.comment = this.normalizeComment(dto.comment);
     }
     if (dto.imageUrls !== undefined) {
       review.images = this.toImages(dto.imageUrls);
@@ -271,6 +273,17 @@ export class ReviewsService {
       isCover: index === 0,
       uploadedAt: new Date(),
     }));
+  }
+
+  private normalizeComment(comment: string) {
+    const normalized = comment.trim();
+    if (normalized.length < MIN_REVIEW_COMMENT_LENGTH) {
+      throw new BadRequestException(
+        'Nội dung đánh giá phải có ít nhất 20 ký tự',
+      );
+    }
+
+    return normalized;
   }
 
   private mapUser(user: unknown) {
