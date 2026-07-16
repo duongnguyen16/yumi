@@ -15,8 +15,8 @@ import { AppealRestoreService } from './appeal-restore.service';
 import { AppealSourceService } from './appeal-source.service';
 import { AppealService } from './appeal.service';
 
-describe('Appeal contracts', () => {
-  it('supports request access escalation', () => {
+describe('Kiểm thử hợp đồng kháng nghị', () => {
+  it('hỗ trợ chuyển cấp yêu cầu quyền truy cập', () => {
     expect(AppealType.REQUEST_ACCESS_REJECTED).toBe(
       'REQUEST_ACCESS_REJECTED',
     );
@@ -24,13 +24,13 @@ describe('Appeal contracts', () => {
     expect(AppealType.USER_WARNED).toBe('USER_WARNED');
   });
 
-  it('stores appeal decision context', () => {
+  it('lưu ngữ cảnh quyết định kháng nghị', () => {
     expect(AppealSchema.path('argument')).toBeDefined();
     expect(AppealSchema.path('originalDeciderId')).toBeDefined();
     expect(AppealSchema.path('originalDecidedAt')).toBeDefined();
   });
 
-  it('stores the request access source', () => {
+  it('lưu nguồn yêu cầu quyền truy cập', () => {
     expect(DisputeSchema.path('requestAccessId')).toBeDefined();
   });
 });
@@ -42,7 +42,7 @@ function query<T>(value: T) {
   };
 }
 
-describe('AppealService', () => {
+describe('Kiểm thử AppealService', () => {
   const userId = new Types.ObjectId();
   const ownerId = new Types.ObjectId();
   const targetId = new Types.ObjectId();
@@ -105,7 +105,7 @@ describe('AppealService', () => {
     };
   }
 
-  it('submits one pending appeal without changing the target', async () => {
+  it('gửi một kháng nghị chờ duyệt mà không thay đổi đối tượng đích', async () => {
     const { service, appealModel, source } = setup();
     source.load.mockResolvedValue(sourceData());
     appealModel.findOne.mockReturnValue(query(null));
@@ -127,7 +127,7 @@ describe('AppealService', () => {
     );
   });
 
-  it('blocks a user who is not affected by the decision', async () => {
+  it('chặn người dùng không bị ảnh hưởng bởi quyết định', async () => {
     const { service, appealModel, source } = setup();
     source.load.mockResolvedValue(
       sourceData({ affectedUserId: String(new Types.ObjectId()) }),
@@ -139,7 +139,7 @@ describe('AppealService', () => {
     expect(appealModel.create).not.toHaveBeenCalled();
   });
 
-  it('blocks an expired decision', async () => {
+  it('chặn quyết định đã hết hạn', async () => {
     const { service, appealModel, source } = setup();
     source.load.mockResolvedValue(
       sourceData({ decidedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }),
@@ -151,7 +151,7 @@ describe('AppealService', () => {
     expect(appealModel.create).not.toHaveBeenCalled();
   });
 
-  it('blocks a second appeal for the same decision', async () => {
+  it('chặn kháng nghị thứ hai cho cùng một quyết định', async () => {
     const { service, appealModel, source } = setup();
     source.load.mockResolvedValue(sourceData());
     appealModel.findOne.mockReturnValue(query({ _id: new Types.ObjectId() }));
@@ -161,7 +161,7 @@ describe('AppealService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 409 });
   });
 
-  it('lists resolved appeals as newest-first history', async () => {
+  it('liệt kê kháng nghị đã giải quyết theo lịch sử mới nhất trước', async () => {
     const { service, appealModel } = setup();
     const find = {
       sort: jest.fn().mockReturnThis(),
@@ -194,7 +194,7 @@ describe('AppealService', () => {
     });
   });
 
-  it('accepts a rejected request access into one dispute', async () => {
+  it('chấp nhận kháng nghị yêu cầu truy cập bị từ chối để mở một tranh chấp', async () => {
     const {
       service,
       appealModel,
@@ -255,7 +255,7 @@ describe('AppealService', () => {
     expect(notify.notify).toHaveBeenCalledTimes(1);
   });
 
-  it('upholds a request access appeal without changing the request', async () => {
+  it('giữ nguyên quyết định kháng nghị yêu cầu truy cập mà không thay đổi yêu cầu', async () => {
     const { service, appealModel, reqModel } = setup();
     const appeal = {
       _id: new Types.ObjectId(),
