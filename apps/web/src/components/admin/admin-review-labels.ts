@@ -39,6 +39,15 @@ const locationRequestStatusLabels: Record<string, string> = {
   PENDING_RE_APPROVAL: 'Chờ duyệt lại',
 };
 
+const locationStatusLabels: Record<string, string> = {
+  SUBMITTED: 'Đã gửi duyệt',
+  PUBLISHED: 'Đang hiển thị',
+  HIDDEN: 'Đã ẩn',
+  REJECTED: 'Đã từ chối',
+  PENDING_RE_APPROVAL: 'Chờ duyệt lại',
+  DELETED: 'Đã xóa',
+};
+
 const locationFieldLabels: Record<string, string> = {
   name: 'Tên địa điểm',
   address: 'Địa chỉ',
@@ -51,6 +60,14 @@ const locationFieldLabels: Record<string, string> = {
   description: 'Mô tả',
   imageUrls: 'Hình ảnh',
   openingHours: 'Giờ mở cửa',
+  subCategoryIds: 'Danh mục phụ',
+  pinLatitude: 'Vĩ độ ghim',
+  pinLongitude: 'Kinh độ ghim',
+  deviceLatitude: 'Vĩ độ thiết bị',
+  deviceLongitude: 'Kinh độ thiết bị',
+  accuracyMeters: 'Độ chính xác',
+  systemCode: 'Mã hệ thống',
+  sourceEditSuggestionId: 'Mã đề xuất chỉnh sửa',
   ward: 'Phường / xã',
   district: 'Quận / huyện',
   province: 'Tỉnh / thành phố',
@@ -103,6 +120,10 @@ export function locationRequestTypeLabel(value?: string | null): string {
 
 export function locationRequestStatusLabel(value?: string | null): string {
   return value ? locationRequestStatusLabels[value] ?? humanizeAdminValue(value) : '—';
+}
+
+export function locationStatusLabel(value?: string | null): string {
+  return value ? locationStatusLabels[value] ?? humanizeAdminValue(value) : '—';
 }
 
 export function locationFieldLabel(value?: string | null): string {
