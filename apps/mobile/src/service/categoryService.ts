@@ -4,7 +4,7 @@ const getAllCategories = async () => {
   try {
     const response = await api.get("/categories");
     return response.data;
-  } catch (error) {
+  } catch {
     return {
       success: false,
     };

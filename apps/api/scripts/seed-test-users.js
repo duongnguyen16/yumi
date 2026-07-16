@@ -36,6 +36,9 @@ const IDS = {
   vendorClaimant: id('66a000000000000000000001'),
   vendorChallenger: id('66a000000000000000000002'),
   vendorPending: id('66a000000000000000000003'),
+  vendorTransfer: id('66a000000000000000000004'),
+  vendorDisputed: id('66a000000000000000000005'),
+  customerContributor: id('667300000000000000000005'),
   locationOwned: id('667200000000000000000001'),
   locationOwnedSecond: id('667200000000000000000002'),
   locationClaimable: id('667200000000000000000005'),
@@ -59,6 +62,9 @@ const IDS = {
   auditLog: id('66b000000000000000000090'),
   trustEvent: id('66b0000000000000000000a0'),
 };
+
+const fixtureLocationId = (index) =>
+  id(`66f000000000000000${String(index).padStart(6, '0')}`);
 
 const evidence = (label, withSiteCode = true) => ({
   url: `https://example.com/test-fixtures/${label}.jpg`,
@@ -162,7 +168,97 @@ const USERS = [
     trustScore: 0,
     trustLevel: 'NEW',
   },
+  {
+    _id: IDS.vendorTransfer,
+    email: 'transfer@wdp301.dev',
+    fullName: 'Vendor nhan chuyen quyen',
+    role: 'VENDOR',
+    phone: '0900000015',
+    phoneVerified: true,
+    trustScore: 52,
+    trustLevel: 'TRUSTED',
+  },
+  {
+    _id: IDS.vendorDisputed,
+    email: 'disputed@wdp301.dev',
+    fullName: 'Vendor dang tranh chap',
+    role: 'VENDOR',
+    phone: '0900000016',
+    phoneVerified: true,
+    trustScore: 24,
+    trustLevel: 'TRUSTED',
+  },
+  {
+    _id: IDS.customerContributor,
+    email: 'contributor@wdp301.dev',
+    fullName: 'Nguoi dung dong gop dia diem',
+    role: 'CUSTOMER',
+    phone: '0900000006',
+    phoneVerified: true,
+    trustScore: 28,
+    trustLevel: 'TRUSTED',
+  },
 ];
+
+const fixtureLocations = () => {
+  const lifecycle = [
+    ...Array(16).fill('PUBLISHED'),
+    ...Array(10).fill('SUBMITTED'),
+    ...Array(4).fill('PENDING_RE_APPROVAL'),
+    ...Array(3).fill('REJECTED'),
+    ...Array(3).fill('HIDDEN'),
+    ...Array(4).fill('PUBLISHED'),
+  ];
+  const owners = [
+    IDS.vendorOwner,
+    IDS.vendorClaimant,
+    IDS.vendorChallenger,
+    IDS.vendorTransfer,
+    IDS.vendorDisputed,
+    null,
+  ];
+  const categories = [
+    id('667000000000000000000001'),
+    id('667000000000000000000002'),
+    id('667000000000000000000003'),
+    id('667000000000000000000004'),
+    id('667000000000000000000005'),
+    id('667000000000000000000006'),
+  ];
+
+  return lifecycle.map((status, offset) => {
+    const index = offset + 1;
+    const ownerId =
+      status === 'PUBLISHED' && offset < 14 ? owners[offset % 5] : null;
+    const isDuplicate = offset === 36 || offset === 37;
+    const isSuspectedDuplicate = offset === 38 || offset === 39;
+    return {
+      _id: fixtureLocationId(index),
+      submittedBy:
+        offset % 3 === 0 ? IDS.customerContributor : IDS.vendorPending,
+      ...(ownerId ? { ownerId } : {}),
+      name: `Fixture dia diem ${String(index).padStart(2, '0')}`,
+      description: `Dia diem fixture ${index} phuc vu manual testing cac luong so huu, dong gop va kiem duyet tai Hoa Lac.`,
+      address: `Khu cong nghe cao Hoa Lac, Thach That, Ha Noi - lo ${index}`,
+      geo: {
+        type: 'Point',
+        coordinates: [105.51 + index * 0.001, 21.0 + index * 0.0007],
+      },
+      accuracyMeters: 10 + (index % 35),
+      openingHours: '07:00 - 22:00',
+      phone: `090100${String(index).padStart(4, '0')}`,
+      status,
+      isDuplicate,
+      isSuspectedDuplicate,
+      viewCount: index * 3,
+      source: offset % 2 === 0 ? 'VENDOR' : 'CUSTOMER',
+      categoryId: categories[offset % categories.length],
+      subCategoryIds: [],
+      imagesUrls: [],
+      submittedAt: daysAgo(30 - (index % 20)),
+    };
+  });
+};
 
 const fixtureCollections = () => ({
   vendorprofiles: [
@@ -189,6 +285,22 @@ const fixtureCollections = () => ({
       business_phone: '0900000014',
       business_address: 'Hoa Lac',
       verification_status: 'pending',
+    },
+    {
+      _id: id('66f100000000000000000004'),
+      user_id: IDS.vendorTransfer,
+      business_name: 'Doanh nghiep nhan ban giao',
+      business_phone: '0900000015',
+      business_address: 'Hoa Lac',
+      verification_status: 'approved',
+    },
+    {
+      _id: id('66f100000000000000000005'),
+      user_id: IDS.vendorDisputed,
+      business_name: 'Doanh nghiep tranh chap',
+      business_phone: '0900000016',
+      business_address: 'Hoa Lac',
+      verification_status: 'approved',
     },
   ],
   claim_requests: [
@@ -218,6 +330,44 @@ const fixtureCollections = () => ({
         decidedAt: daysAgo(9),
       },
     },
+    {
+      _id: id('66f200000000000000000001'),
+      vendorId: IDS.vendorDisputed,
+      locationId: fixtureLocationId(15),
+      type: 'CLAIM_EXISTING_LOCATION',
+      evidenceFiles: [evidence('claim-rejected')],
+      otpVerified: true,
+      otpVerifiedAt: daysAgo(8),
+      status: 'REJECTED',
+      adminDecision: {
+        decidedBy: IDS.admin,
+        reason: 'Bang chung khong khop voi dia chi kinh doanh.',
+        decidedAt: daysAgo(7),
+      },
+    },
+    {
+      _id: id('66f200000000000000000002'),
+      vendorId: IDS.vendorOwner,
+      locationId: fixtureLocationId(14),
+      type: 'CLAIM_EXISTING_LOCATION',
+      evidenceFiles: [evidence('claim-released')],
+      otpVerified: true,
+      status: 'RELEASED',
+    },
+    {
+      _id: id('66f200000000000000000003'),
+      vendorId: IDS.vendorChallenger,
+      locationId: fixtureLocationId(13),
+      type: 'CLAIM_EXISTING_LOCATION',
+      evidenceFiles: [evidence('claim-revoked')],
+      otpVerified: true,
+      status: 'REVOKED',
+      adminDecision: {
+        decidedBy: IDS.admin,
+        reason: 'Quyen so huu bi thu hoi sau tranh chap.',
+        decidedAt: daysAgo(5),
+      },
+    },
   ],
   request_accesses: [
     {
@@ -241,6 +391,48 @@ const fixtureCollections = () => ({
       timeoutAt: daysAgo(4),
       responseReason: 'Chu hien tai khong dong y chuyen quyen',
       respondedAt: daysAgo(2),
+    },
+    {
+      _id: id('66f300000000000000000001'),
+      locationId: fixtureLocationId(1),
+      requesterId: IDS.vendorTransfer,
+      currentOwnerId: IDS.vendorOwner,
+      evidenceFiles: [evidence('access-granted')],
+      otpVerified: true,
+      status: 'GRANTED',
+      responseReason: 'Da ban giao dia diem.',
+      respondedAt: daysAgo(4),
+    },
+    {
+      _id: id('66f300000000000000000002'),
+      locationId: fixtureLocationId(2),
+      requesterId: IDS.vendorDisputed,
+      currentOwnerId: IDS.vendorClaimant,
+      evidenceFiles: [evidence('access-expired')],
+      otpVerified: true,
+      status: 'EXPIRED',
+      timeoutAt: daysAgo(2),
+    },
+    {
+      _id: id('66f300000000000000000003'),
+      locationId: fixtureLocationId(3),
+      requesterId: IDS.vendorTransfer,
+      currentOwnerId: IDS.vendorChallenger,
+      evidenceFiles: [evidence('access-auto-granted')],
+      otpVerified: true,
+      status: 'AUTO_GRANTED',
+      timeoutAt: daysAgo(5),
+      respondedAt: daysAgo(4),
+    },
+    {
+      _id: id('66f300000000000000000004'),
+      locationId: fixtureLocationId(4),
+      requesterId: IDS.vendorDisputed,
+      currentOwnerId: IDS.vendorTransfer,
+      evidenceFiles: [evidence('access-escalated')],
+      otpVerified: true,
+      status: 'ESCALATED',
+      timeoutAt: daysAgo(1),
     },
   ],
   edit_suggestions: [
@@ -344,6 +536,59 @@ const fixtureCollections = () => ({
       reviewedAt: daysAgo(4),
       reviewNote: 'Fixture update da duyet',
     },
+    {
+      _id: id('66f400000000000000000001'),
+      type: 'CREATE',
+      status: 'PENDING',
+      submittedBy: IDS.customerContributor,
+      newData: {
+        name: 'Dong gop moi can kiem duyet',
+        description: 'Dia diem do nguoi dung dong gop, dang cho admin kiem tra.',
+        address: 'Hoa Lac - khu fixture dong gop',
+        categoryId: id('667000000000000000000002'),
+      },
+      imageUrls: [],
+      pinLocation: { type: 'Point', coordinates: [105.551, 21.023] },
+      deviceLocation: { type: 'Point', coordinates: [105.5511, 21.0231] },
+      deviceDistanceMeters: 14,
+      verificationProof: { proofUrls: ['https://example.com/test-fixtures/contribution-pending.jpg'] },
+    },
+    {
+      _id: id('66f400000000000000000002'),
+      type: 'CREATE',
+      status: 'REJECTED',
+      submittedBy: IDS.customerContributor,
+      newData: {
+        name: 'Dong gop bi tu choi',
+        description: 'Dia diem dong gop co thong tin chua du de phe duyet.',
+        address: 'Hoa Lac - khu fixture tu choi',
+        categoryId: id('667000000000000000000001'),
+      },
+      reviewerId: IDS.admin,
+      reviewedAt: daysAgo(3),
+      reviewNote: 'Anh xac minh va dia chi chua du ro rang.',
+    },
+    {
+      _id: id('66f400000000000000000003'),
+      type: 'UPDATE',
+      status: 'PENDING_RE_APPROVAL',
+      submittedBy: IDS.vendorOwner,
+      locationId: fixtureLocationId(27),
+      oldData: { name: 'Fixture dia diem 27', address: 'Dia chi cu' },
+      newData: { name: 'Fixture dia diem 27 da cap nhat', address: 'Dia chi moi da doi chieu' },
+      changedFields: ['name', 'address'],
+      verificationProof: { proofUrls: ['https://example.com/test-fixtures/contribution-reapproval.jpg'] },
+    },
+    {
+      _id: id('66f400000000000000000004'),
+      type: 'DELETE',
+      status: 'CANCELLED',
+      submittedBy: IDS.vendorClaimant,
+      locationId: fixtureLocationId(6),
+      oldData: { name: 'Fixture dia diem 06' },
+      newData: { reason: 'Dia diem da ngung hoat dong' },
+      reviewNote: 'Vendor da huy yeu cau truoc khi admin xu ly.',
+    },
   ],
   disputes: [
     {
@@ -355,6 +600,39 @@ const fixtureCollections = () => ({
       evidenceA: [evidence('dispute-owner')],
       evidenceB: [evidence('dispute-challenger')],
       status: 'OPEN',
+    },
+    {
+      _id: id('66f500000000000000000001'),
+      requestAccessId: id('66f300000000000000000001'),
+      locationId: fixtureLocationId(1),
+      vendorAId: IDS.vendorOwner,
+      vendorBId: IDS.vendorTransfer,
+      evidenceA: [evidence('dispute-keep-owner')],
+      evidenceB: [evidence('dispute-keep-requester')],
+      status: 'RESOLVED_KEEP',
+      adminDecision: { decidedBy: IDS.admin, reason: 'Chu cu cung cap giay to hop le.', decidedAt: daysAgo(3) },
+    },
+    {
+      _id: id('66f500000000000000000002'),
+      requestAccessId: id('66f300000000000000000003'),
+      locationId: fixtureLocationId(3),
+      vendorAId: IDS.vendorChallenger,
+      vendorBId: IDS.vendorTransfer,
+      evidenceA: [evidence('dispute-transfer-owner')],
+      evidenceB: [evidence('dispute-transfer-requester')],
+      status: 'RESOLVED_TRANSFER',
+      adminDecision: { decidedBy: IDS.admin, reason: 'Xac nhan hop dong chuyen nhuong hop le.', decidedAt: daysAgo(4) },
+    },
+    {
+      _id: id('66f500000000000000000003'),
+      requestAccessId: id('66f300000000000000000004'),
+      locationId: fixtureLocationId(4),
+      vendorAId: IDS.vendorTransfer,
+      vendorBId: IDS.vendorDisputed,
+      evidenceA: [evidence('dispute-revoke-owner')],
+      evidenceB: [evidence('dispute-revoke-requester')],
+      status: 'RESOLVED_REVOKE',
+      adminDecision: { decidedBy: IDS.admin, reason: 'Khong xac minh duoc chu so huu hop le.', decidedAt: daysAgo(5) },
     },
   ],
   appeals: [
@@ -372,6 +650,51 @@ const fixtureCollections = () => ({
       originalDeciderId: IDS.vendorOwner,
       originalDecidedAt: daysAgo(2),
       appealDeadline: daysFromNow(5),
+    },
+    {
+      _id: id('66f600000000000000000001'),
+      type: 'CLAIM_REJECTED',
+      targetCollection: 'claim_requests',
+      targetId: id('66f200000000000000000001'),
+      appellantId: IDS.vendorDisputed,
+      additionalEvidenceFiles: [evidence('appeal-claim-upheld')],
+      argument: 'De nghi giu nguyen quyet dinh vi tai lieu bo sung khong hop le.',
+      status: 'UPHELD',
+      originalDecisionReason: 'Bang chung khong khop voi dia chi kinh doanh.',
+      originalDeciderId: IDS.admin,
+      originalDecidedAt: daysAgo(7),
+      appealDeadline: daysAgo(1),
+      adminDecision: { decidedBy: IDS.admin, reason: 'Tai lieu bo sung van khong du dieu kien.', decidedAt: daysAgo(2) },
+    },
+    {
+      _id: id('66f600000000000000000002'),
+      type: 'OWNERSHIP_REVOKED',
+      targetCollection: 'disputes',
+      targetId: id('66f500000000000000000003'),
+      appellantId: IDS.vendorTransfer,
+      additionalEvidenceFiles: [evidence('appeal-ownership-overturned')],
+      argument: 'Da bo sung giay to chuyen nhuong de khoi phuc quyen so huu.',
+      status: 'OVERTURNED',
+      originalDecisionReason: 'Khong xac minh duoc chu so huu hop le.',
+      originalDeciderId: IDS.admin,
+      originalDecidedAt: daysAgo(5),
+      appealDeadline: daysFromNow(3),
+      adminDecision: { decidedBy: IDS.admin, reason: 'Khoi phuc theo fixture lich su.', decidedAt: daysAgo(1) },
+    },
+    {
+      _id: id('66f600000000000000000003'),
+      type: 'LOCATION_REJECTED',
+      targetCollection: 'location_requests',
+      targetId: id('66f400000000000000000002'),
+      appellantId: IDS.customerContributor,
+      additionalEvidenceFiles: [evidence('appeal-location-dispute')],
+      argument: 'Nguoi dong gop de nghi mo tranh chap de bo sung bang chung moi.',
+      status: 'ACCEPTED_TO_DISPUTE',
+      originalDecisionReason: 'Anh xac minh va dia chi chua du ro rang.',
+      originalDeciderId: IDS.admin,
+      originalDecidedAt: daysAgo(3),
+      appealDeadline: daysFromNow(4),
+      adminDecision: { decidedBy: IDS.admin, reason: 'Can kiem tra lai tai thuc dia.', decidedAt: daysAgo(1) },
     },
   ],
   bookmarks: [
@@ -483,6 +806,7 @@ async function main() {
     },
   ]);
   console.log('locations: refreshed ownership fixtures for manual testing');
+  await upsert('locations', fixtureLocations());
 
   for (const [collection, docs] of Object.entries(fixtureCollections())) {
     await upsert(collection, docs);
@@ -493,6 +817,18 @@ async function main() {
     console.log(
       `  - ${user.role.padEnd(8)} ${user.email} (${user.status ?? 'ACTIVE'})`,
     );
+
+  const fixtureLocationSummary = await mongoose.connection.db
+    .collection('locations')
+    .aggregate([
+      { $match: { _id: { $gte: fixtureLocationId(1), $lte: fixtureLocationId(40) } } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ])
+    .toArray();
+  console.log(
+    `Fixture locations: ${fixtureLocationSummary.reduce((total, item) => total + item.count, 0)} (${fixtureLocationSummary.map((item) => `${item._id}:${item.count}`).join(', ')})`,
+  );
 
   await mongoose.disconnect();
 }

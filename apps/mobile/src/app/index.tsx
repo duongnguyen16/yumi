@@ -1,4 +1,5 @@
 import { userContext } from "@/contexts/userContext";
+import { getAuthenticatedDestination } from "@/navigation/authDestination";
 import { Redirect } from "expo-router";
 import { useContext } from "react";
 import { Text, View } from "react-native";
@@ -16,7 +17,7 @@ export default function Index() {
   }
 
   if (user) {
-    return <Redirect href="/home" />;
+    return <Redirect href={getAuthenticatedDestination(user)} />;
   }
   if (!user) {
     return <Redirect href="/auth/login" />;

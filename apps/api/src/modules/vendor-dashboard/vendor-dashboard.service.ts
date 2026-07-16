@@ -92,7 +92,6 @@ export class VendorDashboardService {
     const locations = await this.locationModel
       .find({
         ownerId,
-        status: LocationStatus.PUBLISHED,
       })
       .sort({ updatedAt: -1 })
       .lean()
@@ -139,6 +138,7 @@ export class VendorDashboardService {
         _id: loc._id,
         name: loc.name,
         address: loc.address,
+        status: loc.status,
         viewCount: (loc.viewCount as number) ?? 0,
         categoryId: loc.categoryId,
         reviewCount: stats?.reviewCount ?? 0,
