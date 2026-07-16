@@ -42,7 +42,7 @@ import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 type ReviewRequiredData = {
   name?: string | null;
   address?: string | null;
-  pinLocation?: GeoPoint | null;
+  geo?: GeoPoint | null;
   deviceLocation?: GeoPoint | null;
   deviceDistanceMeters?: number | null;
 };
@@ -94,7 +94,7 @@ export class VendorLocationsService {
         reviewRequiredData = {
           name: updateData.name ?? null,
           address: updateData.address ?? null,
-          pinLocation:
+          geo:
             updateData.pinLatitude && updateData.pinLongitude
               ? {
                   type: 'Point',
@@ -156,7 +156,7 @@ export class VendorLocationsService {
           oldData,
           newData: cleanData,
           deviceLocation: reviewRequiredData.deviceLocation ?? null,
-          pinLocation: reviewRequiredData.pinLocation ?? null,
+          pinLocation: reviewRequiredData.geo ?? null,
           deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
           verificationProof: {
             proofUrls: urls.map((url) => url.url),

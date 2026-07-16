@@ -349,7 +349,7 @@ const validateTimeRange = (
   end: TimeValue | string,
   options: OpeningHoursValidationOptions = {},
 ) => {
-  const { allowOvernight = false, allowSameTime = false } = options;
+  const { allowOvernight = true, allowSameTime = false } = options;
   const startResult =
     typeof start === "string"
       ? validateClockTime(start)
@@ -378,7 +378,11 @@ const validateOpeningHours = (
   value: unknown,
   options: OpeningHoursValidationOptions = {},
 ) => {
-  const { required = false } = options;
+  const {
+    required = false,
+    allowOvernight = true,
+    allowSameTime = false,
+  } = options;
   const openingHours = normalizeText(value);
 
   if (!openingHours) {
