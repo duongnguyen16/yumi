@@ -1,4 +1,10 @@
-import { buildSuggestionChanges, getAllowedEditFields } from "./edit-location-model";
+import {
+  buildSuggestionChanges,
+  getAllowedEditFields,
+  validateEditLocationSubmission,
+  validatePhoneOtpRequest,
+  validatePhoneOtpVerification,
+} from "./edit-location-model";
 
 describe("edit location form model", () => {
   it("limits editable fields by ownership", () => {
@@ -19,5 +25,45 @@ describe("edit location form model", () => {
       { fieldName: "geo", geoValue: { latitude: 10.8, longitude: 106.7 } },
       { fieldName: "flag", flagValue: "DUPLICATE" },
     ]);
+  });
+
+  it("rejects invalid phone numbers before sending update OTP", () => {
+    expect(validatePhoneOtpRequest("123").isValid).toBe(false);
+    expect(validatePhoneOtpRequest("+84 909 000 111")).toEqual({
+      isValid: true,
+      phone: "0909000111",
+    });
+  });
+
+  it("rejects invalid OTP codes before verification", () => {
+    expect(validatePhoneOtpVerification("12a456").isValid).toBe(false);
+    expect(validatePhoneOtpVerification("123456")).toEqual({
+      isValid: true,
+      otp: "123456",
+    });
+  });
+
+  it("validates owner edits before submitting location updates", () => {
+    expect(
+      validateEditLocationSubmission({
+        selectedFields: ["name"],
+        assets: [],
+      }).message,
+    ).toBe("Vui lòng thêm bằng chứng");
+
+    expect(
+      validateEditLocationSubmission({
+        selectedFields: ["phone"],
+        phone: "0123",
+        otpVerified: false,
+      }).message,
+    ).toBe("Số điện thoại không hợp lệ.");
+
+    expect(
+      validateEditLocationSubmission({
+        selectedFields: ["openingHours"],
+        openingHours: "22:00-06:00",
+      }).message,
+    ).toBe("Giờ đóng cửa phải sau giờ mở cửa.");
   });
 });

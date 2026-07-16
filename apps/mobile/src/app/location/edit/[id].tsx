@@ -8,8 +8,12 @@ import { useEffect, useState } from "react";
 export default function EditLocation() {
   const { id, type } = useLocalSearchParams<{ id?: string; type?: string }>();
   const router = useRouter();
-  const [selectedFields, setSelectedFields] = useState<string[]>(type ? [type] : []);
-  const [locationData, setLocationData] = useState<EditableLocation | null>(null);
+  const [selectedFields, setSelectedFields] = useState<string[]>(
+    type ? [type] : [],
+  );
+  const [locationData, setLocationData] = useState<EditableLocation | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -19,14 +23,26 @@ export default function EditLocation() {
   }, [id]);
 
   const toggleField = (field: string) => {
-    setSelectedFields((current) => current.includes(field) ? current.filter((item) => item !== field) : [...current, field]);
+    setSelectedFields((current) =>
+      current.includes(field)
+        ? current.filter((item) => item !== field)
+        : [...current, field],
+    );
   };
 
   return (
     <Page>
       <Stack.Screen options={{ headerShown: false }} />
       <NavigationBar onBack={() => router.back()} title="Chỉnh sửa thông tin" />
-      {locationData ? <EditLocationScreen data={locationData} selectedChip={selectedFields} setSelectedChip={toggleField} /> : <LoadingState />}
+      {locationData ? (
+        <EditLocationScreen
+          data={locationData}
+          selectedChip={selectedFields}
+          setSelectedChip={toggleField}
+        />
+      ) : (
+        <LoadingState />
+      )}
     </Page>
   );
 }
