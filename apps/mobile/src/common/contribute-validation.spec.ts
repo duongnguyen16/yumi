@@ -45,6 +45,26 @@ describe("contribute place validation", () => {
     ).toBe("Giờ mở cửa không được để trống.");
   });
 
+  it("validates opening hours through the shared time range rules", () => {
+    expect(
+      validateContributionBasics({
+        name: "Quán ăn",
+        description: "Mô tả hợp lệ",
+        selectedCategoryId: "cat-1",
+        openingHours: "7:00-21:00",
+      }).message,
+    ).toBe("Giờ phải có định dạng HH:mm.");
+
+    expect(
+      validateContributionBasics({
+        name: "Quán ăn",
+        description: "Mô tả hợp lệ",
+        selectedCategoryId: "cat-1",
+        openingHours: "07:00-07:00",
+      }).message,
+    ).toBe("Giờ đóng cửa phải khác giờ mở cửa.");
+  });
+
   it("rejects vendor verification videos with missing size, large size, or long duration", () => {
     const baseVideo: PickedVideoAsset = {
       uri: "file://video.mp4",

@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { LocationStatus } from 'src/common/schemas/common.enums';
-import {
-  Location,
-  LocationDocument,
-} from 'src/common/schemas/location.schema';
+import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { LocationGeoService } from '../location-geo/location-geo.service';
 
 const DUPLICATE_DISTANCE_METERS = 500;
