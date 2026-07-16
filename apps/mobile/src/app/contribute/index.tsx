@@ -203,7 +203,7 @@ export default function ContributePlaceScreen() {
         if (isVendorRegistration) {
           const response = await getSystemCode();
           if (response.success) {
-            setSystemCode(response.code);
+            setSystemCode(response.systemCode);
           } else {
             setNotice(response.message || "Không lấy được mã xác thực đăng ký.");
           }
