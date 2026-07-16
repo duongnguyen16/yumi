@@ -60,6 +60,15 @@ export class LocationReportsService {
       throw new NotFoundException('Không tìm thấy địa điểm');
     }
 
+    if (
+      location.ownerId &&
+      String(location.ownerId) === String(reporterObjectId)
+    ) {
+      throw new ForbiddenException(
+        'Chá»§ sá»Ÿ há»¯u khĂ´ng thá»ƒ tá»± bĂ¡o cĂ¡o Ä‘á»‹a Ä‘iá»ƒm cá»§a mĂ¬nh',
+      );
+    }
+
     const evidence = dto.evidence ?? [];
     if (dto.reason === ReportReason.WRONG_OWNER) {
       if (!location.ownerId) {

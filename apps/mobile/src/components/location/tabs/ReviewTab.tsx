@@ -1,5 +1,9 @@
 import { userContext } from "@/contexts/userContext";
 import {
+  PendingContributionImage,
+  uploadContributionImage,
+} from "@/service/contributePlaceService";
+import {
   createReview,
   deleteReview,
   getReviewsByLocation,
@@ -7,6 +11,7 @@ import {
   ReviewSummary,
   updateReview,
 } from "@/service/reviewService";
+import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
   useCallback,
@@ -33,6 +38,14 @@ type ReviewTabProps = {
   initialRating?: Partial<ReviewSummary> | null;
 };
 
+type SelectedReviewImage = PendingContributionImage & {
+  id: string;
+  remoteUrl?: string;
+};
+
+const MAX_REVIEW_IMAGES = 3;
+const MIN_REVIEW_COMMENT_LENGTH = 20;
+
 export default function ReviewTab({
   locationData,
   initialRating,
@@ -46,6 +59,9 @@ export default function ReviewTab({
   const [errorMessage, setErrorMessage] = useState("");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [selectedImages, setSelectedImages] = useState<SelectedReviewImage[]>(
+    [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
@@ -99,12 +115,22 @@ export default function ReviewTab({
       setNotice("Vui lòng nhập nội dung đánh giá.");
       return;
     }
+    if (trimmedComment.length < MIN_REVIEW_COMMENT_LENGTH) {
+      setNotice(
+        `Nội dung đánh giá cần ít nhất ${MIN_REVIEW_COMMENT_LENGTH} ký tự.`,
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const imageUrls = await uploadSelectedImages(selectedImages);
+
       if (editingReviewId) {
         const response = await updateReview(editingReviewId, {
           rating,
           comment: trimmedComment,
+          imageUrls,
         });
 
         if (!response.success) {
@@ -114,6 +140,7 @@ export default function ReviewTab({
 
         setComment("");
         setRating(5);
+        setSelectedImages([]);
         setEditingReviewId(null);
         setNotice("Đã cập nhật đánh giá.");
         await loadReviews({ showLoading: false });
@@ -134,6 +161,7 @@ export default function ReviewTab({
         locationId,
         rating,
         comment: trimmedComment,
+        imageUrls,
         deviceLatitude: currentLocation.coords.latitude,
         deviceLongitude: currentLocation.coords.longitude,
         accuracyMeters: currentLocation.coords.accuracy ?? undefined,
@@ -146,6 +174,7 @@ export default function ReviewTab({
 
       setComment("");
       setRating(5);
+      setSelectedImages([]);
       setNotice("Đã gửi đánh giá.");
       await loadReviews({ showLoading: false });
     } finally {
@@ -157,12 +186,68 @@ export default function ReviewTab({
     setEditingReviewId(review.id);
     setRating(review.rating);
     setComment(review.comment);
+    setSelectedImages(
+      (review.images ?? []).slice(0, MAX_REVIEW_IMAGES).map((image, index) => ({
+        id: `existing-${review.id}-${index}-${image.url}`,
+        uri: image.url,
+        remoteUrl: image.url,
+        fileName: `review-${index + 1}.jpg`,
+        mimeType: "image/jpeg",
+        fileSize: 1,
+      })),
+    );
   };
 
   const handleCancelEdit = () => {
     setEditingReviewId(null);
     setRating(5);
     setComment("");
+    setSelectedImages([]);
+  };
+
+  const handlePickImages = async () => {
+    if (selectedImages.length >= MAX_REVIEW_IMAGES) {
+      setNotice(`Mỗi đánh giá tối đa ${MAX_REVIEW_IMAGES} ảnh.`);
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== "granted") {
+      setNotice("Bạn cần cấp quyền thư viện ảnh để thêm ảnh.");
+      return;
+    }
+
+    const remainingSlots = MAX_REVIEW_IMAGES - selectedImages.length;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
+      quality: 0.85,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    const pickedImages = result.assets
+      .slice(0, remainingSlots)
+      .map((asset, index) => ({
+        id: `${asset.uri}-${Date.now()}-${index}`,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `review-${Date.now()}-${index}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+        fileSize: asset.fileSize ?? 1,
+      }));
+
+    setSelectedImages((current) =>
+      [...current, ...pickedImages].slice(0, MAX_REVIEW_IMAGES),
+    );
+  };
+
+  const handleRemoveImage = (imageId: string) => {
+    setSelectedImages((current) =>
+      current.filter((image) => image.id !== imageId),
+    );
   };
 
   const handleDeleteReview = (review: LocationReview) => {
@@ -257,6 +342,45 @@ export default function ReviewTab({
                   style={styles.commentInput}
                 />
 
+                <View style={styles.imagePickerHeader}>
+                  <Text variant="labelLarge" style={styles.imagePickerLabel}>
+                    Ảnh đánh giá ({selectedImages.length}/{MAX_REVIEW_IMAGES})
+                  </Text>
+                  <Button
+                    mode="outlined"
+                    compact
+                    icon="image-plus"
+                    onPress={handlePickImages}
+                    disabled={
+                      submitting || selectedImages.length >= MAX_REVIEW_IMAGES
+                    }
+                    style={styles.addImageButton}
+                  >
+                    Thêm ảnh
+                  </Button>
+                </View>
+
+                {selectedImages.length ? (
+                  <View style={styles.selectedImageRow}>
+                    {selectedImages.map((image) => (
+                      <View key={image.id} style={styles.selectedImageTile}>
+                        <Image
+                          source={{ uri: image.uri }}
+                          style={styles.selectedImage}
+                          alt="Ảnh đánh giá đã chọn"
+                        />
+                        <Pressable
+                          onPress={() => handleRemoveImage(image.id)}
+                          hitSlop={8}
+                          style={styles.removeImageButton}
+                        >
+                          <Icon source="close" size={16} color="#FFFFFF" />
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
                 <View style={styles.formActions}>
                   {editingReviewId ? (
                     <Button
@@ -317,6 +441,21 @@ export default function ReviewTab({
       }
     />
   );
+}
+
+async function uploadSelectedImages(images: SelectedReviewImage[]) {
+  const urls: string[] = [];
+
+  for (const image of images.slice(0, MAX_REVIEW_IMAGES)) {
+    if (image.remoteUrl) {
+      urls.push(image.remoteUrl);
+      continue;
+    }
+
+    urls.push(await uploadContributionImage(image));
+  }
+
+  return urls;
 }
 
 function ReviewCard({
@@ -574,6 +713,47 @@ const styles = StyleSheet.create({
   commentInput: {
     marginTop: 10,
     backgroundColor: "#FFFFFF",
+  },
+  imagePickerHeader: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  imagePickerLabel: {
+    color: "#403A34",
+    fontWeight: "700",
+  },
+  addImageButton: {
+    borderRadius: 8,
+  },
+  selectedImageRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  selectedImageTile: {
+    width: 76,
+    height: 76,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#EFEAE3",
+  },
+  selectedImage: {
+    width: "100%",
+    height: "100%",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(29, 26, 22, 0.78)",
   },
   formActions: {
     flexDirection: "row",

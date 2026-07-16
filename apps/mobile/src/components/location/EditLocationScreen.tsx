@@ -306,7 +306,7 @@ export default function EditLocationScreen({
 
     if (selectedChips.includes("openingHours")) {
       if (!openingHours.trim()) {
-        Alert.alert("Vui long nhap gio mo cua");
+        Alert.alert("Vui lòng nhập giờ mở cửa");
         setLoading(false);
         return;
       }
@@ -318,7 +318,7 @@ export default function EditLocationScreen({
 
     if (selectedChips.includes("phone")) {
       if (!phone.trim()) {
-        Alert.alert("Vui long nhap so dien thoai");
+        Alert.alert("Vui lòng nhập số điện thoại");
         setLoading(false);
         return;
       }
@@ -329,7 +329,7 @@ export default function EditLocationScreen({
       const longitude = pinLocation?.longitude ?? coordinates?.[0];
       const latitude = pinLocation?.latitude ?? coordinates?.[1];
       if (latitude === undefined || longitude === undefined) {
-        Alert.alert("Vui long chon vi tri de xuat");
+        Alert.alert("Vui lòng chọn vị trí đề xuất");
         setLoading(false);
         return;
       }
@@ -344,7 +344,7 @@ export default function EditLocationScreen({
     }
 
     if (changes.length === 0) {
-      Alert.alert("Vui long chon it nhat mot thong tin de de xuat");
+      Alert.alert("Vui lòng chọn ít nhất một thông tin để đề xuất");
       setLoading(false);
       return;
     }
@@ -355,7 +355,7 @@ export default function EditLocationScreen({
         note: suggestionNote.trim() || undefined,
       });
       if (response.success) {
-        Alert.alert("Da gui de xuat chinh sua");
+        Alert.alert("Đã gửi đề xuất chỉnh sửa");
         setSuggestionNote("");
       } else {
         Alert.alert(response.message);
@@ -504,7 +504,7 @@ export default function EditLocationScreen({
               onPress={() => setSelectedChip("flag")}
               selected={selectedChips.includes("flag")}
             >
-              Co trang thai
+              Cờ trạng thái
             </Chip>
           ) : null}
           {isOwner ? (
@@ -714,19 +714,19 @@ export default function EditLocationScreen({
           )}
           {!isOwner && selectedChips.includes("flag") && (
             <View style={{ marginBottom: 12 }}>
-              <Text>Co trang thai</Text>
+              <Text>Cờ trạng thái</Text>
               <View style={{ gap: 8, marginTop: 8 }}>
                 <Chip
                   selected={flagValue === "PERMANENTLY_CLOSED"}
                   onPress={() => setFlagValue("PERMANENTLY_CLOSED")}
                 >
-                  Da dong cua
+                  Đã đóng cửa
                 </Chip>
                 <Chip
                   selected={flagValue === "DUPLICATE"}
                   onPress={() => setFlagValue("DUPLICATE")}
                 >
-                  Trung lap
+                  Trùng lặp
                 </Chip>
                 <Chip
                   selected={flagValue === "NON_EXISTENT"}
@@ -788,7 +788,7 @@ export default function EditLocationScreen({
           )}
           {!isOwner && selectedChips.length !== 0 && (
             <View style={{ marginBottom: 12 }}>
-              <Text>Ghi chu</Text>
+              <Text>Ghi chú</Text>
               <TextInput
                 placeholder="Thêm mô tả ngắn cho người duyệt"
                 mode="outlined"
