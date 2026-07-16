@@ -94,6 +94,39 @@ describe('DisputeService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 403 });
   });
 
+  it('lists resolved disputes as newest-first history', async () => {
+    const { service, disputeModel } = setup();
+    const find = {
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    };
+    disputeModel.find.mockReturnValue(find);
+    disputeModel.countDocuments.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(0),
+    });
+
+    await service.getQueue({ page: 1, limit: 20, view: 'history' } as never);
+
+    expect(disputeModel.find).toHaveBeenCalledWith({
+      status: {
+        $in: [
+          DisputeStatus.RESOLVED_KEEP,
+          DisputeStatus.RESOLVED_TRANSFER,
+          DisputeStatus.RESOLVED_REVOKE,
+        ],
+      },
+    });
+    expect(find.sort).toHaveBeenCalledWith({
+      'adminDecision.decidedAt': -1,
+      updatedAt: -1,
+      createdAt: -1,
+    });
+  });
+
   it.each([
     [DisputeOutcome.KEEP, DisputeStatus.RESOLVED_KEEP, vendorA],
     [DisputeOutcome.TRANSFER, DisputeStatus.RESOLVED_TRANSFER, vendorB],

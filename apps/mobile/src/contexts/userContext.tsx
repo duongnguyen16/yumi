@@ -81,7 +81,7 @@ export default function UserContextProvider({
           setAccessToken(null);
           await deleteAllTokens();
         }
-      } catch (error) {
+      } catch {
         setUser(null);
         setAccessToken(null);
         await deleteAllTokens();

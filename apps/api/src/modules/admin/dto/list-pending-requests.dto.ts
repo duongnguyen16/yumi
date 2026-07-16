@@ -1,7 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
 export class ListPendingRequestsDTO {
+  @IsOptional()
+  @IsEnum(AdminListView)
+  view: AdminListView = AdminListView.QUEUE;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

@@ -3,7 +3,6 @@ import {
   Body,
   ConflictException,
   Controller,
-  ForbiddenException,
   Get,
   HttpException,
   HttpStatus,
@@ -34,8 +33,6 @@ export class AuthController {
   async login(@Body() body: LoginDTO) {
     const result = await this.authService.login(body.email, body.password);
     if (!result.success) {
-      if (result.statusCode === 403)
-        throw new ForbiddenException(result.message);
       if (result.statusCode === 500)
         throw new InternalServerErrorException(result.message);
       throw new UnauthorizedException(result.message);
@@ -59,8 +56,6 @@ export class AuthController {
   async refresh(@Body() body: RefreshTokenDTO) {
     const result = await this.authService.refresh(body.refreshToken);
     if (!result.success) {
-      if (result.statusCode === 403)
-        throw new ForbiddenException(result.message);
       if (result.statusCode === 500)
         throw new InternalServerErrorException(result.message);
       throw new UnauthorizedException(result.message);
@@ -119,7 +114,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(AuthGuard('jwt-at'))
+  @UseGuards(AuthGuard('jwt-appeal-access'))
   async authMe(@Request() req: { user?: { userId?: string } }) {
     const userId = req.user?.userId;
     if (!userId) {

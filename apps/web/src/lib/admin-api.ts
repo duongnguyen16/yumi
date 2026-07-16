@@ -328,6 +328,7 @@ export interface PaginatedAuditLogs {
   total: number;
   page: number;
   limit: number;
+  actions: string[];
 }
 
 export async function getDashboardOverview(): Promise<{
@@ -354,6 +355,8 @@ export async function listAuditLogs(params?: {
 
 // ─── Admin Claim Management (WDP-28) ────────────────────────────────────────
 
+export type AdminRequestView = "queue" | "history";
+
 export interface AdminClaimLocation {
   _id: string;
   name: string;
@@ -372,8 +375,8 @@ export interface AdminClaimVendor {
 
 export interface ClaimEvidenceFile {
   url: string;
-  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
-  geo?: { type: 'Point'; coordinates: [number, number] };
+  fileType: "IMAGE" | "VIDEO" | "DOCUMENT";
+  geo?: { type: "Point"; coordinates: [number, number] };
   capturedAt?: string;
   metadata?: {
     siteCode?: string;
@@ -429,9 +432,10 @@ export interface ClaimActionResponse {
 export async function getClaimQueue(
   page = 1,
   limit = 20,
+  view: AdminRequestView = "queue",
 ): Promise<ClaimQueueResponse> {
-  const res = await api.get<ClaimQueueResponse>('/admin/claims/queue', {
-    params: { page, limit },
+  const res = await api.get<ClaimQueueResponse>("/admin/claims/queue", {
+    params: { page, limit, view },
   });
   return res.data;
 }
@@ -480,10 +484,13 @@ export interface AdminLocationRequestFlags {
 
 export interface AdminLocationRequest {
   _id: string;
-  type: 'CREATE' | 'UPDATE';
+  type: "CREATE" | "UPDATE";
   status: string;
   submittedBy: { _id: string; fullName?: string; email?: string } | string;
-  locationId?: { _id: string; name?: string; address?: string; status?: string } | string | null;
+  locationId?:
+    | { _id: string; name?: string; address?: string; status?: string }
+    | string
+    | null;
   newData?: {
     name?: string;
     address?: string;
@@ -499,6 +506,9 @@ export interface AdminLocationRequest {
   };
   createdAt: string;
   updatedAt?: string;
+  reviewerId?: string;
+  reviewedAt?: string;
+  reviewNote?: string | null;
 }
 
 export interface LocationRequestQueueResponse {
@@ -517,10 +527,11 @@ export interface LocationRequestActionResponse {
 export async function getLocationRequestQueue(
   page = 1,
   limit = 30,
+  view: AdminRequestView = "queue",
 ): Promise<LocationRequestQueueResponse> {
   const res = await api.get<LocationRequestQueueResponse>(
-    '/admin/location-requests/queue',
-    { params: { page, limit } },
+    "/admin/location-requests/queue",
+    { params: { page, limit, view } },
   );
   return res.data;
 }
@@ -548,9 +559,9 @@ export async function rejectLocationRequest(
 
 export interface DecisionEvidence {
   url: string;
-  fileType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  fileType: "IMAGE" | "VIDEO" | "DOCUMENT";
   capturedAt?: string;
-  geo?: { type: 'Point'; coordinates: [number, number] };
+  geo?: { type: "Point"; coordinates: [number, number] };
 }
 
 export interface DecisionUser {
@@ -588,8 +599,14 @@ export interface DisputeQueueResponse {
   limit: number;
 }
 
-export async function getDisputeQueue(): Promise<DisputeQueueResponse> {
-  const res = await api.get<DisputeQueueResponse>('/admin/disputes');
+export async function getDisputeQueue(
+  page = 1,
+  limit = 20,
+  view: AdminRequestView = "queue",
+): Promise<DisputeQueueResponse> {
+  const res = await api.get<DisputeQueueResponse>("/admin/disputes", {
+    params: { page, limit, view },
+  });
   return res.data;
 }
 
@@ -602,7 +619,7 @@ export async function getDisputeDetail(id: string): Promise<AdminDispute> {
 
 export async function resolveDispute(
   id: string,
-  outcome: 'KEEP' | 'TRANSFER' | 'REVOKE',
+  outcome: "KEEP" | "TRANSFER" | "REVOKE",
   reason: string,
 ): Promise<{ message: string }> {
   const res = await api.patch<{ success: boolean; message: string }>(
@@ -637,8 +654,14 @@ export interface AppealQueueResponse {
   limit: number;
 }
 
-export async function getAppealQueue(): Promise<AppealQueueResponse> {
-  const res = await api.get<AppealQueueResponse>('/admin/appeals');
+export async function getAppealQueue(
+  page = 1,
+  limit = 20,
+  view: AdminRequestView = "queue",
+): Promise<AppealQueueResponse> {
+  const res = await api.get<AppealQueueResponse>("/admin/appeals", {
+    params: { page, limit, view },
+  });
   return res.data;
 }
 
@@ -651,7 +674,7 @@ export async function getAppealDetail(id: string): Promise<AdminAppeal> {
 
 export async function resolveAppeal(
   id: string,
-  decision: 'ACCEPTED_TO_DISPUTE' | 'OVERTURNED' | 'UPHELD',
+  decision: "ACCEPTED_TO_DISPUTE" | "OVERTURNED" | "UPHELD",
   reason: string,
 ): Promise<{ message: string }> {
   const res = await api.patch<{ success: boolean; message: string }>(
