@@ -30,7 +30,7 @@ import Dialog from "../ui/Dialog";
 import { userContext } from "@/contexts/userContext";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_API ||
+  process.env.EXPO_PUBLIC_MAP_APu ||
   "https://demotiles.maplibre.org/style.json";
 
 const GLYPH_URL = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
@@ -322,7 +322,7 @@ export default function MapScreen() {
                 filter={["has", "point_count"]}
                 layout={{
                   "text-field": ["get", "point_count_abbreviated"],
-                  "text-font": TEXT_FONT,
+                  // "text-font": TEXT_FONT,
                   "text-size": 14,
                   "text-anchor": "center",
                 }}
@@ -364,7 +364,7 @@ export default function MapScreen() {
                 filter={["!", ["has", "point_count"]]}
                 layout={{
                   "text-field": ["get", "name"],
-                  "text-font": TEXT_FONT,
+                  // "text-font": TEXT_FONT,
                   "text-size": 12,
                   "text-offset": [0, 1.5],
                   "text-anchor": "top",
