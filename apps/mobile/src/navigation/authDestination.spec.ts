@@ -18,7 +18,10 @@ describe("getVendorRegistrationDestination", () => {
     expect(getVendorRegistrationDestination(true)).toEqual({ pathname: "/contribute", params: { type: "register" } });
   });
 
-  it("opens phone verification and preserves the registration destination", () => {
-    expect(getVendorRegistrationDestination(false)).toEqual({ pathname: "/profile/verify-phone", params: { redirect: "/contribute?type=register" } });
+  it("opens Edit Profile and preserves the registration destination for an unverified phone", () => {
+    expect(getVendorRegistrationDestination(false)).toEqual({
+      pathname: "/profile/edit",
+      params: { redirect: "/contribute?type=register" },
+    });
   });
 });

@@ -5,8 +5,11 @@ import { colors, spacing } from "@/ui/tokens";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { FlatList, RefreshControl, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getTabContentBottomPadding } from "@/navigation/tab-content-inset";
 
 export default function ActivityFeed() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -57,7 +60,7 @@ export default function ActivityFeed() {
       <FlatList
       ListEmptyComponent={<EmptyState icon="bell-outline" supportingText="Thông báo và cập nhật quy trình sẽ xuất hiện tại đây." title="Chưa có thông báo" />}
       ListHeaderComponent={unreadCount > 0 ? <Button label="Đọc tất cả" onPress={handleMarkAllRead} size="small" variant="tertiary" /> : null}
-      contentContainerStyle={{ flexGrow: 1, gap: spacing[2], padding: spacing[4], paddingBottom: spacing[7] }}
+      contentContainerStyle={{ flexGrow: 1, gap: spacing[2], padding: spacing[4], paddingBottom: getTabContentBottomPadding(insets.bottom) }}
       contentInsetAdjustmentBehavior="automatic"
       data={notifications}
       keyExtractor={(item) => item._id}

@@ -10,19 +10,12 @@ export interface VendorLocation {
   _id: string;
   name: string;
   address: string;
+  status: string;
   viewCount: number;
   categoryId: string;
   reviewCount: number;
   avgRating: number;
   updatedAt: string;
-}
-
-export interface OwnedLocation {
-  _id: string;
-  name: string;
-  address: string;
-  status: string;
-  updatedAt?: string;
 }
 
 export interface VendorDashboardOverview {
@@ -31,28 +24,6 @@ export interface VendorDashboardOverview {
   totalReviews: number;
   avgRating: number;
 }
-
-const getOwnedLocations = async () => {
-  try {
-    const response = await api.get('/location/owned');
-    if (response.data?.success) {
-      return {
-        success: true,
-        data: response.data.data as OwnedLocation[],
-      };
-    }
-    return {
-      success: false,
-      message: response.data?.message || 'Không thể lấy danh sách địa điểm',
-    };
-  } catch (error: unknown) {
-    console.error('Error fetching owned locations:', error);
-    return {
-      success: false,
-      message: getVendorError(error, 'Không thể lấy danh sách địa điểm'),
-    };
-  }
-};
 
 const getDashboardOverview = async () => {
   try {
@@ -99,4 +70,4 @@ const getLocationStats = async (days?: number) => {
   }
 };
 
-export { getOwnedLocations, getDashboardOverview, getLocationStats };
+export { getDashboardOverview, getLocationStats };
