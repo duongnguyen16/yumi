@@ -7,6 +7,7 @@ import {
   appealTypeLabel,
   humanizeAdminValue,
   locationFieldLabel,
+  locationStatusLabel,
   locationRequestStatusLabel,
   locationRequestTypeLabel,
 } from '../src/components/admin/admin-review-labels.ts';
@@ -39,6 +40,12 @@ test('localizes known admin review enums and fields', () => {
   assert.equal(locationRequestStatusLabel('REJECTED'), 'Đã từ chối');
   assert.equal(locationRequestStatusLabel('CANCELLED'), 'Đã hủy');
   assert.equal(locationRequestStatusLabel('PENDING_RE_APPROVAL'), 'Chờ duyệt lại');
+  assert.equal(locationStatusLabel('SUBMITTED'), 'Đã gửi duyệt');
+  assert.equal(locationStatusLabel('PUBLISHED'), 'Đang hiển thị');
+  assert.equal(locationStatusLabel('HIDDEN'), 'Đã ẩn');
+  assert.equal(locationStatusLabel('REJECTED'), 'Đã từ chối');
+  assert.equal(locationStatusLabel('PENDING_RE_APPROVAL'), 'Chờ duyệt lại');
+  assert.equal(locationStatusLabel('DELETED'), 'Đã xóa');
   assert.equal(locationFieldLabel('name'), 'Tên địa điểm');
   assert.equal(locationFieldLabel('address'), 'Địa chỉ');
   assert.equal(locationFieldLabel('categoryId'), 'Danh mục');
@@ -88,4 +95,28 @@ test('appeal surfaces use localized labels and accessible decision cards', async
   assert.match(drawer, /appealDecisionOptions\(item\?\.type\)/);
   assert.match(drawer, /aria-pressed=/);
   assert.doesNotMatch(drawer, /label=\{value\}/);
+});
+
+test('location review surfaces keep quick actions and localize visible data', async () => {
+  const [page, drawer] = await Promise.all([
+    readFile(
+      new URL('../src/app/admin/(protected)/location-requests/page.tsx', import.meta.url),
+      'utf8',
+    ),
+    readFile(
+      new URL(
+        '../src/app/admin/(protected)/location-requests/components/LocationRequestDetailDrawer.tsx',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  ]);
+
+  assert.match(page, /locationRequestTypeLabel\(req\.type\)/);
+  assert.match(page, /locationRequestStatusLabel\(req\.status\)/);
+  assert.match(page, /aria-label="Duyệt địa điểm"/);
+  assert.match(page, /aria-label="Từ chối địa điểm"/);
+  assert.match(drawer, /locationFieldLabel\(key\)/);
+  assert.match(drawer, /locationRequestStatusLabel\(request\?\.status\)/);
+  assert.doesNotMatch(drawer, /Optional/);
 });
