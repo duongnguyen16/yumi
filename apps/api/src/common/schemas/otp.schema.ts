@@ -89,8 +89,9 @@ export class Otp {
 
   @Prop({
     type: Date,
+    required: true,
   })
-  expiresAt?: Date;
+  expiresAt!: Date;
 
   @Prop({
     type: Date,

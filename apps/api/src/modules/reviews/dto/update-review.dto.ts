@@ -7,6 +7,7 @@ import {
   IsUrl,
   Max,
   Min,
+  MinLength,
 } from 'class-validator';
 
 export class UpdateReviewDto {
@@ -18,6 +19,7 @@ export class UpdateReviewDto {
 
   @IsOptional()
   @IsString()
+  @MinLength(20)
   comment?: string;
 
   @IsOptional()

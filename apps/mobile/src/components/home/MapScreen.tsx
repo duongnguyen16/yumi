@@ -30,8 +30,11 @@ import Dialog from "../ui/Dialog";
 import { userContext } from "@/contexts/userContext";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_APu ||
+  process.env.EXPO_PUBLIC_MAP_API ||
   "https://demotiles.maplibre.org/style.json";
+
+const GLYPH_URL = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+const TEXT_FONT = ["Open Sans Regular"];
 
 const emptyGeoJson = {
   type: "FeatureCollection" as const,
@@ -89,8 +92,7 @@ export default function MapScreen() {
         if (!Array.isArray(styleJson.layers)) {
           throw new Error("Map style response is missing layers");
         }
-        styleJson.glyphs =
-          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        styleJson.glyphs = GLYPH_URL;
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
@@ -107,12 +109,23 @@ export default function MapScreen() {
               id.includes("atm") ||
               id.includes("parking"));
 
-          if (!shouldHide) return layer;
+          const nextLayer =
+            layer.type === "symbol"
+              ? {
+                  ...layer,
+                  layout: {
+                    ...(layer.layout ?? {}),
+                    "text-font": TEXT_FONT,
+                  },
+                }
+              : layer;
+
+          if (!shouldHide) return nextLayer;
 
           return {
-            ...layer,
+            ...nextLayer,
             layout: {
-              ...(layer.layout ?? {}),
+              ...(nextLayer.layout ?? {}),
               visibility: "none",
             },
           };
@@ -261,7 +274,7 @@ export default function MapScreen() {
         />
       ) : (
         <View style={styles.container}>
-          <Map mapStyle={mapStyle} style={styles.map}>
+          <Map mapStyle={mapStyle} style={styles.map} androidView="texture">
             <Camera
               initialViewState={{ center: location, zoom: 10 }}
               ref={cameraRef}
@@ -280,11 +293,12 @@ export default function MapScreen() {
                 const feature = e.nativeEvent.features?.[0];
 
                 if (!feature) return;
-                if (!feature.properties.id) return;
+                const locationId = feature.properties?.id ?? feature.id;
+                if (!locationId) return;
 
                 router.push({
                   pathname: "/location/[id]",
-                  params: { id: feature.properties.id },
+                  params: { id: String(locationId) },
                 });
               }}
             >
@@ -308,7 +322,7 @@ export default function MapScreen() {
                 filter={["has", "point_count"]}
                 layout={{
                   "text-field": ["get", "point_count_abbreviated"],
-                  // "text-font": ["Roboto Regular"],
+                  "text-font": TEXT_FONT,
                   "text-size": 14,
                   "text-anchor": "center",
                 }}
@@ -350,7 +364,7 @@ export default function MapScreen() {
                 filter={["!", ["has", "point_count"]]}
                 layout={{
                   "text-field": ["get", "name"],
-                  // "text-font": ["Roboto Regular"],
+                  "text-font": TEXT_FONT,
                   "text-size": 12,
                   "text-offset": [0, 1.5],
                   "text-anchor": "top",
@@ -444,6 +458,7 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+    backgroundColor: "#f7f5ef",
   },
   marker: {
     width: 32,
