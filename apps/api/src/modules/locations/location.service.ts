@@ -232,6 +232,11 @@ export class LocationService {
       };
     } catch (error) {
       console.log('Error occur at searchLocation: ', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi tìm kiếm địa điểm',
+        statusCode: 500,
+      };
     }
   }
 }
