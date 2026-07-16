@@ -50,7 +50,7 @@ import { colors, radius, spacing } from "@/ui/tokens";
 import {
   validateContributionBasics,
   validateVendorVideos,
-} from "./contribute-validation";
+} from "@/common/contribute-validation";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
