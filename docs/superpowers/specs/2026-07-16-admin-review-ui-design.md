@@ -75,4 +75,3 @@ Các giá trị kỹ thuật vẫn được gửi về backend như hiện tại
 - ESLint và Next build của workspace web phải qua.
 - Kiểm tra trực tiếp cả hai route ở desktop và mobile: bảng, thao tác nhanh, drawer, validation lý do, lựa chọn quyết định và lịch sử chỉ đọc.
 - Không xuất hiện enum kỹ thuật hoặc chuỗi `Optional` trong UI của hai luồng sau khi hoàn tất.
-
