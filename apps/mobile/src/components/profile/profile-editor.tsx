@@ -1,4 +1,9 @@
 import { userContext } from "@/contexts/userContext";
+import {
+  validateProfilePhoneOtpRequest,
+  validateProfilePhoneOtpVerification,
+  validateProfileUpdate,
+} from "@/common/profile-validation";
 import { getProfile, sendProfilePhoneOtp, toAbsoluteUrl, updateProfile, verifyProfilePhoneOtp } from "@/service/profileService";
 import { ActionSheet, AppText, BottomActionBar, Button, FormSection, IconButton, LoadingState, NoticeSnackbar, PageContent, Stack, TextField } from "@/ui/components";
 import { colors, fontFamily } from "@/ui/tokens";
@@ -71,28 +76,31 @@ export default function ProfileEditor() {
   };
 
   const sendOtp = async () => {
-    if (!phone.trim()) {
-      setMessage("Vui lòng nhập số điện thoại.");
+    const validation = validateProfilePhoneOtpRequest(phone);
+    if (!validation.isValid || !validation.phone) {
+      setMessage(validation.message || "Số điện thoại không hợp lệ.");
       return;
     }
     setSaving(true);
-    const response = await sendProfilePhoneOtp(phone.trim());
+    const response = await sendProfilePhoneOtp(validation.phone);
     setSaving(false);
     if (!response?.success) {
       setMessage(response?.message || "Không thể gửi mã OTP.");
       return;
     }
+    setPhone(validation.phone);
     setOtpSent(true);
     setMessage(response.message || "Mã OTP đã được gửi.");
   };
 
   const verifyOtp = async () => {
-    if (!/^\d{6}$/.test(otp.trim())) {
-      setMessage("Vui lòng nhập mã OTP gồm 6 số.");
+    const validation = validateProfilePhoneOtpVerification(otp);
+    if (!validation.isValid || !validation.otp) {
+      setMessage(validation.message || "Mã OTP không hợp lệ.");
       return;
     }
     setSaving(true);
-    const response = await verifyProfilePhoneOtp(otp.trim());
+    const response = await verifyProfilePhoneOtp(validation.otp);
     setSaving(false);
     if (!response?.success) {
       setMessage(response?.message || "Xác minh OTP thất bại.");
@@ -112,12 +120,13 @@ export default function ProfileEditor() {
   };
 
   const saveProfile = async () => {
-    if (!name.trim()) {
-      setMessage("Tên không được để trống.");
+    const validation = validateProfileUpdate({ name, avatar });
+    if (!validation.isValid || !validation.name) {
+      setMessage(validation.message || "Thông tin hồ sơ không hợp lệ.");
       return;
     }
     setSaving(true);
-    const response = await updateProfile({ name: name.trim(), avatar: avatar ?? undefined });
+    const response = await updateProfile({ name: validation.name, avatar: avatar ?? undefined });
     if (response?.success) {
       setUser({ ...user, fullName: response.user?.display_name, avatarUrl: response.user?.avatar_url, phone: response.user?.phone ?? user?.phone, phoneVerified: response.user?.phoneVerified ?? user?.phoneVerified });
       router.back();
