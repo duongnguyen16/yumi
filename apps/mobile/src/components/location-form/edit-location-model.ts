@@ -5,11 +5,11 @@ import type {
 import {
   normalizePhoneNumber,
   validateDescription,
-  validateOpeningHours,
   validatePhoneNumber,
   validatePlaceName,
   validateRequiredText,
   validateOtp,
+  validateTimeRange,
   type ValidationResult,
 } from "@/common/function";
 
@@ -125,7 +125,7 @@ export function validateEditLocationSubmission({
   }
 
   if (selectedFields.includes("openingHours")) {
-    const result = validateOpeningHours(openingHours, { required: true });
+    const result = validateEditOpeningHours(openingHours);
     if (!result.isValid) return result;
   }
 
@@ -146,4 +146,28 @@ export function validateEditLocationSubmission({
   }
 
   return { isValid: true };
+}
+
+function validateEditOpeningHours(openingHours: string): ValidationResult {
+  const value = openingHours.trim();
+
+  if (!value) {
+    return {
+      isValid: false,
+      message: "Giờ mở cửa không được để trống.",
+    };
+  }
+
+  const parts = value.split(/\s*-\s*/);
+  if (parts.length !== 2) {
+    return {
+      isValid: false,
+      message: "Giờ mở cửa phải có định dạng HH:mm-HH:mm.",
+    };
+  }
+
+  return validateTimeRange(parts[0], parts[1], {
+    allowOvernight: false,
+    allowSameTime: false,
+  });
 }
