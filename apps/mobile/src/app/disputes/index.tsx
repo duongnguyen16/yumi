@@ -2,6 +2,7 @@ import { getWorkflowStatus } from "@/components/workflow/status";
 import { listDisputes, type DisputeItem } from "@/service/disputeService";
 import { ActivityRow, EmptyState, LoadingState, NavigationBar, NoticeSnackbar, Page, PageContent, Stack } from "@/ui/components";
 import { colors } from "@/ui/tokens";
+import { workflowListLayout } from "@/ui/components/workflow-list";
 import { Stack as RouterStack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl } from "react-native";
@@ -36,13 +37,13 @@ export default function DisputesScreen() {
       <RouterStack.Screen options={{ headerShown: false }} />
       <NavigationBar onBack={() => router.back()} title="Tranh chấp" />
       {loading ? <LoadingState /> : (
-        <PageContent refreshControl={<RefreshControl onRefresh={() => load(true)} refreshing={refreshing} tintColor={colors.accentPrimary} />}>
+        <PageContent refreshControl={<RefreshControl onRefresh={() => load(true)} refreshing={refreshing} tintColor={colors.accentPrimary} />} style={workflowListLayout}>
           {blockingError ? <EmptyState actionLabel="Thử lại" icon="alert-circle-outline" onAction={() => load()} supportingText={message} title="Không thể tải tranh chấp" /> : null}
           {!blockingError && items.length === 0 ? <EmptyState icon="shield-account-outline" supportingText="Hồ sơ tranh chấp mà bạn tham gia sẽ xuất hiện tại đây." title="Chưa có tranh chấp" /> : null}
-          {!blockingError ? <Stack>
+          {!blockingError ? <Stack gap={0}>
             {items.map((item) => {
               const location = typeof item.locationId === "object" ? item.locationId : null;
-              return <ActivityRow icon="shield-account-outline" key={item._id} onPress={() => router.push(`/disputes/${item._id}` as never)} status={getWorkflowStatus(item.status)} supportingText={location?.address} title={location?.name || "Tranh chấp sở hữu"} />;
+              return <ActivityRow compact icon="shield-account-outline" key={item._id} onPress={() => router.push(`/disputes/${item._id}` as never)} status={getWorkflowStatus(item.status)} supportingText={location?.address} title={location?.name || "Tranh chấp sở hữu"} />;
             })}
           </Stack> : null}
         </PageContent>

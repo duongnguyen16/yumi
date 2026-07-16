@@ -1,6 +1,6 @@
 export { Button, Chip, IconButton, SegmentedControl } from "./button";
 export { ActionSheet, BottomSheet, Card, Divider, FormSection, GroupedList, ListRow, SectionHeader } from "./containers";
-export { Badge, NoticeSnackbar } from "./feedback";
+export { Badge, MetricBadge, NoticeSnackbar } from "./feedback";
 export { PasswordField, SearchField, TextArea, TextField } from "./fields";
 export { AppText, Inline, Page, PageContent, PageHeader, Stack } from "./layout";
 export { MediaPicker, type MediaPickerItem } from "./media";

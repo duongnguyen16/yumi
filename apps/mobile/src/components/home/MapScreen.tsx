@@ -7,7 +7,8 @@ import { useLocationContext } from "@/contexts/locationContext";
 import { getMapLocationPreview, mapSelectionZoom, type MapLocationPreview } from "@/common/map-location";
 import { getAllLocations, getCurrentLocation, getLocationById } from "@/service/locationService";
 import { getUnreadCount } from "@/service/notificationService";
-import { EmptyState, LoadingState, MapCanvas, MapControls, MapSearchDock } from "@/ui/components";
+import { clearExploreLocationAction, setExploreLocationAction } from "@/navigation/exploreTabAction";
+import { EmptyState, LoadingState, MapCanvas, MapSearchDock } from "@/ui/components";
 import { colors } from "@/ui/tokens";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 import { MapLocationDrawer } from "./MapLocationDrawer";
@@ -118,13 +119,18 @@ export default function MapScreen() {
     return () => subscription.remove();
   }, [closeSearch, searchScreen]));
 
-  const setCurrentLocation = async () => {
+  const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
     if (!currentLocation) return;
     const coordinates: [number, number] = [currentLocation.coords.longitude, currentLocation.coords.latitude];
     setLocation(coordinates);
     cameraRef.current?.setStop({ center: coordinates, zoom: 15, duration: 1000, easing: "ease" });
-  };
+  }, [setLocation]);
+
+  useEffect(() => {
+    setExploreLocationAction(() => { void setCurrentLocation(); });
+    return clearExploreLocationAction;
+  }, [setCurrentLocation]);
 
   if (loading) return <LoadingState label="Đang tải bản đồ" />;
   if (!mapStyle || !location) return <EmptyState icon="alert-outline" title="Không hiện được bản đồ" supportingText={mapError || "Không có dữ liệu vị trí hiện tại."} />;
@@ -162,7 +168,6 @@ export default function MapScreen() {
               <Layer filter={["!", ["has", "point_count"]]} id="locations-label" layout={{ "text-allow-overlap": false, "text-anchor": "top", "text-field": ["get", "name"], "text-ignore-placement": false, "text-offset": [0, 1.5], "text-size": 12 }} paint={{ "text-color": colors.textPrimary, "text-halo-color": colors.surfaceBase, "text-halo-width": 1.5 }} source="geojson" type="symbol" />
             </GeoJSONSource>
           </Map>
-          {!selectedLocation ? <MapControls onLocate={setCurrentLocation} /> : null}
           {selectedLocation ? <MapLocationDrawer key={selectedLocation.id} location={selectedLocation} onDismiss={() => setSelectedLocation(null)} /> : null}
         </View>
       )}

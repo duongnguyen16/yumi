@@ -41,7 +41,7 @@ const submitEditSuggestion = async (
       success: true,
       routingTarget: response.data?.routingTarget,
       suggestions: response.data?.suggestions ?? [],
-      message: response.data?.message || "Da gui de xuat chinh sua.",
+      message: response.data?.message || "Đã gửi đề xuất chỉnh sửa.",
     };
   } catch (error) {
     console.log("Error submitting edit suggestion:", error);

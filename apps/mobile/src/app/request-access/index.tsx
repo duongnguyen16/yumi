@@ -3,6 +3,7 @@ import { requestAccessTabs } from "@/navigation/request-access-tabs";
 import { listAccess, type AccessRequest, type AccessSide } from "@/service/requestAccessService";
 import { ActivityRow, EmptyState, LoadingState, NavigationBar, NoticeSnackbar, Page, PageContent, Stack } from "@/ui/components";
 import { colors, fontFamily } from "@/ui/tokens";
+import { workflowListLayout } from "@/ui/components/workflow-list";
 import { Stack as RouterStack, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshControl, View } from "react-native";
@@ -27,13 +28,13 @@ function AccessTabContent({ side }: { side: AccessSide }) {
   return (
     <View style={{ backgroundColor: colors.surfaceApp, flex: 1 }}>
       {loading && items.length === 0 ? <LoadingState /> : (
-        <PageContent refreshControl={<RefreshControl onRefresh={load} refreshing={loading} tintColor={colors.accentPrimary} />}>
+        <PageContent refreshControl={<RefreshControl onRefresh={load} refreshing={loading} tintColor={colors.accentPrimary} />} style={workflowListLayout}>
           {items.length === 0 ? <EmptyState icon="account-switch-outline" supportingText={side === "owner" ? "Yêu cầu gửi đến bạn sẽ xuất hiện tại đây." : "Yêu cầu bạn đã gửi sẽ xuất hiện tại đây."} title="Chưa có yêu cầu" /> : null}
-          <Stack>
+          <Stack gap={0}>
             {items.map((item) => {
               const location = typeof item.locationId === "object" ? item.locationId : null;
               const relatedUser = side === "owner" ? (typeof item.requesterId === "object" ? item.requesterId : null) : (typeof item.currentOwnerId === "object" ? item.currentOwnerId : null);
-              return <ActivityRow icon="account-switch-outline" key={item._id} onPress={() => router.push(`/request-access/${item._id}` as never)} status={getWorkflowStatus(item.effectiveState)} supportingText={relatedUser?.fullName || relatedUser?.email || location?.address} title={location?.name || "Địa điểm"} />;
+              return <ActivityRow compact icon="account-switch-outline" key={item._id} onPress={() => router.push(`/request-access/${item._id}` as never)} status={getWorkflowStatus(item.effectiveState)} supportingText={relatedUser?.fullName || relatedUser?.email || location?.address} title={location?.name || "Địa điểm"} />;
             })}
           </Stack>
         </PageContent>
