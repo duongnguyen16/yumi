@@ -784,7 +784,7 @@ imports: [ /* ... */ AuthModule, SchemaModule, LocationModule, ClaimModule ],
 
 ---
 
-## 6. Seed data để test (không cần ai khác)
+## 6. Dữ liệu mẫu để kiểm thử (không cần ai khác)
 
 Cần: **1 user role `VENDOR`** (login lấy token) + **1 location no-owner PUBLISHED**. Dùng **MongoDB Compass / mongosh** insert vào `locations` (field bắt buộc theo `location.schema.ts`):
 ```js
@@ -808,7 +808,7 @@ db.locations.insertOne({
 
 ---
 
-## 7. Chạy & test
+## 7. Chạy và kiểm thử
 
 ```bash
 # từ thư mục gốc repo (repo đã chuyển pnpm → npm)

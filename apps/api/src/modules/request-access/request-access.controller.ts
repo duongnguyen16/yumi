@@ -41,6 +41,7 @@ interface ServiceResult {
 export class RequestAccessController {
   constructor(private readonly service: RequestAccessService) {}
 
+  // tạo request access
   @Post()
   async create(
     @Body() dto: CreateRequestAccessDTO,
@@ -49,6 +50,7 @@ export class RequestAccessController {
     return this.handle(await this.service.createRequest(req.user.userId, dto));
   }
 
+  // list request access của owner hoặc requester
   @Get('mine')
   async list(
     @Query() query: ListRequestAccessDTO,
@@ -59,11 +61,13 @@ export class RequestAccessController {
     );
   }
 
+  // get request access by id
   @Get(':id')
   async getOne(@Param('id') id: string, @NestRequest() req: UserRequest) {
     return this.handle(await this.service.getRequestById(id, req.user.userId));
   }
 
+  // respond request access
   @Patch(':id/respond')
   async respond(
     @Param('id') id: string,
@@ -73,6 +77,7 @@ export class RequestAccessController {
     return this.handle(await this.service.respond(id, req.user.userId, dto));
   }
 
+  // gửi yêu cầu tiếp quản
   @Patch(':id/verify-takeover')
   async verify(
     @Param('id') id: string,

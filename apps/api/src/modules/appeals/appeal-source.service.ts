@@ -62,6 +62,7 @@ export class AppealSourceService {
   ) {}
 
   async load(type: AppealType, id: Types.ObjectId): Promise<AppealSourceResult> {
+    // load dữ liệu gốc của kháng cáo
     if (type === AppealType.REQUEST_ACCESS_REJECTED) return this.access(id);
     if (type === AppealType.LOCATION_REJECTED) return this.locationRequest(id);
     if (type === AppealType.CLAIM_REJECTED) return this.claim(id);
@@ -78,7 +79,7 @@ export class AppealSourceService {
     const item = await this.accessModel.findById(id).lean().exec();
     if (!item) return this.fail(404, 'Không tìm thấy RequestAccess');
     if (item.status !== RequestAccessStatus.REJECTED || !item.respondedAt) {
-      return this.fail(409, 'RequestAccess không thể kháng cáo');
+    return this.fail(409, 'RequestAccess không thể kháng cáo');
     }
     return this.ok(
       'request_accesses',
