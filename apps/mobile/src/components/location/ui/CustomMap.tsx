@@ -17,7 +17,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Alert, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 
 const MAP_API =
@@ -137,6 +137,13 @@ function CustomMap(
   const getLocation = async () => {
     try {
       const response = await getCurrentLocation();
+      if (!response) {
+        Alert.alert(
+          "Không thể lấy vị trí thiết bị. Vui lòng kiểm tra quyền truy cập vị trí.",
+        );
+        setLoading(false);
+        return;
+      }
       cameraRef.current?.setStop({
         center: [response.coords.longitude, response.coords.latitude],
         zoom: 15,

@@ -16,6 +16,9 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @IsEmpty({
+    message: 'Số điện thoại chỉ được thay đổi qua xác minh OTP',
+  })
   @Matches(VN_PHONE_REGEX, {
     message: 'Số điện thoại phải đúng định dạng Việt Nam',
   })

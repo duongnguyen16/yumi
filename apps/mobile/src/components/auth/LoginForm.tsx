@@ -1,3 +1,4 @@
+import { validateEmail, validatePassword } from "@/common/function";
 import { userContext } from "@/contexts/userContext";
 import { login } from "@/service/authService";
 import { Href, Link, useLocalSearchParams, useRouter } from "expo-router";
@@ -26,7 +27,16 @@ export default function LoginForm() {
         setError("Vui lòng nhập đầy đủ thông tin.");
         return;
       }
-
+      const validatedEmail = validateEmail(email);
+      if (validatedEmail.isValid === false) {
+        setError(validatedEmail.message);
+        return;
+      }
+      const validatedPassword = validatePassword(password);
+      if (validatedPassword.isValid === false) {
+        setError(validatedPassword.message);
+        return;
+      }
       const response = await login(email, password);
       if (response?.success) {
         setUser(response.user);

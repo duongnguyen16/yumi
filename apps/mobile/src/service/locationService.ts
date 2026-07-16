@@ -19,6 +19,7 @@ const getCurrentLocation = async () => {
     return locationWatch;
   } catch (error) {
     console.error("Error starting location watch:", error);
+    return null;
   }
 };
 
@@ -50,8 +51,8 @@ const getAllLocations = async () => {
 const getLocationById = async (id: string) => {
   try {
     const response = await api.get(`/location/${id}`);
-    if (response.data?.success) {
-      return { success: true, data: response.data.location };
+    if (response?.data?.success) {
+      return { success: true, data: response?.data?.location || null };
     }
   } catch (error) {
     console.log("Error while getLocationById: ", error);
@@ -126,7 +127,12 @@ const updateLocation = async (formData: FormData, locationId: string) => {
 const getSystemCode = async () => {
   try {
     const response = await api.get("/location/register/code");
-    return { code: response.data.code, success: true };
+    if (response?.data?.success) {
+      return {
+        success: true,
+        systemCode: response?.data?.systemCode || null,
+      };
+    }
   } catch (error) {
     console.error("Error getting system code:", error);
     return {

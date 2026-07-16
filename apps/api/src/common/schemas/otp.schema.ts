@@ -12,11 +12,13 @@ export enum OtpPurpose {
   RESET_PASSWORD = 'RESET_PASSWORD',
   VERIFY_PHONE = 'VERIFY_PHONE',
   VERIFY_EMAIL = 'VERIFY_EMAIL',
+  VERIFY_LOCATION = 'VERIFY_LOCATION',
 }
 
 export enum OtpChannel {
   SMS = 'SMS',
   EMAIL = 'EMAIL',
+  SYSTEM = 'SYSTEM',
 }
 
 export enum OtpStatus {
@@ -87,9 +89,8 @@ export class Otp {
 
   @Prop({
     type: Date,
-    required: true,
   })
-  expiresAt!: Date;
+  expiresAt?: Date;
 
   @Prop({
     type: Date,
