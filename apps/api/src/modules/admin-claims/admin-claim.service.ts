@@ -21,6 +21,7 @@ import { EvidenceFile } from 'src/common/schemas/common.embedded';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { ListClaimsDTO } from './dto/list-claims.dto';
+import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
 type ClaimData = {
   otpVerified?: boolean;
@@ -60,11 +61,31 @@ export class AdminClaimService {
     try {
       const page = q.page ?? 1;
       const limit = q.limit ?? 20;
-      const filter = { status: q.status ?? ClaimRequestStatus.PENDING };
+      const isHistory = q.view === AdminListView.HISTORY;
+      const historyStatuses = [
+        ClaimRequestStatus.APPROVED,
+        ClaimRequestStatus.REJECTED,
+        ClaimRequestStatus.RELEASED,
+        ClaimRequestStatus.REVOKED,
+      ];
+      const filter = q.status
+        ? { status: q.status }
+        : {
+            status: isHistory
+              ? { $in: historyStatuses }
+              : ClaimRequestStatus.PENDING,
+          };
+      const sort: Record<string, 1 | -1> = isHistory
+        ? {
+            'adminDecision.decidedAt': -1 as const,
+            updatedAt: -1 as const,
+            createdAt: -1 as const,
+          }
+        : { otpVerified: -1 as const, createdAt: 1 as const };
       const [items, total] = await Promise.all([
         this.claimModel
           .find(filter)
-          .sort({ otpVerified: -1, createdAt: 1 })
+          .sort(sort)
           .skip((page - 1) * limit)
           .limit(limit)
           .populate('vendorId', 'fullName email phone')

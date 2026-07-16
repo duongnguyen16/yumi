@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Image, View, Share, useWindowDimensions } from "react-native";
-import { Icon, IconButton, Text, useTheme } from "react-native-paper";
+import { Icon } from "react-native-paper";
 import * as Linking from "expo-linking";
 import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
 
@@ -8,12 +8,12 @@ import GeneralTab from "./tabs/GeneralTab";
 import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
-
-const HEADER_HEIGHT = 310;
+import { AppText, IconButton, Inline, Stack } from "@/ui/components";
+import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
+import { buildDirectionsUrl, getMapLocationPreview } from "@/common/map-location";
 
 export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const { width } = useWindowDimensions();
-  const theme = useTheme();
   const location = data?.data;
   const locationId = location?._id;
 
@@ -38,6 +38,11 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
     }
   };
 
+  const handleDirections = () => {
+    const preview = getMapLocationPreview(location);
+    if (preview) void Linking.openURL(buildDirectionsUrl(preview));
+  };
+
   useEffect(() => {
     if (!locationId) return;
 
@@ -50,9 +55,9 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
 
   const renderHeader = () => {
     return (
-      <View style={{ backgroundColor: theme.colors.background }}>
+      <View style={{ backgroundColor: colors.surfaceBase }}>
         <Image
-          style={{ width: "100%", height: 200, resizeMode: "cover" }}
+          style={{ backgroundColor: colors.surfaceMedia, borderBottomLeftRadius: radius.large, borderBottomRightRadius: radius.large, height: 220, resizeMode: "cover", width: "100%" }}
           alt={location?.name || "Location Image"}
           source={{
             uri:
@@ -61,32 +66,13 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
           }}
         />
 
-        <View style={{ padding: 16 }}>
-          <Text variant="headlineMedium">
-            {location?.name || "Có lỗi khi hiển thị tên vị trí"}
-          </Text>
-
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginTop: 8,
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-              }}
-            >
-              <Text>{location?.rating?.avgRating || 0}</Text>
-              <Icon source="star" size={20} color="#FFD700" />
-            </View>
-
-            <IconButton icon="share" onPress={handleShare} mode="outlined" />
-          </View>
-        </View>
+        <Stack style={{ padding: spacing[4] }}>
+          <AppText variant="title1">{location?.name || "Chi tiết địa điểm"}</AppText>
+          <Inline style={{ justifyContent: "space-between" }}>
+            <Inline><Icon color={colors.accentOrange} size={20} source="star" /><AppText variant="headline">{location?.rating?.avgRating || 0}</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">{location?.rating?.reviewCount || 0} đánh giá</AppText></Inline>
+            <Inline gap={spacing[1]}><IconButton icon="navigation-variant-outline" label="Chỉ đường tôi đến đó" onPress={handleDirections} /><IconButton icon="share-variant-outline" label="Chia sẻ địa điểm" onPress={handleShare} /></Inline>
+          </Inline>
+        </Stack>
       </View>
     );
   };
@@ -100,24 +86,24 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
         renderTabBar={(props) => (
           <MaterialTabBar
             {...props}
-            activeColor={theme.colors.primary}
-            inactiveColor={theme.colors.onSurfaceVariant}
+            activeColor={colors.accentPrimary}
+            inactiveColor={colors.textSecondary}
             contentContainerStyle={{
               alignItems: "center",
             }}
             indicatorStyle={{
-              backgroundColor: theme.colors.primary,
+              backgroundColor: colors.accentPrimary,
             }}
             scrollEnabled={false}
             style={{
-              backgroundColor: theme.colors.surface,
+              backgroundColor: colors.surfaceBase,
               height: 48,
             }}
             tabStyle={{
               width: width / 3,
             }}
             labelStyle={{
-              fontWeight: "600",
+              fontFamily: fontFamily.semibold,
               width: width / 3,
               textAlign: "center",
               margin: 0,

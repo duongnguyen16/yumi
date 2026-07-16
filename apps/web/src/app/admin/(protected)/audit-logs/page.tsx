@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -19,58 +19,45 @@ import {
   MenuItem,
   type SxProps,
   type Theme,
-} from '@mui/material';
-import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined';
-import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
-import dayjs from 'dayjs';
-import {
-  listAuditLogs,
-  type AuditLogEntry,
-} from '@/lib/admin-api';
-import { Topbar } from '@/components/admin/Topbar';
-import { AdminCard } from '@/components/admin/AdminCard';
-import { EmptyState } from '@/components/admin/EmptyState';
-import { tokens } from '@/theme/admin-tokens';
+} from "@mui/material";
+import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
+import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
+import dayjs from "dayjs";
+import { listAuditLogs, type AuditLogEntry } from "@/lib/admin-api";
+import { Topbar } from "@/components/admin/Topbar";
+import { AdminCard } from "@/components/admin/AdminCard";
+import { EmptyState } from "@/components/admin/EmptyState";
+import { tokens } from "@/theme/admin-tokens";
 
 function extractMessage(err: unknown): string {
   const e = err as {
     response?: { data?: { message?: string } };
     message?: string;
   };
-  return e?.response?.data?.message ?? e?.message ?? 'Đã xảy ra lỗi';
+  return e?.response?.data?.message ?? e?.message ?? "Đã xảy ra lỗi";
 }
 
 const headSx: SxProps<Theme> = {
   fontFamily: tokens.font.mono,
   fontSize: 11,
   fontWeight: 700,
-  letterSpacing: '0.06em',
-  textTransform: 'uppercase',
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
   color: tokens.color.textSecondary,
   borderBottom: `1px solid ${tokens.color.border}`,
   py: 2,
-  whiteSpace: 'nowrap',
+  whiteSpace: "nowrap",
 };
-
-const ACTIONS = [
-  'LOCATION_REQUEST_APPROVED',
-  'LOCATION_REQUEST_REJECTED',
-  'REPORT_RESOLVED',
-  'REPORT_DISMISSED',
-  'REVIEW_REMOVED_BY_ADMIN',
-  'update_user_status',
-  'update_user_role',
-  'admin_trust_adjust',
-];
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [actions, setActions] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [actionFilter, setActionFilter] = useState('');
+  const [actionFilter, setActionFilter] = useState("");
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -84,6 +71,7 @@ export default function AuditLogsPage() {
       const res = await listAuditLogs(params);
       setLogs(res.data);
       setTotal(res.total);
+      setActions(res.actions);
     } catch (err) {
       setError(extractMessage(err));
     } finally {
@@ -113,15 +101,15 @@ export default function AuditLogsPage() {
         p: { xs: 2, md: 3 },
         flex: 1,
         minWidth: 0,
-        display: 'flex',
-        flexDirection: 'column',
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <Topbar
         title="Lịch sử hoạt động"
         subtitle="Audit log"
         actions={
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
             <TextField
               select
               size="small"
@@ -132,7 +120,7 @@ export default function AuditLogsPage() {
               }}
               sx={{
                 minWidth: 220,
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 0,
                   bgcolor: tokens.color.inputBg,
                   fontSize: 14,
@@ -141,20 +129,22 @@ export default function AuditLogsPage() {
               slotProps={{ select: { displayEmpty: true } }}
             >
               <MenuItem value="">Tất cả hành động</MenuItem>
-              {ACTIONS.map((a) => (
+              {actions.map((a) => (
                 <MenuItem key={a} value={a}>
                   {a}
                 </MenuItem>
               ))}
             </TextField>
             <Tooltip title="Làm mới">
-              <IconButton
-                onClick={() => fetchLogs()}
-                disabled={loading}
-                sx={{ color: tokens.color.textSecondary }}
-              >
-                <RefreshOutlinedIcon />
-              </IconButton>
+              <span>
+                <IconButton
+                  onClick={() => fetchLogs()}
+                  disabled={loading}
+                  sx={{ color: tokens.color.textSecondary }}
+                >
+                  <RefreshOutlinedIcon />
+                </IconButton>
+              </span>
             </Tooltip>
           </Stack>
         }
@@ -173,8 +163,8 @@ export default function AuditLogsPage() {
       {loading && logs.length === 0 ? (
         <Box
           sx={{
-            display: 'flex',
-            justifyContent: 'center',
+            display: "flex",
+            justifyContent: "center",
             py: 8,
           }}
         >
@@ -185,12 +175,12 @@ export default function AuditLogsPage() {
           sx={{
             flex: 1,
             borderRadius: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            animation: 'admin-fade-in 320ms ease both',
+            display: "flex",
+            flexDirection: "column",
+            animation: "admin-fade-in 320ms ease both",
           }}
         >
-          <Box sx={{ overflowX: 'auto', flex: 1 }}>
+          <Box sx={{ overflowX: "auto", flex: 1 }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: tokens.color.card }}>
@@ -204,7 +194,7 @@ export default function AuditLogsPage() {
               <TableBody>
                 {logs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} sx={{ borderBottom: 'none' }}>
+                    <TableCell colSpan={5} sx={{ borderBottom: "none" }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
                         title="Không có hoạt động"
@@ -217,12 +207,12 @@ export default function AuditLogsPage() {
                     <TableRow
                       key={log._id}
                       sx={{
-                        '&:hover': {
+                        "&:hover": {
                           bgcolor: `${tokens.color.rowHover} !important`,
                         },
                       }}
                     >
-                      <TableCell sx={{ py: 2, whiteSpace: 'nowrap' }}>
+                      <TableCell sx={{ py: 2, whiteSpace: "nowrap" }}>
                         <Typography
                           sx={{
                             fontFamily: tokens.font.mono,
@@ -230,7 +220,7 @@ export default function AuditLogsPage() {
                             color: tokens.color.textSecondary,
                           }}
                         >
-                          {dayjs(log.createdAt).format('DD/MM/YYYY HH:mm')}
+                          {dayjs(log.createdAt).format("DD/MM/YYYY HH:mm")}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ py: 2 }}>
@@ -241,9 +231,7 @@ export default function AuditLogsPage() {
                             fontWeight: 500,
                           }}
                         >
-                          {log.actorId?.fullName ||
-                            log.actorId?.email ||
-                            '—'}
+                          {log.actorId?.fullName || log.actorId?.email || "—"}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ py: 2 }}>
@@ -268,19 +256,17 @@ export default function AuditLogsPage() {
                           {log.targetCollection}
                         </Typography>
                       </TableCell>
-                      <TableCell
-                        sx={{ py: 2, maxWidth: 280 }}
-                      >
+                      <TableCell sx={{ py: 2, maxWidth: 280 }}>
                         <Typography
                           sx={{
                             fontSize: 13,
                             color: tokens.color.textDescription,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {log.reason || '—'}
+                          {log.reason || "—"}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -304,7 +290,7 @@ export default function AuditLogsPage() {
               fontFamily: tokens.font.sans,
               fontSize: 14,
               color: tokens.color.textSecondary,
-              '& .MuiTablePagination-toolbar': { minHeight: 52 },
+              "& .MuiTablePagination-toolbar": { minHeight: 52 },
             }}
           />
         </AdminCard>

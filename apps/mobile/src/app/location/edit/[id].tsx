@@ -1,47 +1,32 @@
 import EditLocationScreen from "@/components/location/EditLocationScreen";
+import type { EditableLocation } from "@/components/location-form/use-edit-location-form";
 import { getLocationById } from "@/service/locationService";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { LoadingState, NavigationBar, Page } from "@/ui/components";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function EditLocation() {
-  const { id, type } = useLocalSearchParams();
-  const [selectedChip, setSelectedChip] = useState<string[]>([type as string]);
-  const [locationData, setLocationData] = useState(null);
-  const handleChipChange = (types: string) => {
-    if (selectedChip.includes(types)) {
-      setSelectedChip((prev) => prev.filter((item) => item !== types));
-    } else {
-      setSelectedChip((prev) => [...prev, types]);
-    }
-  };
+  const { id, type } = useLocalSearchParams<{ id?: string; type?: string }>();
+  const router = useRouter();
+  const [selectedFields, setSelectedFields] = useState<string[]>(type ? [type] : []);
+  const [locationData, setLocationData] = useState<EditableLocation | null>(null);
+
   useEffect(() => {
-    const fetchLocationData = async () => {
-      try {
-        const response = await getLocationById(id as string);
-        if (response?.success) {
-          setLocationData(response?.data);
-        }
-      } catch (error) {
-        console.error("Error fetching location data:", error);
-      }
-    };
-    fetchLocationData();
+    if (!id) return;
+    getLocationById(id).then((response) => {
+      if (response?.success) setLocationData(response.data as EditableLocation);
+    });
   }, [id]);
+
+  const toggleField = (field: string) => {
+    setSelectedFields((current) => current.includes(field) ? current.filter((item) => item !== field) : [...current, field]);
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
-      <Stack.Screen
-        options={{
-          title: "Chỉnh sửa thông tin",
-          headerShown: true,
-          headerShadowVisible: false,
-        }}
-      />
-      <EditLocationScreen
-        selectedChip={selectedChip}
-        setSelectedChip={handleChipChange}
-        data={locationData}
-      />
-    </SafeAreaView>
+    <Page>
+      <Stack.Screen options={{ headerShown: false }} />
+      <NavigationBar onBack={() => router.back()} title="Chỉnh sửa thông tin" />
+      {locationData ? <EditLocationScreen data={locationData} selectedChip={selectedFields} setSelectedChip={toggleField} /> : <LoadingState />}
+    </Page>
   );
 }

@@ -108,13 +108,10 @@ const register = async (email: string, password: string, name: string) => {
       success: false,
       message: response.data?.message || "Đăng ký thất bại",
     };
-  } catch (error: any) {
-    console.log(error);
+  } catch (error: unknown) {
     return {
       success: false,
-      message:
-        error.response?.data?.message ||
-        "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.",
+      message: getErrorMessage(error, "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin."),
     };
   }
 };
