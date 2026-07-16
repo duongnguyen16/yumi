@@ -18,10 +18,6 @@ export class CreateProductDto {
   @MaxLength(500)
   description?: string;
 
-  @IsString()
-  @IsOptional()
-  imageUrl?: string;
-
   @IsNumber()
   @Min(0)
   @IsOptional()

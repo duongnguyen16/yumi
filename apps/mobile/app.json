@@ -36,6 +36,12 @@
             "imageWidth": 76
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép YuMi truy cập ảnh để chọn ảnh sản phẩm."
+        }
       ]
     ],
     "experiments": {
