@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  HttpException,
   InternalServerErrorException,
   NotFoundException,
   Param,
@@ -40,16 +41,32 @@ export class LocationController {
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @UseGuards(AuthGuard('jwt-at'))
   async searchLocation(@Query() query: SearchDto) {
-    const { keyword, categoryId, subCategoryId, limit, page, lat, lng } = query;
-    return this.locationService.searchLocation(
-      limit,
-      page,
-      lat,
-      lng,
-      keyword,
-      categoryId,
-      subCategoryId,
-    );
+    try {
+      const { keyword, categoryId, subCategoryId, limit, page, lat, lng } =
+        query;
+      const result = await this.locationService.searchLocation(
+        limit,
+        page,
+        lat,
+        lng,
+        keyword,
+        categoryId,
+        subCategoryId,
+      );
+      if (!result?.success) {
+        if (result?.statusCode === 404) {
+          throw new NotFoundException('Không tìm thấy địa điểm nào');
+        }
+      }
+    } catch (error) {
+      console.log('Error occur at searchLocation: ', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Xảy ra lỗi khi tìm kiếm địa điểm',
+      );
+    }
   }
 
   @Get(':id')
