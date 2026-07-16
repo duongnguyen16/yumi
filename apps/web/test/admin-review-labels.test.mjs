@@ -91,10 +91,12 @@ test('appeal surfaces use localized labels and accessible decision cards', async
 
   assert.match(page, /appealTypeLabel\(item\.type\)/);
   assert.match(page, /appealStatusLabel\(item\.status\)/);
+  assert.match(page, /position: 'sticky'/);
   assert.doesNotMatch(page, />\{item\.type\}</);
   assert.match(drawer, /appealDecisionOptions\(item\?\.type\)/);
   assert.match(drawer, /aria-pressed=/);
   assert.doesNotMatch(drawer, /label=\{value\}/);
+  assert.doesNotMatch(drawer, /preview=\{/);
 });
 
 test('location review surfaces keep quick actions and localize visible data', async () => {
@@ -114,9 +116,21 @@ test('location review surfaces keep quick actions and localize visible data', as
 
   assert.match(page, /locationRequestTypeLabel\(req\.type\)/);
   assert.match(page, /locationRequestStatusLabel\(req\.status\)/);
+  assert.match(page, /position: 'sticky'/);
+  assert.match(page, /<TableCell sx=\{\{ minWidth: 150 \}\}>/);
   assert.match(page, /aria-label="Duyệt địa điểm"/);
   assert.match(page, /aria-label="Từ chối địa điểm"/);
   assert.match(drawer, /locationFieldLabel\(key\)/);
   assert.match(drawer, /locationRequestStatusLabel\(request\?\.status\)/);
   assert.doesNotMatch(drawer, /Optional/);
+  assert.doesNotMatch(drawer, /preview=\{/);
+});
+
+test('shared detail drawer labels its close control', async () => {
+  const drawer = await readFile(
+    new URL('../src/components/admin/DetailDrawer.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(drawer, /aria-label="Đóng bảng chi tiết"/);
 });
