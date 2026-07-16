@@ -1,10 +1,11 @@
 import AuthScreen from "@/components/auth/AuthScreen";
 import { userContext } from "@/contexts/userContext";
 import { register, requestVendorOtp, verifyVendorOtp } from "@/service/authService";
-import { AppText, Button, FormSection, GroupedList, ListRow, PasswordField, Stack, TextField } from "@/ui/components";
-import { colors, spacing } from "@/ui/tokens";
+import { BottomActionBar, Button, FormSection, GroupedList, ListRow, NoticeSnackbar, PasswordField, Stack, TextField } from "@/ui/components";
+import { spacing } from "@/ui/tokens";
 import { useRouter } from "expo-router";
 import { useContext, useState } from "react";
+import { ScrollView } from "react-native";
 
 type Step = "select-role" | "form" | "otp";
 type Role = "customer" | "vendor";
@@ -103,18 +104,16 @@ export default function Register() {
 
   return (
     <AuthScreen onBack={handleBack} supportingText={supportingText} title={title}>
-      {step === "select-role" ? (
-        <Stack gap={spacing[4]}>
+      <ScrollView contentContainerStyle={{ gap: spacing[4], padding: spacing[4] }} keyboardShouldPersistTaps="handled">
+        {step === "select-role" ? (
           <GroupedList>
             <ListRow icon="account-outline" label="Tài khoản cá nhân" onPress={() => handleSelectRole("customer")} supportingText="Khám phá, lưu và đóng góp địa điểm" />
             <ListRow icon="store-outline" label="Đối tác kinh doanh" onPress={() => handleSelectRole("vendor")} supportingText="Quản lý địa điểm và cần xác minh số điện thoại" />
           </GroupedList>
-          <Button label="Đã có tài khoản? Đăng nhập" onPress={() => router.replace("/auth/login")} variant="tertiary" width="full" />
-        </Stack>
-      ) : null}
+        ) : null}
 
-      {step === "form" ? (
-        <Stack gap={spacing[4]}>
+        {step === "form" ? (
+          <Stack gap={spacing[4]}>
           <FormSection title="Tài khoản">
             <TextField label="Họ tên" onChangeText={setName} value={name} />
             <TextField autoCapitalize="none" keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
@@ -131,19 +130,17 @@ export default function Register() {
             </FormSection>
           ) : null}
 
-          {error ? <AppText accessibilityRole="alert" style={{ color: colors.accentRed }} variant="subhead">{error}</AppText> : null}
-          <Button disabled={loading} label={role === "vendor" ? "Tiếp tục nhận OTP" : "Tạo tài khoản"} loading={loading} onPress={handleSubmitForm} width="full" />
-        </Stack>
-      ) : null}
+          </Stack>
+        ) : null}
 
-      {step === "otp" ? (
-        <Stack gap={spacing[3]}>
-          <TextField keyboardType="number-pad" label="Mã OTP" maxLength={6} onChangeText={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))} value={otp} />
-          {error ? <AppText accessibilityRole="alert" style={{ color: colors.accentRed }} variant="subhead">{error}</AppText> : null}
-          <Button disabled={loading} label="Xác minh và đăng ký" loading={loading} onPress={handleVerifyOtp} width="full" />
-          <Button disabled={loading} label="Gửi lại OTP" onPress={handleResendOtp} variant="tertiary" width="full" />
-        </Stack>
-      ) : null}
+        {step === "otp" ? <TextField keyboardType="number-pad" label="Mã OTP" maxLength={6} onChangeText={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))} value={otp} /> : null}
+      </ScrollView>
+      <BottomActionBar>
+        {step === "select-role" ? <Button label="Đã có tài khoản? Đăng nhập" onPress={() => router.replace("/auth/login")} variant="tertiary" width="full" /> : null}
+        {step === "form" ? <Button disabled={loading} label={role === "vendor" ? "Tiếp tục nhận OTP" : "Tạo tài khoản"} loading={loading} onPress={handleSubmitForm} width="full" /> : null}
+        {step === "otp" ? <Stack gap={spacing[2]}><Button disabled={loading} label="Xác minh và đăng ký" loading={loading} onPress={handleVerifyOtp} width="full" /><Button disabled={loading} label="Gửi lại OTP" onPress={handleResendOtp} variant="tertiary" width="full" /></Stack> : null}
+      </BottomActionBar>
+      <NoticeSnackbar message={error} onDismiss={() => setError("")} />
     </AuthScreen>
   );
 }

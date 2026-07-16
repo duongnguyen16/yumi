@@ -26,8 +26,17 @@ export function Page({ children, style }: { children: ReactNode; style?: StylePr
   return <Screen style={style}>{children}</Screen>;
 }
 
+export function PageHeader({ title, supportingText }: { title: string; supportingText?: string }) {
+  return (
+    <Stack gap={spacing[1]}>
+      <AppText variant="title1">{title}</AppText>
+      {supportingText ? <AppText style={{ color: colors.textSecondary }} variant="subhead">{supportingText}</AppText> : null}
+    </Stack>
+  );
+}
+
 export function PageContent({ children, scrollable = true, style, refreshControl }: { children: ReactNode; scrollable?: boolean; style?: StyleProp<ViewStyle>; refreshControl?: ReactElement<RefreshControlProps> }) {
-  const contentStyle: StyleProp<ViewStyle> = [{ gap: spacing[6], padding: spacing[4], paddingBottom: spacing[7] }, style];
+  const contentStyle: StyleProp<ViewStyle> = [{ gap: spacing[5], padding: spacing[4], paddingBottom: spacing[7] }, style];
 
   if (!scrollable) {
     return <View style={[{ flex: 1 }, contentStyle]}>{children}</View>;

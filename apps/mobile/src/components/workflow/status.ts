@@ -12,6 +12,9 @@ const statuses: Record<string, { label: string; tone: WorkflowTone }> = {
   REJECTED: { label: "Đã từ chối", tone: "danger" },
   EXPIRED: { label: "Đã hết hạn", tone: "neutral" },
   RESOLVED: { label: "Đã giải quyết", tone: "success" },
+  RESOLVED_KEEP: { label: "Giữ nguyên quyền quản lý", tone: "success" },
+  RESOLVED_TRANSFER: { label: "Đã chuyển quyền quản lý", tone: "success" },
+  RESOLVED_REVOKE: { label: "Đã thu hồi quyền quản lý", tone: "danger" },
 };
 
 export function getWorkflowStatus(status?: string | null) {

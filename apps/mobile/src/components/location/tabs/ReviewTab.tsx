@@ -1,16 +1,17 @@
 import { userContext } from "@/contexts/userContext";
+import { formatRecentReviewsTitle, locationReviewCardHeight, locationReviewCommentLines } from "@/common/map-location";
 import { createReview, deleteReview, getReviewsByLocation, type LocationReview, type ReviewSummary, updateReview } from "@/service/reviewService";
-import { AppText, Button, Card, Chip, EmptyState, Inline, LoadingState, Stack, TextArea } from "@/ui/components";
+import { AppText, Button, Card, Chip, EmptyState, IconButton, Inline, LoadingState, NoticeSnackbar, Stack, TextArea } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 import * as Location from "expo-location";
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Alert, Image, Pressable, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { Tabs } from "react-native-collapsible-tab-view";
-import { Icon, Snackbar, Surface } from "react-native-paper";
+import { Icon, Modal, Portal, Surface } from "react-native-paper";
 
-type ReviewTabProps = { locationData?: { _id?: string; id?: string; ownerId?: string | null }; initialRating?: Partial<ReviewSummary> | null };
+type ReviewTabProps = { embedded?: boolean; locationData?: { _id?: string; id?: string; ownerId?: string | { _id?: string; id?: string } | null }; initialRating?: Partial<ReviewSummary> | null };
 
-export default function ReviewTab({ locationData, initialRating }: ReviewTabProps) {
+export default function ReviewTab({ embedded = false, locationData, initialRating }: ReviewTabProps) {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<ReviewSummary>({ avgRating: Number(initialRating?.avgRating ?? 0), reviewCount: Number(initialRating?.reviewCount ?? 0) });
   const [reviews, setReviews] = useState<LocationReview[]>([]);
@@ -21,6 +22,7 @@ export default function ReviewTab({ locationData, initialRating }: ReviewTabProp
   const [notice, setNotice] = useState("");
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [composerVisible, setComposerVisible] = useState(false);
   const userState = useContext(userContext) as { user?: { _id?: string; id?: string } | null } | null;
   const currentUserId = userState?.user?._id ?? userState?.user?.id;
   const locationId = locationData?._id ?? locationData?.id;
@@ -60,6 +62,7 @@ export default function ReviewTab({ locationData, initialRating }: ReviewTabProp
           return;
         }
         resetForm();
+        setComposerVisible(false);
         setNotice("Đã cập nhật đánh giá.");
         await loadReviews({ showLoading: false });
         return;
@@ -76,6 +79,7 @@ export default function ReviewTab({ locationData, initialRating }: ReviewTabProp
         return;
       }
       resetForm();
+      setComposerVisible(false);
       setNotice("Đã gửi đánh giá.");
       await loadReviews({ showLoading: false });
     } finally {
@@ -93,6 +97,7 @@ export default function ReviewTab({ locationData, initialRating }: ReviewTabProp
     setEditingReviewId(review.id);
     setRating(review.rating);
     setComment(review.comment);
+    setComposerVisible(true);
   };
 
   const confirmDeleteReview = async (reviewId: string) => {
@@ -119,64 +124,45 @@ export default function ReviewTab({ locationData, initialRating }: ReviewTabProp
 
   if (loading) return <View style={{ minHeight: 180 }}><LoadingState label="Đang tải đánh giá" /></View>;
 
-  return (
-    <Tabs.FlatList
-      contentContainerStyle={{ gap: spacing[3], padding: spacing[4] }}
-      data={reviews}
-      keyExtractor={(item) => item.id}
-      ListEmptyComponent={<EmptyState icon="star-outline" title="Chưa có đánh giá" supportingText="Hãy là người đầu tiên chia sẻ trải nghiệm." />}
-      ListFooterComponent={<Snackbar duration={3000} onDismiss={() => setNotice("")} visible={Boolean(notice)}>{notice}</Snackbar>}
-      ListHeaderComponent={
-        <Stack>
-          <Card>
-            <Inline>
-              <Stack gap={spacing[1]}><AppText variant="largeTitle">{formattedRating}</AppText><StarRating rating={summary.avgRating} /></Stack>
-              <Stack gap={spacing[1]} style={{ flex: 1 }}><AppText variant="headline">{summary.reviewCount} đánh giá</AppText><AppText style={{ color: colors.textSecondary }} variant="caption">Dữ liệu đánh giá mới nhất</AppText></Stack>
-            </Inline>
-          </Card>
-          {currentUserId !== locationData?.ownerId ? (
-            <Card>
-              <Stack>
-                <AppText variant="headline">{editingReviewId ? "Sửa đánh giá" : "Viết đánh giá"}</AppText>
-                <PressableStarRating onChange={setRating} rating={rating} />
-                <TextArea label="Trải nghiệm của bạn" onChangeText={setComment} placeholder="Chia sẻ trải nghiệm của bạn" value={comment} />
-                <Inline style={{ justifyContent: "flex-end" }}>
-                  {editingReviewId ? <Button disabled={submitting} label="Hủy" onPress={resetForm} variant="secondary" /> : null}
-                  <Button disabled={submitting} icon={editingReviewId ? "content-save" : "send"} label={editingReviewId ? "Cập nhật" : "Gửi đánh giá"} loading={submitting} onPress={handleSubmitReview} />
-                </Inline>
-              </Stack>
-            </Card>
-          ) : null}
-          {errorMessage ? <AppText style={{ color: colors.accentRed }} variant="subhead">{errorMessage}</AppText> : null}
-        </Stack>
-      }
-      renderItem={({ item }) => <ReviewCard canEdit={Boolean(currentUserId && item.user?.id === currentUserId)} deleting={deletingReviewId === item.id} onDelete={requestDelete} onEdit={startEdit} review={item} />}
-    />
+  const canReview = Boolean(currentUserId && currentUserId !== getId(locationData?.ownerId));
+  const header = (
+    <Stack>
+      <Card><Inline><Stack gap={spacing[1]} style={{ flex: 1 }}><AppText variant="largeTitle">{formattedRating}</AppText><StarRating rating={summary.avgRating} /></Stack>{canReview ? <Button icon="star-outline" label="Viết đánh giá" onPress={() => { resetForm(); setComposerVisible(true); }} variant="secondary" /> : null}</Inline></Card>
+      {errorMessage ? <AppText style={{ color: colors.accentRed }} variant="subhead">{errorMessage}</AppText> : null}
+    </Stack>
   );
+  const recentHeader = <AppText variant="headline">{formatRecentReviewsTitle(summary.reviewCount)}</AppText>;
+  const reviewItems = reviews.map((item) => <ReviewCard canEdit={Boolean(currentUserId && item.user?.id === currentUserId)} deleting={deletingReviewId === item.id} key={item.id} onDelete={requestDelete} onEdit={startEdit} review={item} />);
+  const emptyState = <EmptyState icon="star-outline" title="Chưa có đánh giá" supportingText="Hãy là người đầu tiên chia sẻ trải nghiệm." />;
+  const noticeBar = <NoticeSnackbar message={notice} onDismiss={() => setNotice("")} />;
+  const composer = <ReviewComposer comment={comment} editing={Boolean(editingReviewId)} onChangeComment={setComment} onChangeRating={setRating} onDismiss={() => { setComposerVisible(false); resetForm(); }} onSubmit={handleSubmitReview} rating={rating} submitting={submitting} visible={composerVisible} />;
+
+  if (embedded) return <Stack gap={spacing[3]}>{header}{recentHeader}{reviewItems.length ? <ScrollView contentContainerStyle={{ gap: spacing[3] }} horizontal showsHorizontalScrollIndicator={false}>{reviewItems}</ScrollView> : emptyState}{composer}{noticeBar}</Stack>;
+
+  return <><Tabs.FlatList contentContainerStyle={{ gap: spacing[3], padding: spacing[4] }} data={reviews} keyExtractor={(item) => item.id} ListEmptyComponent={emptyState} ListFooterComponent={noticeBar} ListHeaderComponent={<Stack>{header}{recentHeader}</Stack>} renderItem={({ item }) => <ReviewCard canEdit={Boolean(currentUserId && item.user?.id === currentUserId)} deleting={deletingReviewId === item.id} onDelete={requestDelete} onEdit={startEdit} review={item} />} />{composer}</>;
 }
 
 function ReviewCard({ review, canEdit, onEdit, onDelete, deleting }: { review: LocationReview; canEdit: boolean; onEdit: (review: LocationReview) => void; onDelete: (review: LocationReview) => void; deleting: boolean }) {
   const hasReply = Boolean(review.reply?.content);
   return (
-    <Card>
-      <Stack>
+    <Surface elevation={0} style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.large, height: locationReviewCardHeight, padding: spacing[4], width: 280 }}>
+      <Stack gap={spacing[2]} style={{ flex: 1 }}>
         <Inline style={{ alignItems: "flex-start" }}>
-          <Surface elevation={0} style={{ alignItems: "center", backgroundColor: colors.accentPrimary, borderRadius: radius.pill, height: 44, justifyContent: "center", overflow: "hidden", width: 44 }}>
-            {review.user?.avatarUrl ? <Image alt={`Ảnh đại diện của ${review.user.fullName || "người dùng"}`} source={{ uri: review.user.avatarUrl }} style={{ height: 44, width: 44 }} /> : <AppText style={{ color: colors.textInverse }} variant="headline">{getInitials(review.user?.fullName)}</AppText>}
-          </Surface>
           <Stack gap={spacing[1]} style={{ flex: 1 }}>
-            <Inline style={{ flexWrap: "wrap" }}><AppText variant="headline">{review.user?.fullName || "Người dùng"}</AppText><AppText style={{ color: colors.textTertiary }} variant="caption">{formatRelativeDate(review.createdAt)}</AppText></Inline>
+            <AppText numberOfLines={1} variant="headline">{review.user?.fullName || "Người dùng"}</AppText>
+            <AppText style={{ color: colors.textTertiary }} variant="caption">{formatRelativeDate(review.createdAt)}</AppText>
             <StarRating rating={review.rating} size={14} />
           </Stack>
-          {hasReply ? <Chip icon="check" label="Đã trả lời" /> : null}
+          {canEdit ? <Inline gap={0}><IconButton icon="pencil-outline" label="Sửa" onPress={() => onEdit(review)} /><IconButton icon="delete-outline" label="Xóa" onPress={() => onDelete(review)} /></Inline> : hasReply ? <Chip icon="check" label="Đã trả lời" /> : null}
         </Inline>
-        <AppText variant="body">{review.comment}</AppText>
-        {review.images?.length ? <Inline>{review.images.slice(0, 3).map((image) => <Image alt="Ảnh đánh giá" key={image.url} source={{ uri: image.url }} style={{ backgroundColor: colors.surfaceMedia, borderRadius: radius.medium, height: 76, width: 76 }} />)}</Inline> : null}
-        {hasReply ? <Card variant="grouped"><Stack style={{ padding: spacing[3] }}><AppText style={{ color: colors.accentPrimary }} variant="headline">Chủ địa điểm đã trả lời</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">{review.reply?.content}</AppText></Stack></Card> : null}
-        {canEdit ? <Inline style={{ justifyContent: "flex-end" }}><Button icon="pencil-outline" label="Sửa" onPress={() => onEdit(review)} variant="tertiary" /><Button disabled={deleting} icon="delete-outline" label="Xóa" loading={deleting} onPress={() => onDelete(review)} variant="destructive" /></Inline> : null}
+        <AppText numberOfLines={locationReviewCommentLines} style={{ color: colors.textSecondary, opacity: deleting ? 0.5 : 1 }} variant="body">{review.comment}</AppText>
       </Stack>
-    </Card>
+    </Surface>
   );
+}
+
+function ReviewComposer({ visible, editing, rating, comment, submitting, onDismiss, onChangeRating, onChangeComment, onSubmit }: { visible: boolean; editing: boolean; rating: number; comment: string; submitting: boolean; onDismiss: () => void; onChangeRating: (rating: number) => void; onChangeComment: (comment: string) => void; onSubmit: () => void }) {
+  return <Portal><Modal contentContainerStyle={{ backgroundColor: colors.surfaceRaised, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, gap: spacing[4], marginTop: "auto", padding: spacing[5], paddingBottom: spacing[7] }} onDismiss={onDismiss} visible={visible}><Inline style={{ justifyContent: "space-between" }}><AppText variant="title2">{editing ? "Sửa đánh giá" : "Viết đánh giá"}</AppText><IconButton icon="close" label="Đóng" onPress={onDismiss} /></Inline><PressableStarRating onChange={onChangeRating} rating={rating} /><TextArea label="Trải nghiệm của bạn" onChangeText={onChangeComment} placeholder="Chia sẻ trải nghiệm của bạn" value={comment} /><Button disabled={submitting} icon={editing ? "content-save" : "send"} label={editing ? "Cập nhật" : "Gửi đánh giá"} loading={submitting} onPress={onSubmit} width="full" /></Modal></Portal>;
 }
 
 function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
@@ -187,10 +173,7 @@ function PressableStarRating({ rating, onChange }: { rating: number; onChange: (
   return <Inline>{Array.from({ length: 5 }).map((_, index) => { const value = index + 1; return <Pressable hitSlop={8} key={value} onPress={() => onChange(value)} style={{ alignItems: "center", height: 42, justifyContent: "center", width: 42 }}><Icon color={value <= rating ? colors.accentOrange : colors.borderStrong} size={30} source="star" /></Pressable>; })}</Inline>;
 }
 
-function getInitials(name?: string) {
-  if (!name?.trim()) return "U";
-  return name.trim().split(/\s+/).slice(-2).map((part) => part[0]).join("").toUpperCase();
-}
+function getId(value: unknown) { if (!value) return ""; if (typeof value === "string") return value; if (typeof value === "object") { const item = value as { _id?: string; id?: string }; return item._id ?? item.id ?? ""; } return ""; }
 
 function formatRelativeDate(value?: string) {
   if (!value) return "";
