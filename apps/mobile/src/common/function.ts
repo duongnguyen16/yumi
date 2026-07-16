@@ -122,24 +122,24 @@ const validateRequiredText = (
     required = true,
     minLength = 1,
     maxLength = 255,
-    fieldName = "Truong nay",
+    fieldName = "Trường này",
   } = options;
   const text = normalizeText(value);
 
   if (!text) {
-    return required ? invalid(`${fieldName} khong duoc de trong.`) : valid();
+    return required ? invalid(`${fieldName} không được để trống.`) : valid();
   }
 
   if (text.length < minLength) {
-    return invalid(`${fieldName} phai co it nhat ${minLength} ky tu.`);
+    return invalid(`${fieldName} phải có ít nhất ${minLength} ký tự.`);
   }
 
   if (text.length > maxLength) {
-    return invalid(`${fieldName} khong duoc vuot qua ${maxLength} ky tu.`);
+    return invalid(`${fieldName} không được vượt quá ${maxLength} ký tự.`);
   }
 
   if (hasBlockedTextCharacters(text)) {
-    return invalid(`${fieldName} chua ky tu khong hop le.`);
+    return invalid(`${fieldName} chứa ký tự không hợp lệ.`);
   }
 
   return valid();
@@ -147,7 +147,7 @@ const validateRequiredText = (
 
 const validateUserName = (value: unknown) => {
   const result = validateRequiredText(value, {
-    fieldName: "Ten",
+    fieldName: "Tên",
     minLength: 2,
     maxLength: 80,
   });
@@ -155,7 +155,7 @@ const validateUserName = (value: unknown) => {
   if (!result.isValid) return result;
 
   if (/\d/.test(normalizeText(value))) {
-    return invalid("Ten khong nen chua chu so.");
+    return invalid("Tên không nên chứa chữ số.");
   }
 
   return valid();
@@ -163,7 +163,7 @@ const validateUserName = (value: unknown) => {
 
 const validatePlaceName = (value: unknown) =>
   validateRequiredText(value, {
-    fieldName: "Ten dia diem",
+    fieldName: "Tên địa điểm",
     minLength: 3,
     maxLength: 100,
   });
@@ -173,7 +173,7 @@ const validateDescription = (
   options: TextValidationOptions = {},
 ) =>
   validateRequiredText(value, {
-    fieldName: "Mo ta",
+    fieldName: "Mô tả",
     minLength: 3,
     maxLength: 1000,
     ...options,
@@ -184,7 +184,7 @@ const validateAddress = (
   options: TextValidationOptions = {},
 ) =>
   validateRequiredText(value, {
-    fieldName: "Dia chi",
+    fieldName: "Địa chỉ",
     minLength: 5,
     maxLength: 255,
     ...options,
@@ -195,11 +195,11 @@ const validateEmail = (value: unknown) => {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
   if (!email) {
-    return invalid("Email khong duoc de trong.");
+    return invalid("Email không được để trống.");
   }
 
   if (email.length > 254 || !emailPattern.test(email)) {
-    return invalid("Email khong hop le.");
+    return invalid("Email không hợp lệ.");
   }
 
   return valid();
@@ -218,23 +218,23 @@ const validatePassword = (
   const password = typeof value === "string" ? value : "";
 
   if (!password) {
-    return invalid("Mat khau khong duoc de trong.");
+    return invalid("Mật khẩu không được để trống.");
   }
 
   if (password.length < minLength) {
-    return invalid(`Mat khau phai co it nhat ${minLength} ky tu.`);
+    return invalid(`Mật khẩu phải có ít nhất ${minLength} ký tự.`);
   }
 
   if (password.length > maxLength) {
-    return invalid(`Mat khau khong duoc vuot qua ${maxLength} ky tu.`);
+    return invalid(`Mật khẩu không được vượt quá ${maxLength} ký tự.`);
   }
 
   if (requireLetter && !/[A-Za-z]/.test(password)) {
-    return invalid("Mat khau phai co it nhat 1 chu cai.");
+    return invalid("Mật khẩu phải có ít nhất 1 chữ cái.");
   }
 
   if (requireNumber && !/\d/.test(password)) {
-    return invalid("Mat khau phai co it nhat 1 chu so.");
+    return invalid("Mật khẩu phải có ít nhất 1 chữ số.");
   }
 
   return valid();
@@ -249,11 +249,11 @@ const validateConfirmPassword = (
     typeof confirmPassword === "string" ? confirmPassword : "";
 
   if (!confirmPasswordValue) {
-    return invalid("Vui long nhap lai mat khau.");
+    return invalid("Vui lòng nhập lại mật khẩu.");
   }
 
   if (passwordValue !== confirmPasswordValue) {
-    return invalid("Mat khau xac nhan khong khop.");
+    return invalid("Mật khẩu xác nhận không khớp.");
   }
 
   return valid();
@@ -277,11 +277,11 @@ const validatePhoneNumber = (value: unknown) => {
   const vietnamMobilePattern = /^0(3|5|7|8|9)\d{8}$/;
 
   if (!phone) {
-    return invalid("So dien thoai khong duoc de trong.");
+    return invalid("Số điện thoại không được để trống.");
   }
 
   if (!vietnamMobilePattern.test(phone)) {
-    return invalid("So dien thoai khong hop le.");
+    return invalid("Số điện thoại không hợp lệ.");
   }
 
   return valid();
@@ -292,11 +292,11 @@ const validateOtp = (value: unknown, length = 6) => {
   const otpPattern = new RegExp(`^\\d{${length}}$`);
 
   if (!otp) {
-    return invalid("Ma OTP khong duoc de trong.");
+    return invalid("Mã OTP không được để trống.");
   }
 
   if (!otpPattern.test(otp)) {
-    return invalid(`Ma OTP phai gom ${length} chu so.`);
+    return invalid(`Mã OTP phải gồm ${length} chữ số.`);
   }
 
   return valid();
@@ -304,7 +304,7 @@ const validateOtp = (value: unknown, length = 6) => {
 
 const validateTimeValue = (value: TimeValue | null | undefined) => {
   if (!value) {
-    return invalid("Thoi gian khong duoc de trong.");
+    return invalid("Thời gian không được để trống.");
   }
 
   const { hours, minutes } = value;
@@ -317,7 +317,7 @@ const validateTimeValue = (value: TimeValue | null | undefined) => {
     minutes < 0 ||
     minutes > 59
   ) {
-    return invalid("Thoi gian khong hop le.");
+    return invalid("Thời gian không hợp lệ.");
   }
 
   return valid();
@@ -328,11 +328,11 @@ const validateClockTime = (value: unknown) => {
   const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
   if (!time) {
-    return invalid("Gio khong duoc de trong.");
+    return invalid("Giờ không được để trống.");
   }
 
   if (!timePattern.test(time)) {
-    return invalid("Gio phai co dinh dang HH:mm.");
+    return invalid("Giờ phải có định dạng HH:mm.");
   }
 
   return valid();
@@ -365,11 +365,11 @@ const validateTimeRange = (
   const endMinutes = timeToMinutes(end);
 
   if (startMinutes === endMinutes && !allowSameTime) {
-    return invalid("Gio dong cua phai khac gio mo cua.");
+    return invalid("Giờ đóng cửa phải khác giờ mở cửa.");
   }
 
   if (endMinutes < startMinutes && !allowOvernight) {
-    return invalid("Gio dong cua phai sau gio mo cua.");
+    return invalid("Giờ đóng cửa phải sau giờ mở cửa.");
   }
 
   return valid();
@@ -383,13 +383,13 @@ const validateOpeningHours = (
   const openingHours = normalizeText(value);
 
   if (!openingHours) {
-    return required ? invalid("Gio mo cua khong duoc de trong.") : valid();
+    return required ? invalid("Giờ mở cửa không được để trống.") : valid();
   }
 
   const parts = openingHours.split(/\s*-\s*/);
 
   if (parts.length !== 2) {
-    return invalid("Gio mo cua phai co dinh dang HH:mm-HH:mm.");
+    return invalid("Giờ mở cửa phải có định dạng HH:mm-HH:mm.");
   }
 
   return validateTimeRange(parts[0], parts[1], options);
@@ -397,7 +397,7 @@ const validateOpeningHours = (
 
 const validateCategoryId = (value: unknown) => {
   if (!normalizeText(value)) {
-    return invalid("Vui long chon danh muc.");
+    return invalid("Vui lòng chọn danh mục.");
   }
 
   return valid();
@@ -410,15 +410,15 @@ const validateSubCategoryIds = (
   const { required = false, maxCount = 10 } = options;
 
   if (!Array.isArray(value) || value.length === 0) {
-    return required ? invalid("Vui long chon danh muc con.") : valid();
+    return required ? invalid("Vui lòng chọn danh mục con.") : valid();
   }
 
   if (value.some((item) => !normalizeText(item))) {
-    return invalid("Danh muc con khong hop le.");
+    return invalid("Danh mục con không hợp lệ.");
   }
 
   if (value.length > maxCount) {
-    return invalid(`Chi duoc chon toi da ${maxCount} danh muc con.`);
+    return invalid(`Chỉ được chọn tối đa ${maxCount} danh mục con.`);
   }
 
   return valid();
@@ -428,7 +428,7 @@ const validateLatitude = (value: unknown) => {
   const latitude = Number(value);
 
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    return invalid("Vi do khong hop le.");
+    return invalid("Vĩ độ không hợp lệ.");
   }
 
   return valid();
@@ -438,7 +438,7 @@ const validateLongitude = (value: unknown) => {
   const longitude = Number(value);
 
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return invalid("Kinh do khong hop le.");
+    return invalid("Kinh độ không hợp lệ.");
   }
 
   return valid();
@@ -446,7 +446,7 @@ const validateLongitude = (value: unknown) => {
 
 const validateCoordinates = (value: Coordinates | null | undefined) => {
   if (!value) {
-    return invalid("Vi tri khong duoc de trong.");
+    return invalid("Vị trí không được để trống.");
   }
 
   const latitudeResult = validateLatitude(value.latitude);
@@ -466,11 +466,11 @@ const validateFileCount = (
   const fileCount = Array.isArray(files) ? files.length : 0;
 
   if (fileCount < minCount) {
-    return invalid(`Vui long them it nhat ${minCount} tep.`);
+    return invalid(`Vui lòng thêm ít nhất ${minCount} tệp.`);
   }
 
   if (fileCount > maxCount) {
-    return invalid(`Chi duoc them toi da ${maxCount} tep.`);
+    return invalid(`Chỉ được thêm tối đa ${maxCount} tệp.`);
   }
 
   return valid();
@@ -493,15 +493,15 @@ const validateMediaFiles = (
     const fileSize = Number(file.fileSize ?? file.size ?? 0);
 
     if (!normalizeText(file.uri) || !fileName) {
-      return invalid("Tep tai len khong hop le.");
+      return invalid("Tệp tải lên không hợp lệ.");
     }
 
     if (allowedMimeTypes?.length && !allowedMimeTypes.includes(mimeType)) {
-      return invalid("Dinh dang tep khong duoc ho tro.");
+      return invalid("Định dạng tệp không được hỗ trợ.");
     }
 
     if (fileSize > maxSizeBytes) {
-      return invalid(`Moi tep khong duoc vuot qua ${maxSizeMb} MB.`);
+      return invalid(`Mỗi tệp không được vượt quá ${maxSizeMb} MB.`);
     }
   }
 

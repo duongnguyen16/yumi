@@ -1,44 +1,52 @@
 import { ErrorBoundaryProps, Stack } from "expo-router";
 import { DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
+import { GoogleSansFlex_400Regular, GoogleSansFlex_500Medium, GoogleSansFlex_600SemiBold, GoogleSansFlex_700Bold, GoogleSansFlex_800ExtraBold, useFonts } from "@expo-google-fonts/google-sans-flex";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import "../../global.css";
 import UserContextProvider from "@/contexts/userContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Button, MD3LightTheme, PaperProvider, Text } from "react-native-paper";
+import { Button, configureFonts, MD3LightTheme, PaperProvider, Text } from "react-native-paper";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Location from "expo-location";
 import { useEffect } from "react";
 import LocationContextProvider from "@/contexts/locationContext";
+import { colors, fontFamily } from "@/ui/tokens";
+
+void SplashScreen.preventAutoHideAsync();
 
 const appColors = {
-  background: "#f7f5ef",
-  surface: "#fffdf9",
-  surfaceVariant: "#f1eee7",
-  primary: "#ff4b22",
-  text: "#25221e",
-  muted: "#7a736b",
-  outline: "#e5ddd4",
-  success: "#16833a",
-  successContainer: "#d8f2df",
+  background: colors.surfaceApp,
+  surface: colors.surfaceBase,
+  surfaceVariant: colors.surfaceElevated,
+  primary: colors.accentPrimary,
+  text: colors.textPrimary,
+  muted: colors.textSecondary,
+  outline: colors.borderSubtle,
+  success: colors.accentGreen,
+  successContainer: colors.surfaceControl,
 };
 
 const paperTheme = {
   ...MD3LightTheme,
   dark: false,
-  roundness: 4,
+  roundness: 28,
+  fonts: configureFonts({ config: { fontFamily: fontFamily.regular } }),
   colors: {
     ...MD3LightTheme.colors,
     primary: appColors.primary,
-    onPrimary: "#ffffff",
-    primaryContainer: "#fee4d9",
-    onPrimaryContainer: "#8f1e0b",
-    secondary: "#5f513f",
-    onSecondary: "#ffffff",
+    onPrimary: colors.textInverse,
+    primaryContainer: colors.surfaceControl,
+    onPrimaryContainer: colors.accentPrimary,
+    secondary: colors.textSecondary,
+    onSecondary: colors.textInverse,
     secondaryContainer: appColors.surfaceVariant,
     onSecondaryContainer: appColors.text,
     tertiary: appColors.success,
-    onTertiary: "#ffffff",
+    onTertiary: colors.textInverse,
     tertiaryContainer: appColors.successContainer,
-    onTertiaryContainer: "#0b4f25",
+    onTertiaryContainer: colors.textPrimary,
     background: appColors.background,
     onBackground: appColors.text,
     surface: appColors.surface,
@@ -46,19 +54,19 @@ const paperTheme = {
     surfaceVariant: appColors.surfaceVariant,
     onSurfaceVariant: appColors.muted,
     outline: appColors.outline,
-    outlineVariant: "#eee8df",
-    error: "#dc2626",
-    onError: "#ffffff",
-    errorContainer: "#fee2e2",
-    onErrorContainer: "#7f1d1d",
+    outlineVariant: colors.separator,
+    error: colors.accentRed,
+    onError: colors.textInverse,
+    errorContainer: colors.surfaceControl,
+    onErrorContainer: colors.accentRed,
     elevation: {
       ...MD3LightTheme.colors.elevation,
       level0: appColors.background,
       level1: appColors.surface,
-      level2: "#fff9f4",
-      level3: "#fff6ef",
-      level4: "#fff3eb",
-      level5: "#ffeee4",
+      level2: colors.surfaceElevated,
+      level3: colors.surfaceElevated,
+      level4: colors.surfaceElevated,
+      level5: colors.surfaceElevated,
     },
   },
 };
@@ -98,6 +106,14 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    GoogleSansFlex_400Regular,
+    GoogleSansFlex_500Medium,
+    GoogleSansFlex_600SemiBold,
+    GoogleSansFlex_700Bold,
+    GoogleSansFlex_800ExtraBold,
+  });
+
   const requestLocationPermission = async () => {
     const permission = await Location.getForegroundPermissionsAsync();
     if (permission.status === "undetermined") {
@@ -106,25 +122,35 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    requestLocationPermission();
-  }, []);
+    if (fontsLoaded) {
+      requestLocationPermission();
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider value={navigationTheme}>
-        <PaperProvider theme={paperTheme}>
-          <UserContextProvider>
-            <LocationContextProvider>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: appColors.background },
-                }}
-              />
-            </LocationContextProvider>
-          </UserContextProvider>
-        </PaperProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <ThemeProvider value={navigationTheme}>
+          <PaperProvider theme={paperTheme}>
+            <UserContextProvider>
+              <LocationContextProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: appColors.background },
+                  }}
+                />
+              </LocationContextProvider>
+            </UserContextProvider>
+          </PaperProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

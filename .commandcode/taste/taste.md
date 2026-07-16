@@ -3,4 +3,4 @@
 [cmd]: https://commandcode.ai/
 
 # code-style
-- Remove unnecessary comments from production code; prefer clean, self-documenting code. Confidence: 0.70
+- Use short, understandable variable names suitable for entry-level learners; do not include comments in production code. Confidence: 0.80
