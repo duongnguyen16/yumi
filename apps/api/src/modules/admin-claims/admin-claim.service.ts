@@ -113,11 +113,15 @@ export class AdminClaimService {
 
   async approve(id: string, adminId: string, reason?: string) {
     try {
+      // load claim and location
       const data = await this.load(id);
       if (!data.success) return data;
+
+      // check cờ
       const { claim, loc } = data;
       const flags = this.getFlags(claim);
 
+      // được approve k?
       if (!flags.eligibleForApprove) {
         return this.fail(
           422,
@@ -125,10 +129,12 @@ export class AdminClaimService {
         );
       }
 
+      // đã có chủ
       if (loc.ownerId && String(loc.ownerId) !== String(claim.vendorId)) {
         return this.redirectToAccess(claim, loc, adminId);
       }
 
+      // approve claim
       const oldOwner = loc.ownerId ? String(loc.ownerId) : null;
       loc.ownerId = claim.vendorId;
       await loc.save();
@@ -179,6 +185,7 @@ export class AdminClaimService {
 
   async reject(id: string, adminId: string, reason: string) {
     try {
+      // load claim and location
       const data = await this.load(id);
       if (!data.success) return data;
       const { claim, loc } = data;
@@ -247,6 +254,7 @@ export class AdminClaimService {
     }
   }
 
+  // chuyển hướng sang request access 
   private async redirectToAccess(
     claim: ClaimRequestDocument,
     loc: LocationDocument,
@@ -284,6 +292,9 @@ export class AdminClaimService {
   }
 
   private getFlags(claim: ClaimData) {
+
+    // đủ điều kiện k?
+    // đủ điều kiện là phải có otpVerified hoặc needsAdminScrutiny, và phải có ảnh hiện trường có vị trí và thời gian chụp, và phải có ảnh có siteCode
     const files = claim.evidenceFiles ?? [];
     const hasOnSiteProof = files.some(
       (file) =>
@@ -310,6 +321,7 @@ export class AdminClaimService {
     };
   }
 
+  // load claim base trên id 
   private async load(id: string): Promise<LoadResult> {
     if (!Types.ObjectId.isValid(id)) {
       return this.fail(400, 'ID claim không hợp lệ');

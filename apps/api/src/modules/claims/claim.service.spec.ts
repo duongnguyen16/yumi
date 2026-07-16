@@ -6,8 +6,8 @@ function query<T>(value: T) {
   return { lean: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue(value) };
 }
 
-describe('ClaimService', () => {
-  it('starts a verified claim session for an unowned published location', async () => {
+describe('Kiểm thử ClaimService', () => {
+  it('khởi tạo phiên claim đã xác thực cho địa điểm công khai chưa có chủ', async () => {
     const locationId = new Types.ObjectId();
     const vendorId = new Types.ObjectId();
     const locationModel = {
@@ -46,7 +46,7 @@ describe('ClaimService', () => {
     expect(sessionModel.findOneAndUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('blocks a new claim when the pending slot is already occupied', async () => {
+  it('chặn claim mới khi đã có yêu cầu chờ trong cùng vị trí', async () => {
     const locationId = new Types.ObjectId();
     const vendorId = new Types.ObjectId();
     const locationModel = {
@@ -80,7 +80,7 @@ describe('ClaimService', () => {
     expect(sms.sendOtp).not.toHaveBeenCalled();
   });
 
-  it('submits a pending claim without changing the location owner', async () => {
+  it('gửi claim chờ duyệt mà không thay đổi chủ sở hữu địa điểm', async () => {
     const locationId = new Types.ObjectId();
     const vendorId = new Types.ObjectId();
     const location = {

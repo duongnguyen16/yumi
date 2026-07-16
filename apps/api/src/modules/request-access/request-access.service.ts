@@ -64,17 +64,22 @@ export class RequestAccessService {
     req: Pick<RequestAccess, 'status' | 'timeoutAt'>,
     now = new Date(),
   ): EffectiveState {
+    // nếu pending + timeoutAt < now => timed out
     if (req.status === RequestAccessStatus.PENDING) {
       return now > req.timeoutAt ? 'PENDING_TIMED_OUT' : 'PENDING_OPEN';
     }
     return req.status;
   }
 
+  // tạo request access
   async createRequest(userId: string, dto: CreateRequestAccessDTO) {
     try {
+      // validate userId
       if (!Types.ObjectId.isValid(userId)) {
         return this.fail(400, 'ID người yêu cầu không hợp lệ');
       }
+
+      // lấy location
       const loc = await this.locModel.findById(dto.locationId).exec();
       if (!loc) return this.fail(404, 'Không tìm thấy địa điểm');
       if (loc.status !== LocationStatus.PUBLISHED) {
@@ -87,6 +92,7 @@ export class RequestAccessService {
         return this.fail(409, 'Bạn đã là chủ địa điểm này');
       }
 
+      // check xem có claim hoặc request đang chờ xử lý không
       const [claim, req] = await Promise.all([
         this.claimModel.exists({
           locationId: loc._id,
@@ -100,6 +106,7 @@ export class RequestAccessService {
       if (claim) return this.fail(409, 'Địa điểm đang có claim chờ xử lý');
       if (req) return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
 
+      // create request access
       const now = new Date();
       const created = await this.reqModel.create({
         locationId: loc._id,
@@ -139,11 +146,16 @@ export class RequestAccessService {
     }
   }
 
+
+  // list request access của owner hoặc requester
   async listMine(userId: string, side: 'owner' | 'requester') {
     try {
+
+      // validate userId
       if (!Types.ObjectId.isValid(userId)) {
         return this.fail(400, 'ID người dùng không hợp lệ');
       }
+
       const id = new Types.ObjectId(userId);
       const filter =
         side === 'owner' ? { currentOwnerId: id } : { requesterId: id };
@@ -165,6 +177,7 @@ export class RequestAccessService {
     }
   }
 
+  // get request access by id
   async getRequestById(id: string, userId: string) {
     try {
       if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
@@ -186,10 +199,14 @@ export class RequestAccessService {
     }
   }
 
+  // owner trả lời request access
   async respond(id: string, ownerId: string, dto: RespondRequestAccessDTO) {
     try {
+      // validate id
       const data = await this.loadPendingRequest(id);
+      // nếu không thành công thì return fail
       if (!data.success) return data;
+
       const { req } = data;
       if (String(req.currentOwnerId) !== ownerId) {
         return this.fail(403, 'Chỉ chủ địa điểm mới được phản hồi');
@@ -203,8 +220,11 @@ export class RequestAccessService {
         return this.fail(409, 'Chủ địa điểm đã thay đổi');
       }
 
+      // nếu reject thì set status = REJECTED, nếu grant thì set status = GRANTED và chuyển quyền sở hữu
       const now = new Date();
       req.respondedAt = now;
+
+      // từ chối 
       if (dto.action === RespondAction.REJECT) {
         req.status = RequestAccessStatus.REJECTED;
         req.responseReason = dto.reason?.trim();
@@ -245,6 +265,7 @@ export class RequestAccessService {
         };
       }
 
+      // đồng ý
       const oldOwner = String(loc.ownerId);
       loc.ownerId = req.requesterId;
       loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
@@ -272,6 +293,7 @@ export class RequestAccessService {
 
   async verifyTakeover(id: string, userId: string, dto: VerifyTakeoverDTO) {
     try {
+      // ktra như bthg
       const data = await this.loadPendingRequest(id);
       if (!data.success) return data;
       const { req } = data;
@@ -290,15 +312,18 @@ export class RequestAccessService {
         return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
       }
 
+      // bắt đầu check đổi chủ 
       const now = new Date();
       const oldOwner = String(loc.ownerId);
       loc.ownerId = req.requesterId;
       loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
       await loc.save();
+
       req.evidenceFiles = dto.evidenceFiles;
       req.otpVerified = true;
       req.respondedAt = now;
       req.status = RequestAccessStatus.AUTO_GRANTED;
+
       await req.save();
       await this.notifyTransfer(loc, req, oldOwner, true);
       await this.writeLog(
@@ -319,7 +344,9 @@ export class RequestAccessService {
     }
   }
 
+  // check xem có tồn tại request access pending không, nếu có thì trả về req, nếu không thì trả về fail
   private async loadPendingRequest(id: string) {
+  
     if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
     const req = await this.reqModel.findById(id).exec();
     if (!req) return this.fail(404, 'Không tìm thấy yêu cầu');
@@ -382,6 +409,7 @@ export class RequestAccessService {
     );
   }
 
+  // chuyển đổi request access sang view model
   private toView(item: unknown, userId: string) {
     const data = item as RequestAccess & Record<string, unknown>;
     const state = this.resolveEffectiveState(data);
@@ -394,6 +422,7 @@ export class RequestAccessService {
     };
   }
 
+  // check xem đc coi k, ko phải 1 trong 2 thì nghỉ
   private canView(item: unknown, userId: string) {
     const data = item as RequestAccess;
     return (
@@ -401,7 +430,7 @@ export class RequestAccessService {
       this.idOf(data.currentOwnerId) === userId
     );
   }
-
+   // 
   private idOf(value: unknown) {
     if (value && typeof value === 'object' && '_id' in value) {
       return String(value._id);

@@ -55,6 +55,7 @@ function handle<T extends ServiceResult>(result: T) {
 export class AppealController {
   constructor(private readonly service: AppealService) {}
 
+  // submit appeal
   @Post()
   async submit(@Body() dto: SubmitAppealDTO, @NestRequest() req: UserRequest) {
     return handle(await this.service.submit(req.user.userId, dto));
