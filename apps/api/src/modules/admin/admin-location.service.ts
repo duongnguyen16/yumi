@@ -21,6 +21,7 @@ import {
   NotificationPort,
 } from 'src/common/contracts/notification.port';
 import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
+import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
 const FAR_PIN_THRESHOLD = 50; // mét — BR-42/59
 
@@ -28,6 +29,12 @@ const FAR_PIN_THRESHOLD = 50; // mét — BR-42/59
 const REVIEWABLE_STATUSES: LocationRequestStatus[] = [
   LocationRequestStatus.PENDING,
   LocationRequestStatus.PENDING_RE_APPROVAL,
+];
+
+const HISTORY_STATUSES: LocationRequestStatus[] = [
+  LocationRequestStatus.APPROVED,
+  LocationRequestStatus.REJECTED,
+  LocationRequestStatus.CANCELLED,
 ];
 
 // Các field của Location được phép cập nhật từ newData (allow-list).
@@ -90,12 +97,22 @@ export class AdminLocationService {
     try {
       const page = q.page ?? 1,
         limit = q.limit ?? 30;
-      const filter = { status: { $in: REVIEWABLE_STATUSES } };
+      const isHistory = q.view === AdminListView.HISTORY;
+      const filter = {
+        status: { $in: isHistory ? HISTORY_STATUSES : REVIEWABLE_STATUSES },
+      };
+      const sort: Record<string, 1 | -1> = isHistory
+        ? {
+            reviewedAt: -1 as const,
+            updatedAt: -1 as const,
+            createdAt: -1 as const,
+          }
+        : { isPotentialDuplicate: -1 as const, createdAt: 1 as const };
 
       const [list, total] = await Promise.all([
         this.reqModel
           .find(filter)
-          .sort({ isPotentialDuplicate: -1, createdAt: 1 })
+          .sort(sort)
           .skip((page - 1) * limit)
           .limit(limit)
           .populate('submittedBy', 'fullName email')

@@ -51,7 +51,7 @@ function handle<T extends ServiceResult>(result: T) {
 @ApiTags('appeals')
 @ApiBearerAuth()
 @Controller('appeals')
-@UseGuards(AuthGuard('jwt-at'))
+@UseGuards(AuthGuard('jwt-appeal-access'))
 export class AppealController {
   constructor(private readonly service: AppealService) {}
 
