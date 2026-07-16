@@ -12,6 +12,7 @@ import {
 } from 'src/common/schemas/location.schema';
 import { LocationStatus } from 'src/common/schemas/common.enums';
 import { Product, ProductDocument } from 'src/common/schemas/product.schema';
+import { ImagesService } from '../images/images.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
@@ -24,6 +25,7 @@ export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(Location.name) private locationModel: Model<LocationDocument>,
+    private readonly imagesService: ImagesService,
   ) {}
 
   async getAllProductsByLocation(locationId: string) {
@@ -72,7 +74,12 @@ export class ProductsService {
     };
   }
 
-  async create(locationId: string, userId: string, dto: CreateProductDto) {
+  async create(
+    locationId: string,
+    userId: string,
+    dto: CreateProductDto,
+    image?: Express.Multer.File,
+  ) {
     const location = await this.findOwnedLocation(locationId, userId);
     const productCount = await this.productModel.countDocuments({
       locationId: location._id,
@@ -82,13 +89,34 @@ export class ProductsService {
       throw new BadRequestException('Mỗi địa điểm chỉ được có tối đa 50 sản phẩm');
     }
 
-    const product = await this.productModel.create({
-      locationId: location._id,
-      name: dto.name.trim(),
-      description: dto.description?.trim() || undefined,
-      imageUrl: dto.imageUrl?.trim() || undefined,
-      price: dto.price ?? undefined,
-    });
+    const productId = new Types.ObjectId();
+    const uploadedImage = image
+      ? await this.imagesService.uploadProductImage(
+          String(location._id),
+          String(productId),
+          image,
+        )
+      : undefined;
+
+    let product: ProductDocument;
+    try {
+      product = await this.productModel.create({
+        _id: productId,
+        locationId: location._id,
+        name: dto.name.trim(),
+        description: dto.description?.trim() || undefined,
+        imageUrl: uploadedImage?.url,
+        imagePath: uploadedImage?.path,
+        price: dto.price ?? undefined,
+      });
+    } catch (error) {
+      if (uploadedImage) {
+        await this.imagesService
+          .deleteProductImage(uploadedImage.path)
+          .catch(() => undefined);
+      }
+      throw error;
+    }
 
     return {
       success: true,
@@ -97,9 +125,32 @@ export class ProductsService {
     };
   }
 
-  async update(productId: string, userId: string, dto: UpdateProductDto) {
+  async update(
+    productId: string,
+    userId: string,
+    dto: UpdateProductDto,
+    image?: Express.Multer.File,
+  ) {
     const product = await this.findProduct(productId);
     await this.findOwnedLocation(String(product.locationId), userId);
+
+    if (image && dto.removeImage) {
+      throw new BadRequestException(
+        'Không thể vừa thay thế vừa xóa ảnh sản phẩm',
+      );
+    }
+
+    const previousImage = {
+      url: product.imageUrl,
+      path: product.imagePath,
+    };
+    const uploadedImage = image
+      ? await this.imagesService.uploadProductImage(
+          String(product.locationId),
+          String(product._id),
+          image,
+        )
+      : undefined;
 
     if (dto.name !== undefined) {
       product.name = dto.name.trim();
@@ -107,14 +158,43 @@ export class ProductsService {
     if (dto.description !== undefined) {
       product.description = dto.description.trim() || undefined;
     }
-    if (dto.imageUrl !== undefined) {
-      product.imageUrl = dto.imageUrl.trim() || undefined;
+    if (uploadedImage) {
+      product.imageUrl = uploadedImage.url;
+      product.imagePath = uploadedImage.path;
+    } else if (dto.removeImage) {
+      product.imageUrl = undefined;
+      product.imagePath = undefined;
     }
     if (dto.price !== undefined) {
       product.price = dto.price ?? undefined;
     }
 
-    await product.save();
+    try {
+      await product.save();
+    } catch (error) {
+      if (uploadedImage) {
+        await this.imagesService
+          .deleteProductImage(uploadedImage.path)
+          .catch(() => undefined);
+      }
+      throw error;
+    }
+
+    if ((uploadedImage || dto.removeImage) && previousImage.path) {
+      try {
+        await this.imagesService.deleteProductImage(previousImage.path);
+      } catch (error) {
+        product.imageUrl = previousImage.url;
+        product.imagePath = previousImage.path;
+        await product.save();
+        if (uploadedImage) {
+          await this.imagesService
+            .deleteProductImage(uploadedImage.path)
+            .catch(() => undefined);
+        }
+        throw error;
+      }
+    }
 
     return {
       success: true,
@@ -126,6 +206,9 @@ export class ProductsService {
   async remove(productId: string, userId: string) {
     const product = await this.findProduct(productId);
     await this.findOwnedLocation(String(product.locationId), userId);
+    if (product.imagePath) {
+      await this.imagesService.deleteProductImage(product.imagePath);
+    }
     await product.deleteOne();
 
     return {
@@ -173,9 +256,12 @@ export class ProductsService {
   private toResponse(product: ProductDocument) {
     const plain = product.toObject();
     const hasPrice = plain.price !== undefined && plain.price !== null;
+    const imageUrl = plain.imagePath ? plain.imageUrl : undefined;
 
     return {
       ...plain,
+      imageUrl,
+      imagePath: undefined,
       _id: String(plain._id),
       id: String(plain._id),
       locationId: String(plain.locationId),

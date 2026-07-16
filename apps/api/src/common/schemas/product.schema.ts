@@ -20,6 +20,9 @@ export class Product {
   imageUrl?: string;
 
   @Prop({ trim: true })
+  imagePath?: string;
+
+  @Prop({ trim: true })
   description?: string;
 
   @Prop({ type: Number, min: 0 })
