@@ -55,7 +55,7 @@ function formatTime(value?: string): string {
   return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—';
 }
 
-const headSx: SxProps<Theme> = {
+const headSx = {
   fontFamily: tokens.font.mono,
   fontSize: 11,
   fontWeight: 700,
@@ -65,6 +65,23 @@ const headSx: SxProps<Theme> = {
   borderBottom: `1px solid ${tokens.color.border}`,
   py: 2,
   whiteSpace: 'nowrap',
+} satisfies SxProps<Theme>;
+
+const stickyActionHeadSx: SxProps<Theme> = {
+  ...headSx,
+  position: 'sticky',
+  right: 0,
+  zIndex: 2,
+  bgcolor: tokens.color.card,
+  boxShadow: '-8px 0 12px rgba(25, 28, 33, 0.04)',
+};
+
+const stickyActionCellSx: SxProps<Theme> = {
+  position: 'sticky',
+  right: 0,
+  zIndex: 1,
+  bgcolor: tokens.color.card,
+  boxShadow: '-8px 0 12px rgba(25, 28, 33, 0.04)',
 };
 
 export default function LocationRequestsPage() {
@@ -221,7 +238,7 @@ export default function LocationRequestsPage() {
                   <TableCell sx={headSx}>Cờ cảnh báo</TableCell>
                   <TableCell sx={headSx}>Gửi lúc</TableCell>
                   <TableCell sx={headSx}>Trạng thái</TableCell>
-                  <TableCell sx={headSx} align="right">
+                  <TableCell sx={stickyActionHeadSx} align="right">
                     Hành động
                   </TableCell>
                 </TableRow>
@@ -287,17 +304,17 @@ export default function LocationRequestsPage() {
                           </Typography>
                         </Stack>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 150 }}>
                         <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
                           {submitter?.fullName ?? submitter?.email ?? '—'}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 150 }}>
                         <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
                           {locationRequestTypeLabel(req.type)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 120 }}>
                         <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
                           {flags?.suspectedDuplicate && (
                             <Chip label="Nghi trùng" size="small" sx={flagChipSx(tokens.color.red, tokens.color.redSoftBg, tokens.color.redSoftBorder)} />
@@ -322,7 +339,7 @@ export default function LocationRequestsPage() {
                           sx={requestStatusChipSx(req.status)}
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={stickyActionCellSx}>
                         <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
                           <Tooltip title="Xem chi tiết">
                             <Button

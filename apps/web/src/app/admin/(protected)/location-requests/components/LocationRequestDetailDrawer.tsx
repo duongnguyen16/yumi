@@ -76,21 +76,6 @@ export function LocationRequestDetailDrawer({
       onClose={close}
       title={readOnly ? 'Kết quả duyệt địa điểm' : rejecting ? 'Từ chối địa điểm' : 'Xét duyệt địa điểm'}
       width={620}
-      preview={
-        <Box
-          sx={{
-            width: 76,
-            height: 76,
-            bgcolor: 'rgba(255,255,255,0.55)',
-            border: '1px solid rgba(255,255,255,0.78)',
-            display: 'grid',
-            placeItems: 'center',
-            color: tokens.color.orange,
-          }}
-        >
-          <LocationOnOutlinedIcon sx={{ fontSize: 40 }} />
-        </Box>
-      }
       footer={
         readOnly ? (
           <ActionButton variant="neutral" onClick={close} sx={{ flex: 1, minHeight: 46 }}>

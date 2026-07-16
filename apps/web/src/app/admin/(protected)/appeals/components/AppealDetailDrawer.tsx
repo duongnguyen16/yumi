@@ -16,7 +16,6 @@ import ArrowForwardOutlinedIcon from '@mui/icons-material/ArrowForwardOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
-import RuleOutlinedIcon from '@mui/icons-material/RuleOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { DetailDrawer } from '@/components/admin/DetailDrawer';
@@ -64,20 +63,6 @@ export function AppealDetailDrawer({
       onClose={onClose}
       title={readOnly ? 'Kết quả kháng cáo' : 'Xét duyệt kháng cáo'}
       width={620}
-      preview={
-        <Box
-          sx={{
-            width: 76,
-            height: 76,
-            border: '1px solid rgba(255,255,255,0.78)',
-            bgcolor: 'rgba(255,255,255,0.55)',
-            display: 'grid',
-            placeItems: 'center',
-          }}
-        >
-          <RuleOutlinedIcon sx={{ fontSize: 40, color: tokens.color.orange }} />
-        </Box>
-      }
       footer={
         readOnly ? (
           <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1, minHeight: 46 }}>
