@@ -114,7 +114,7 @@ export class AdminDashboardService {
       filter.actorId = new Types.ObjectId(actorId);
     }
 
-    const [data, total] = await Promise.all([
+    const [data, total, actions] = await Promise.all([
       this.auditLogModel
         .find(filter)
         .sort({ createdAt: -1 })
@@ -124,6 +124,7 @@ export class AdminDashboardService {
         .lean()
         .exec(),
       this.auditLogModel.countDocuments(filter).lean().exec(),
+      this.auditLogModel.distinct('action').exec(),
     ]);
 
     return {
@@ -132,6 +133,7 @@ export class AdminDashboardService {
       total,
       page,
       limit,
+      actions: actions.sort(),
     };
   }
 
