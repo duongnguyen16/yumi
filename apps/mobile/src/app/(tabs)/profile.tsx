@@ -1,6 +1,7 @@
 import type { ProfileData } from "@/components/profile/profile-types";
 import { userContext } from "@/contexts/userContext";
 import { getProfile } from "@/service/profileService";
+import { getVendorRegistrationDestination } from "@/navigation/authDestination";
 import { AppText, Button, GroupedList, ListRow, LoadingState, NoticeSnackbar, Page, PageContent, PageHeader, SectionHeader, Stack } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -57,7 +58,7 @@ export default function AccountScreen() {
         <Stack>
           <SectionHeader title={isVendor ? "Kinh doanh" : "Đóng góp"} />
           <GroupedList>
-            {isVendor ? <ListRow icon="storefront-outline" label="Quản lý địa điểm" onPress={() => router.push("/manage")} supportingText="Hiệu suất và địa điểm thuộc sở hữu" /> : <ListRow icon="map-marker-plus-outline" label="Đóng góp địa điểm" onPress={() => router.push("/contribute?type=add" as never)} supportingText="Thêm một địa điểm còn thiếu trên bản đồ" />}
+            {isVendor ? <><ListRow icon="storefront-outline" label="Quản lý địa điểm" onPress={() => router.push("/manage")} supportingText="Hiệu suất và địa điểm thuộc sở hữu" /><ListRow icon="map-marker-plus-outline" label="Đăng ký địa điểm" onPress={() => router.push(getVendorRegistrationDestination(phoneVerified))} supportingText="Thêm cơ sở kinh doanh mới" /></> : <ListRow icon="map-marker-plus-outline" label="Đóng góp địa điểm" onPress={() => router.push("/contribute?type=add" as never)} supportingText="Thêm một địa điểm còn thiếu trên bản đồ" />}
           </GroupedList>
         </Stack>
 
