@@ -18,16 +18,9 @@ import {
   EditSuggestionStatus,
   LocationStatus,
   RoutingTarget,
-  UserRole,
   UserStatus,
 } from 'src/common/schemas/common.enums';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
-import {
-  LocationRequest,
-  LocationRequestDocument,
-  LocationRequestStatus,
-  LocationRequestType,
-} from 'src/common/schemas/location-request';
 import {
   Notification,
   NotificationDocument,
@@ -37,8 +30,9 @@ import {
   CreateEditSuggestionDto,
   EditSuggestionChangeDto,
   EditSuggestionField,
-  EditSuggestionFlag,
 } from './dto/create-edit-suggestion.dto';
+import { EditSuggestionApplyService } from './edit-suggestion-apply.service';
+import { EditSuggestionRoutingService } from './edit-suggestion-routing.service';
 
 @Injectable()
 export class EditSuggestionsService {
@@ -49,12 +43,12 @@ export class EditSuggestionsService {
     private readonly locationModel: Model<LocationDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
-    @InjectModel(LocationRequest.name)
-    private readonly locationRequestModel: Model<LocationRequestDocument>,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     @InjectModel(AuditLog.name)
     private readonly auditLogModel: Model<AuditLogDocument>,
+    private readonly routingService: EditSuggestionRoutingService,
+    private readonly applyService: EditSuggestionApplyService,
   ) {}
 
   async create(
@@ -89,7 +83,7 @@ export class EditSuggestionsService {
       );
     }
 
-    const routingTarget = this.getRoutingTarget(location);
+    const routingTarget = this.routingService.getRoutingTarget(location);
 
     const suggestions = await this.editSuggestionModel.insertMany(
       dto.changes.map((change) => ({
@@ -114,26 +108,32 @@ export class EditSuggestionsService {
   }
 
   async getAdminQueue() {
-    const suggestions = await this.getPendingSuggestionsForRoute(
-      RoutingTarget.ADMIN,
-    );
+    const routedSuggestions =
+      await this.routingService.getPendingSuggestionsForRoute(
+        RoutingTarget.ADMIN,
+      );
 
     return {
       success: true,
-      suggestions,
+      suggestions: routedSuggestions.map(({ suggestion, location }) =>
+        this.serializeSuggestion(suggestion, location),
+      ),
     };
   }
 
   async getVendorInbox(userId: string) {
     const userObjectId = this.toObjectId(userId, 'Người dùng không hợp lệ');
-    const suggestions = await this.getPendingSuggestionsForRoute(
-      RoutingTarget.VENDOR,
-      userObjectId,
-    );
+    const routedSuggestions =
+      await this.routingService.getPendingSuggestionsForRoute(
+        RoutingTarget.VENDOR,
+        userObjectId,
+      );
 
     return {
       success: true,
-      suggestions,
+      suggestions: routedSuggestions.map(({ suggestion, location }) =>
+        this.serializeSuggestion(suggestion, location),
+      ),
     };
   }
 
@@ -148,9 +148,12 @@ export class EditSuggestionsService {
     );
 
     const { suggestion, location, reviewer, currentRoute } =
-      await this.loadReviewContext(reviewerObjectId, suggestionObjectId);
+      await this.routingService.loadReviewContext(
+        reviewerObjectId,
+        suggestionObjectId,
+      );
 
-    await this.assertCanReview(reviewer, location, currentRoute);
+    this.routingService.assertCanReview(reviewer, location, currentRoute);
 
     if (location.status !== LocationStatus.PUBLISHED) {
       return this.discardUnavailableSuggestion(
@@ -162,7 +165,7 @@ export class EditSuggestionsService {
     }
 
     const oldStatus = location.status;
-    const applyResult = await this.applySuggestionToLocation(
+    const applyResult = await this.applyService.applySuggestionToLocation(
       suggestion,
       location,
       reviewerObjectId,
@@ -221,9 +224,12 @@ export class EditSuggestionsService {
     );
 
     const { suggestion, location, reviewer, currentRoute } =
-      await this.loadReviewContext(reviewerObjectId, suggestionObjectId);
+      await this.routingService.loadReviewContext(
+        reviewerObjectId,
+        suggestionObjectId,
+      );
 
-    await this.assertCanReview(reviewer, location, currentRoute);
+    this.routingService.assertCanReview(reviewer, location, currentRoute);
 
     suggestion.status = EditSuggestionStatus.DISCARDED;
     suggestion.reviewedBy = reviewerObjectId;
@@ -303,284 +309,6 @@ export class EditSuggestionsService {
     }
   }
 
-  private async getPendingSuggestionsForRoute(
-    target: RoutingTarget,
-    vendorId?: Types.ObjectId,
-  ) {
-    const pendingSuggestions = await this.editSuggestionModel
-      .find({ status: EditSuggestionStatus.PENDING })
-      .sort({ createdAt: -1 })
-      .populate('userId', 'fullName email avatarUrl')
-      .lean()
-      .exec();
-
-    const locationIds = [
-      ...new Set(
-        pendingSuggestions.map((suggestion) => String(suggestion.locationId)),
-      ),
-    ];
-
-    const locations = await this.locationModel
-      .find({ _id: { $in: locationIds.map((id) => new Types.ObjectId(id)) } })
-      .lean()
-      .exec();
-    const locationById = new Map(
-      locations.map((location) => [String(location._id), location]),
-    );
-
-    const routeUpdates: Promise<unknown>[] = [];
-    const routed = pendingSuggestions.filter((suggestion) => {
-      const location = locationById.get(String(suggestion.locationId));
-      if (!location) {
-        return false;
-      }
-
-      const currentRoute = this.getRoutingTarget(location);
-      if (suggestion.routingTarget !== currentRoute) {
-        routeUpdates.push(
-          this.editSuggestionModel
-            .updateOne(
-              { _id: suggestion._id },
-              { $set: { routingTarget: currentRoute } },
-            )
-            .exec(),
-        );
-      }
-
-      if (currentRoute !== target) {
-        return false;
-      }
-
-      if (
-        target === RoutingTarget.VENDOR &&
-        (!vendorId || !location.ownerId?.equals(vendorId))
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-
-    if (routeUpdates.length) {
-      await Promise.all(routeUpdates);
-    }
-
-    return routed.map((suggestion) =>
-      this.serializeSuggestion(
-        { ...suggestion, routingTarget: target },
-        locationById.get(String(suggestion.locationId)),
-      ),
-    );
-  }
-
-  private async loadReviewContext(
-    reviewerId: Types.ObjectId,
-    suggestionId: Types.ObjectId,
-  ) {
-    const [suggestion, reviewer] = await Promise.all([
-      this.editSuggestionModel.findById(suggestionId).exec(),
-      this.userModel.findById(reviewerId).select('role status').exec(),
-    ]);
-
-    if (!reviewer || reviewer.status === UserStatus.BANNED) {
-      throw new ForbiddenException('Tài khoản không thể duyệt đề xuất');
-    }
-
-    if (!suggestion) {
-      throw new NotFoundException('Không tìm thấy đề xuất chỉnh sửa');
-    }
-
-    if (suggestion.status !== EditSuggestionStatus.PENDING) {
-      throw new BadRequestException('Đề xuất này đã được xử lý');
-    }
-
-    const location = await this.locationModel
-      .findById(suggestion.locationId)
-      .exec();
-
-    if (!location) {
-      throw new NotFoundException('Không tìm thấy địa điểm');
-    }
-
-    const currentRoute = this.getRoutingTarget(location);
-    if (suggestion.routingTarget !== currentRoute) {
-      suggestion.routingTarget = currentRoute;
-      await suggestion.save();
-    }
-
-    return { suggestion, location, reviewer, currentRoute };
-  }
-
-  private async assertCanReview(
-    reviewer: UserDocument,
-    location: LocationDocument,
-    currentRoute: RoutingTarget,
-  ) {
-    if (currentRoute === RoutingTarget.ADMIN) {
-      if (reviewer.role !== UserRole.ADMIN) {
-        throw new ForbiddenException(
-          'Chỉ Admin được duyệt đề xuất của địa điểm chưa có chủ',
-        );
-      }
-      return;
-    }
-
-    if (
-      !location.ownerId ||
-      !location.ownerId.equals(reviewer._id as Types.ObjectId)
-    ) {
-      throw new ForbiddenException(
-        'Chỉ Vendor sở hữu địa điểm mới được duyệt đề xuất này',
-      );
-    }
-  }
-
-  private async applySuggestionToLocation(
-    suggestion: EditSuggestionDocument,
-    location: LocationDocument,
-    reviewerId: Types.ObjectId,
-    reason?: string,
-  ) {
-    switch (suggestion.fieldName) {
-      case EditSuggestionField.NAME:
-      case EditSuggestionField.ADDRESS:
-        return this.createReApprovalRequest(
-          suggestion,
-          location,
-          reviewerId,
-          reason,
-        );
-      case EditSuggestionField.OPENING_HOURS:
-        location.openingHours = this.getSuggestedTextValue(suggestion);
-        await location.save();
-        return { action: 'UPDATED', message: 'Đã cập nhật giờ mở cửa' };
-      case EditSuggestionField.PHONE:
-        location.phone = this.getSuggestedTextValue(suggestion);
-        await location.save();
-        return { action: 'UPDATED', message: 'Đã cập nhật số điện thoại' };
-      case EditSuggestionField.GEO:
-        return this.applyGeoSuggestion(suggestion, location);
-      case EditSuggestionField.FLAG:
-        return this.applyFlagSuggestion(suggestion, location);
-      default:
-        throw new BadRequestException('Trường đề xuất không hợp lệ');
-    }
-  }
-
-  private async createReApprovalRequest(
-    suggestion: EditSuggestionDocument,
-    location: LocationDocument,
-    reviewerId: Types.ObjectId,
-    reason?: string,
-  ) {
-    const fieldName = suggestion.fieldName as EditSuggestionField;
-    const nextValue = this.getSuggestedTextValue(suggestion);
-    if (!nextValue) {
-      throw new BadRequestException('Giá trị đề xuất không hợp lệ');
-    }
-    const previousValue =
-      fieldName === EditSuggestionField.NAME ? location.name : location.address;
-
-    const oldData: Record<string, unknown> = {
-      [fieldName]: previousValue,
-    };
-    const newData: Record<string, unknown> = {
-      [fieldName]: nextValue,
-      sourceEditSuggestionId: suggestion._id,
-    };
-
-    const existingPendingUpdate = await this.locationRequestModel
-      .findOne({
-        locationId: location._id,
-        type: LocationRequestType.UPDATE,
-        status: LocationRequestStatus.PENDING,
-      })
-      .lean()
-      .exec();
-
-    if (existingPendingUpdate) {
-      throw new BadRequestException(
-        'Địa điểm đang có yêu cầu duyệt lại thông tin nhạy cảm',
-      );
-    }
-
-    await this.locationRequestModel.create({
-      type: LocationRequestType.UPDATE,
-      status: LocationRequestStatus.PENDING,
-      submittedBy: reviewerId,
-      locationId: location._id,
-      oldData,
-      newData,
-      reviewNote: reason,
-    });
-
-    location.status = LocationStatus.PENDING_RE_APPROVAL;
-    await location.save();
-
-    return {
-      action: 'PENDING_RE_APPROVAL',
-      message: 'Đề xuất đã được đưa vào hàng chờ duyệt lại',
-    };
-  }
-
-  private async applyGeoSuggestion(
-    suggestion: EditSuggestionDocument,
-    location: LocationDocument,
-  ) {
-    const geoValue = suggestion.newValue as {
-      latitude?: number;
-      longitude?: number;
-      accuracyMeters?: number;
-    };
-
-    if (
-      typeof geoValue.latitude !== 'number' ||
-      typeof geoValue.longitude !== 'number'
-    ) {
-      throw new BadRequestException('Tọa độ đề xuất không hợp lệ');
-    }
-
-    location.geo = {
-      type: 'Point',
-      coordinates: [geoValue.longitude, geoValue.latitude],
-    };
-    location.accuracyMeters = geoValue.accuracyMeters;
-    await location.save();
-
-    return { action: 'UPDATED', message: 'Đã cập nhật tọa độ' };
-  }
-
-  private async applyFlagSuggestion(
-    suggestion: EditSuggestionDocument,
-    location: LocationDocument,
-  ) {
-    const flagValue = (suggestion.newValue as { value?: EditSuggestionFlag })
-      .value;
-
-    if (flagValue === EditSuggestionFlag.DUPLICATE) {
-      location.isSuspectedDuplicate = true;
-      await location.save();
-      return {
-        action: 'PUSHED_TO_DUPLICATE_REVIEW',
-        message: 'Đã chuyển sang luồng xác nhận trùng lặp',
-      };
-    }
-
-    if (
-      flagValue === EditSuggestionFlag.PERMANENTLY_CLOSED ||
-      flagValue === EditSuggestionFlag.NON_EXISTENT
-    ) {
-      location.status = LocationStatus.HIDDEN;
-      await location.save();
-      return {
-        action: 'HIDDEN',
-        message: 'Đã ẩn địa điểm theo cờ trạng thái',
-      };
-    }
-
-    throw new BadRequestException('Cờ đề xuất không hợp lệ');
-  }
-
   private async discardUnavailableSuggestion(
     suggestion: EditSuggestionDocument,
     reviewerId: Types.ObjectId,
@@ -591,7 +319,7 @@ export class EditSuggestionsService {
     suggestion.reviewedBy = reviewerId;
     suggestion.reviewedAt = new Date();
     suggestion.reviewReason = reason;
-    suggestion.routingTarget = this.getRoutingTarget(location);
+    suggestion.routingTarget = this.routingService.getRoutingTarget(location);
 
     await Promise.all([
       suggestion.save(),
@@ -613,14 +341,6 @@ export class EditSuggestionsService {
       message: reason,
       suggestion: this.serializeSuggestion(suggestion, location),
     };
-  }
-
-  private getSuggestedTextValue(suggestion: EditSuggestionDocument) {
-    return (suggestion.newValue as { value?: string }).value?.trim();
-  }
-
-  private getRoutingTarget(location: Pick<Location, 'ownerId'>) {
-    return location.ownerId ? RoutingTarget.VENDOR : RoutingTarget.ADMIN;
   }
 
   private serializeSuggestion(
