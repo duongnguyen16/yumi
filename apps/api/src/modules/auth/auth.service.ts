@@ -93,14 +93,6 @@ export default class AuthService {
         };
       }
 
-      if (user.status === UserStatus.BANNED) {
-        return {
-          success: false,
-          message: 'Tài khoản của bạn đã bị cấm',
-          statusCode: 403,
-        };
-      }
-
       if (!passwordIsHashed) {
         const upgradedHash = await bcrypt.hash(password, BCRYPT_COST);
         await this.userModel.updateOne(
@@ -110,11 +102,19 @@ export default class AuthService {
         user.passwordHash = upgradedHash;
       }
 
+      const appealOnly = user.status === UserStatus.BANNED;
       const { accessToken, refreshToken } = this.generateTokens(
         String(user._id),
+        appealOnly,
       );
       const safeUser = this.toSafeUser(user);
-      return { success: true, user: safeUser, accessToken, refreshToken };
+      return {
+        success: true,
+        user: safeUser,
+        accessToken,
+        refreshToken,
+        appealOnly,
+      };
     } catch (error) {
       console.error('Login error:', error);
       return {
@@ -193,16 +193,9 @@ export default class AuthService {
         };
       }
 
-      if (user.status === UserStatus.BANNED) {
-        return {
-          success: false,
-          message: 'Tài khoản của bạn đã bị cấm',
-          statusCode: 403,
-        };
-      }
-
-      const tokens = this.generateTokens(String(user._id));
-      return { success: true, ...tokens };
+      const appealOnly = user.status === UserStatus.BANNED;
+      const tokens = this.generateTokens(String(user._id), appealOnly);
+      return { success: true, ...tokens, appealOnly };
     } catch (error) {
       console.error('Refresh error:', error);
       return {
@@ -530,21 +523,18 @@ export default class AuthService {
     return randomInt(0, 1000000).toString().padStart(6, '0');
   }
 
-  private generateTokens(userId: string) {
-    const accessToken = this.jwtService.sign(
-      { userId },
-      {
-        secret: this.configService.get('ACCESS_TOKEN_SECRET'),
-        expiresIn: '1h',
-      },
-    );
-    const refreshToken = this.jwtService.sign(
-      { userId },
-      {
-        secret: this.configService.get('REFRESH_TOKEN_SECRET'),
-        expiresIn: '7d',
-      },
-    );
+  private generateTokens(userId: string, appealOnly = false) {
+    const payload: JwtPayLoad = appealOnly
+      ? { userId, scope: 'appeal' }
+      : { userId };
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('ACCESS_TOKEN_SECRET'),
+      expiresIn: '1h',
+    });
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+      expiresIn: '7d',
+    });
     return { accessToken, refreshToken };
   }
 

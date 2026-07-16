@@ -9,7 +9,8 @@ import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
 import { AppText, IconButton, Inline, Stack } from "@/ui/components";
-import { colors, radius, spacing } from "@/ui/tokens";
+import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
+import { buildDirectionsUrl, getMapLocationPreview } from "@/common/map-location";
 
 export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const { width } = useWindowDimensions();
@@ -35,6 +36,11 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
     } catch (error) {
       console.log("Error sharing location:", error);
     }
+  };
+
+  const handleDirections = () => {
+    const preview = getMapLocationPreview(location);
+    if (preview) void Linking.openURL(buildDirectionsUrl(preview));
   };
 
   useEffect(() => {
@@ -64,7 +70,7 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
           <AppText variant="title1">{location?.name || "Chi tiết địa điểm"}</AppText>
           <Inline style={{ justifyContent: "space-between" }}>
             <Inline><Icon color={colors.accentOrange} size={20} source="star" /><AppText variant="headline">{location?.rating?.avgRating || 0}</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">{location?.rating?.reviewCount || 0} đánh giá</AppText></Inline>
-            <IconButton icon="share-variant-outline" label="Chia sẻ địa điểm" onPress={handleShare} />
+            <Inline gap={spacing[1]}><IconButton icon="navigation-variant-outline" label="Chỉ đường tôi đến đó" onPress={handleDirections} /><IconButton icon="share-variant-outline" label="Chia sẻ địa điểm" onPress={handleShare} /></Inline>
           </Inline>
         </Stack>
       </View>
@@ -97,7 +103,7 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
               width: width / 3,
             }}
             labelStyle={{
-              fontFamily: "Inter_600SemiBold",
+              fontFamily: fontFamily.semibold,
               width: width / 3,
               textAlign: "center",
               margin: 0,

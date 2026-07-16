@@ -1,5 +1,5 @@
 import { Searchbar, TextInput as PaperTextInput, type TextInputProps } from "react-native-paper";
-import { colors, radius } from "../tokens";
+import { colors, fieldMetrics, fontFamily, radius } from "../tokens";
 import { useState } from "react";
 import type { IconName } from "./types";
 
@@ -7,11 +7,12 @@ export function TextField({ label, trailingIcon, onTrailingPress, ...props }: Te
   return (
     <PaperTextInput
       activeOutlineColor={colors.accentPrimary}
+      contentStyle={{ fontFamily: fontFamily.regular }}
       label={label}
       mode="outlined"
       outlineColor={colors.borderSubtle}
-      outlineStyle={{ borderRadius: radius.medium }}
-      style={{ backgroundColor: colors.surfaceBase }}
+      outlineStyle={{ borderRadius: fieldMetrics.cornerRadius }}
+      style={{ backgroundColor: colors.surfaceField }}
       textColor={colors.textPrimary}
       {...props}
       right={trailingIcon ? <PaperTextInput.Icon accessibilityLabel={label} icon={trailingIcon} onPress={onTrailingPress} /> : props.right}
@@ -40,11 +41,11 @@ export function SearchField({ value, onChangeText, placeholder = "Tìm kiếm" }
   return (
     <Searchbar
       elevation={2}
-      inputStyle={{ color: colors.textPrimary, fontFamily: "Inter_400Regular" }}
+      inputStyle={{ color: colors.textPrimary, fontFamily: fontFamily.regular }}
       onChangeText={onChangeText ?? (() => undefined)}
       placeholder={placeholder}
       placeholderTextColor={colors.textTertiary}
-      style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.large }}
+      style={{ backgroundColor: colors.surfaceField, borderRadius: radius.pill }}
       value={value ?? ""}
     />
   );

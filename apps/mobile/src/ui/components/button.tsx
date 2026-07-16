@@ -1,5 +1,5 @@
 import { Button as PaperButton, Chip as PaperChip, IconButton as PaperIconButton, SegmentedButtons } from "react-native-paper";
-import { colors, radius } from "../tokens";
+import { colors, fontFamily, radius } from "../tokens";
 import type { IconName } from "./types";
 
 type ButtonProps = {
@@ -7,14 +7,14 @@ type ButtonProps = {
   onPress?: () => void;
   variant?: "primary" | "secondary" | "tertiary" | "destructive";
   size?: "small" | "medium" | "large";
-  width?: "content" | "full";
+  width?: "content" | "centered" | "full";
   icon?: IconName;
   disabled?: boolean;
   loading?: boolean;
 };
 
 export function Button({ label, onPress, variant = "primary", size = "medium", width = "content", icon, disabled = false, loading = false }: ButtonProps) {
-  const height = size === "small" ? 42 : size === "large" ? 56 : 50;
+  const height = size === "small" ? 38 : size === "large" ? 50 : 44;
   const mode = variant === "secondary" ? "contained-tonal" : variant === "tertiary" ? "text" : "contained";
   const buttonColor = variant === "destructive" ? colors.accentRed : variant === "primary" ? colors.accentPrimary : undefined;
   const textColor = variant === "destructive" || variant === "primary" ? colors.textInverse : colors.accentPrimary;
@@ -25,11 +25,11 @@ export function Button({ label, onPress, variant = "primary", size = "medium", w
       contentStyle={{ height }}
       disabled={disabled}
       icon={icon}
-      labelStyle={{ fontFamily: "Inter_600SemiBold", fontSize: 16 }}
+      labelStyle={{ fontFamily: fontFamily.semibold, fontSize: 14 }}
       loading={loading}
       mode={mode}
       onPress={onPress}
-      style={{ alignSelf: width === "full" ? "stretch" : "flex-start", borderRadius: radius.pill }}
+      style={{ alignSelf: width === "full" ? "stretch" : width === "centered" ? "center" : "flex-start", borderRadius: radius.pill }}
       textColor={textColor}
     >
       {label}
@@ -46,8 +46,8 @@ export function IconButton({ icon, label, onPress, selected = false }: { icon: I
       iconColor={selected ? colors.textInverse : colors.accentPrimary}
       mode="contained"
       onPress={onPress}
-      size={22}
-      style={{ borderRadius: radius.pill, height: 44, margin: 0, width: 44 }}
+      size={20}
+      style={{ borderRadius: radius.pill, height: 40, margin: 0, width: 40 }}
     />
   );
 }
@@ -63,7 +63,7 @@ export function Chip({ label, icon, selected = false, onPress }: { label: string
       selectedColor={selected ? colors.textInverse : colors.accentPrimary}
       showSelectedCheck={false}
       style={{ alignSelf: "flex-start", backgroundColor: selected ? colors.accentPrimary : colors.surfaceBase, borderRadius: radius.pill }}
-      textStyle={{ color: selected ? colors.textInverse : colors.textPrimary, fontFamily: "Inter_600SemiBold" }}
+      textStyle={{ color: selected ? colors.textInverse : colors.textPrimary, fontFamily: fontFamily.semibold }}
     >
       {label}
     </PaperChip>

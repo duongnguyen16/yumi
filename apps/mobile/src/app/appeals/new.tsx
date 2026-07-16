@@ -1,7 +1,7 @@
 import { submitAppeal } from "@/service/appealService";
 import { uploadContributionImage } from "@/service/contributePlaceService";
-import { AppText, Button, FormSection, NavigationBar, Page, PageContent, TextArea } from "@/ui/components";
-import { colors, radius } from "@/ui/tokens";
+import { BottomActionBar, Button, FormSection, NavigationBar, NoticeSnackbar, Page, PageContent, TextArea } from "@/ui/components";
+import { radius } from "@/ui/tokens";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Stack as RouterStack, useLocalSearchParams, useRouter } from "expo-router";
@@ -62,9 +62,9 @@ export default function NewAppealScreen() {
           {proof ? <Image alt="Bằng chứng kháng cáo" source={{ uri: proof.uri }} style={{ borderRadius: radius.large, height: 240, width: "100%" }} /> : null}
           <Button icon="camera-outline" label={proof ? "Chụp lại" : "Chụp bằng chứng"} onPress={pick} variant="secondary" width="full" />
         </FormSection>
-        {message ? <AppText style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
-        <Button disabled={loading || !proof || argument.trim().length < 10} label="Gửi kháng cáo" loading={loading} onPress={submit} width="full" />
       </PageContent>
+      <BottomActionBar><Button disabled={loading || !proof || argument.trim().length < 10} label="Gửi kháng cáo" loading={loading} onPress={submit} width="full" /></BottomActionBar>
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );
 }

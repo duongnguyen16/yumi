@@ -1,9 +1,10 @@
 import AuthScreen from "@/components/auth/AuthScreen";
 import { forgotPassword, resetPassword } from "@/service/authService";
-import { AppText, Button, PasswordField, Stack, TextField } from "@/ui/components";
-import { colors, spacing } from "@/ui/tokens";
+import { BottomActionBar, Button, NoticeSnackbar, PasswordField, TextField } from "@/ui/components";
+import { spacing } from "@/ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { ScrollView } from "react-native";
 
 const RESEND_SECONDS = 60;
 
@@ -58,15 +59,17 @@ export default function ResetPassword() {
 
   return (
     <AuthScreen onBack={() => router.back()} supportingText={message} title="Đặt lại mật khẩu">
-      <Stack gap={spacing[3]}>
+      <ScrollView contentContainerStyle={{ gap: spacing[3], padding: spacing[4] }} keyboardShouldPersistTaps="handled">
         <TextField autoCapitalize="none" disabled={loading} keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
         <TextField disabled={loading} keyboardType="number-pad" label="Mã xác nhận" maxLength={6} onChangeText={(value) => setCode(value.replace(/\D/g, "").slice(0, 6))} value={code} />
         <PasswordField disabled={loading} label="Mật khẩu mới" onChangeText={setNewPassword} value={newPassword} />
         <PasswordField disabled={loading} label="Xác nhận mật khẩu" onChangeText={setConfirmPassword} value={confirmPassword} />
-        {error ? <AppText accessibilityRole="alert" style={{ color: colors.accentRed }} variant="subhead">{error}</AppText> : null}
         <Button disabled={secondsRemaining > 0 || resending} label={secondsRemaining > 0 ? `Gửi lại mã sau ${secondsRemaining}s` : "Gửi lại mã"} loading={resending} onPress={handleResend} variant="tertiary" />
+      </ScrollView>
+      <BottomActionBar>
         <Button disabled={loading} label="Đặt lại mật khẩu" loading={loading} onPress={handleReset} width="full" />
-      </Stack>
+      </BottomActionBar>
+      <NoticeSnackbar message={error} onDismiss={() => setError("")} />
     </AuthScreen>
   );
 }

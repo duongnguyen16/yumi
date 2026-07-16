@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { View } from "react-native";
 import { ActivityIndicator, Icon, List, Surface } from "react-native-paper";
-import { colors, radius, spacing } from "../tokens";
+import { colors, emptyStateMetrics, fontFamily, radius, spacing } from "../tokens";
 import { Button } from "./button";
 import { Badge } from "./feedback";
 import { AppText, Inline, Stack } from "./layout";
@@ -11,13 +11,13 @@ type Status = { label: string; tone?: "neutral" | "info" | "success" | "warning"
 
 export function EmptyState({ title, supportingText, icon, actionLabel, onAction }: { title: string; supportingText?: string; icon: IconName; actionLabel?: string; onAction?: () => void }) {
   return (
-    <Stack style={{ alignItems: "center", paddingHorizontal: spacing[5], paddingVertical: spacing[7] }}>
-      <Surface elevation={0} style={{ alignItems: "center", backgroundColor: colors.surfaceControl, borderRadius: radius.pill, height: 64, justifyContent: "center", width: 64 }}>
-        <Icon color={colors.accentPrimary} size={30} source={icon} />
+    <Stack style={{ alignItems: "center", alignSelf: "center", maxWidth: emptyStateMetrics.contentWidth, paddingHorizontal: emptyStateMetrics.horizontalPadding, paddingVertical: emptyStateMetrics.verticalPadding, width: "100%" }}>
+      <Surface elevation={0} style={{ alignItems: "center", backgroundColor: colors.surfaceControl, borderRadius: radius.pill, height: emptyStateMetrics.iconSize, justifyContent: "center", width: emptyStateMetrics.iconSize }}>
+        <Icon color={colors.accentPrimary} size={emptyStateMetrics.iconGlyphSize} source={icon} />
       </Surface>
       <AppText style={{ textAlign: "center" }} variant="headline">{title}</AppText>
       {supportingText ? <AppText style={{ color: colors.textSecondary, textAlign: "center" }} variant="subhead">{supportingText}</AppText> : null}
-      {actionLabel ? <Button label={actionLabel} onPress={onAction} variant="secondary" /> : null}
+      {actionLabel ? <Button label={actionLabel} onPress={onAction} variant="secondary" width={emptyStateMetrics.actionWidth} /> : null}
     </Stack>
   );
 }
@@ -64,7 +64,7 @@ export function ActivityRow({ title, supportingText, timestamp, icon, status, un
       onPress={onPress}
       style={{ backgroundColor: colors.surfaceBase, minHeight: 88, paddingHorizontal: spacing[3] }}
       title={title}
-      titleStyle={{ color: colors.textPrimary, fontFamily: unread ? "Inter_700Bold" : "Inter_600SemiBold" }}
+      titleStyle={{ color: colors.textPrimary, fontFamily: unread ? fontFamily.bold : fontFamily.semibold }}
     />
   );
 }
@@ -75,7 +75,7 @@ export function PlaceRow({ title, category, address, metadata, icon = "map-marke
   return (
     <List.Item
       description={description || undefined}
-      descriptionStyle={{ color: colors.textSecondary, fontFamily: "Inter_400Regular" }}
+      descriptionStyle={{ color: colors.textSecondary, fontFamily: fontFamily.regular }}
       left={() => (
         <Surface elevation={0} style={{ alignItems: "center", backgroundColor: colors.surfaceControl, borderRadius: radius.medium, height: 48, justifyContent: "center", width: 48 }}>
           <Icon color={colors.accentPrimary} size={24} source={icon} />
@@ -85,7 +85,7 @@ export function PlaceRow({ title, category, address, metadata, icon = "map-marke
       right={trailing ? () => trailing : (props) => <List.Icon {...props} color={colors.textTertiary} icon="chevron-right" />}
       style={{ backgroundColor: colors.surfaceBase, minHeight: 76, paddingHorizontal: spacing[3] }}
       title={title}
-      titleStyle={{ color: colors.textPrimary, fontFamily: "Inter_600SemiBold" }}
+      titleStyle={{ color: colors.textPrimary, fontFamily: fontFamily.semibold }}
     />
   );
 }
