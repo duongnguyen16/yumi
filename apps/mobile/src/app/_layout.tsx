@@ -1,6 +1,6 @@
 import { ErrorBoundaryProps, Stack } from "expo-router";
 import { DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from "@expo-google-fonts/inter";
+import { GoogleSansFlex_400Regular, GoogleSansFlex_500Medium, GoogleSansFlex_600SemiBold, GoogleSansFlex_700Bold, GoogleSansFlex_800ExtraBold, useFonts } from "@expo-google-fonts/google-sans-flex";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import "../../global.css";
@@ -8,10 +8,11 @@ import UserContextProvider from "@/contexts/userContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Button, configureFonts, MD3LightTheme, PaperProvider, Text } from "react-native-paper";
 import { View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Location from "expo-location";
 import { useEffect } from "react";
 import LocationContextProvider from "@/contexts/locationContext";
-import { colors } from "@/ui/tokens";
+import { colors, fontFamily } from "@/ui/tokens";
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -24,14 +25,14 @@ const appColors = {
   muted: colors.textSecondary,
   outline: colors.borderSubtle,
   success: colors.accentGreen,
-  successContainer: "#E4F7EA",
+  successContainer: colors.surfaceControl,
 };
 
 const paperTheme = {
   ...MD3LightTheme,
   dark: false,
-  roundness: 20,
-  fonts: configureFonts({ config: { fontFamily: "Inter_400Regular" } }),
+  roundness: 28,
+  fonts: configureFonts({ config: { fontFamily: fontFamily.regular } }),
   colors: {
     ...MD3LightTheme.colors,
     primary: appColors.primary,
@@ -43,9 +44,9 @@ const paperTheme = {
     secondaryContainer: appColors.surfaceVariant,
     onSecondaryContainer: appColors.text,
     tertiary: appColors.success,
-    onTertiary: "#ffffff",
+    onTertiary: colors.textInverse,
     tertiaryContainer: appColors.successContainer,
-    onTertiaryContainer: "#0b4f25",
+    onTertiaryContainer: colors.textPrimary,
     background: appColors.background,
     onBackground: appColors.text,
     surface: appColors.surface,
@@ -56,8 +57,8 @@ const paperTheme = {
     outlineVariant: colors.separator,
     error: colors.accentRed,
     onError: colors.textInverse,
-    errorContainer: "#FEECEC",
-    onErrorContainer: "#991B1B",
+    errorContainer: colors.surfaceControl,
+    onErrorContainer: colors.accentRed,
     elevation: {
       ...MD3LightTheme.colors.elevation,
       level0: appColors.background,
@@ -106,10 +107,11 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    GoogleSansFlex_400Regular,
+    GoogleSansFlex_500Medium,
+    GoogleSansFlex_600SemiBold,
+    GoogleSansFlex_700Bold,
+    GoogleSansFlex_800ExtraBold,
   });
 
   const requestLocationPermission = async () => {
@@ -131,22 +133,24 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <ThemeProvider value={navigationTheme}>
-        <PaperProvider theme={paperTheme}>
-          <UserContextProvider>
-            <LocationContextProvider>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: appColors.background },
-                }}
-              />
-            </LocationContextProvider>
-          </UserContextProvider>
-        </PaperProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <ThemeProvider value={navigationTheme}>
+          <PaperProvider theme={paperTheme}>
+            <UserContextProvider>
+              <LocationContextProvider>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: appColors.background },
+                  }}
+                />
+              </LocationContextProvider>
+            </UserContextProvider>
+          </PaperProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

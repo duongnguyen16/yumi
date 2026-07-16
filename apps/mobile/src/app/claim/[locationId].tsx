@@ -1,12 +1,11 @@
 import { startClaim, submitClaim, verifyClaimOtp } from "@/service/claimService";
 import { uploadContributionImage } from "@/service/contributePlaceService";
-import { AppText, Card, MediaPicker, Stack as UIStack, TextField, WizardScreen } from "@/ui/components";
+import { AppText, Card, FormSection, MediaPicker, NoticeSnackbar, Stack as UIStack, TextField, WizardScreen } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
 import * as ImagePicker from "expo-image-picker";
 import * as ExpoLocation from "expo-location";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert } from "react-native";
 
 type ProofImage = { uri: string; fileName: string; mimeType: string; fileSize: number };
 
@@ -25,6 +24,7 @@ export default function ClaimLocationScreen() {
   const [proof, setProof] = useState<ProofImage | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const step = useMemo(() => !siteCode ? 0 : otpRequired && !otpVerified ? 1 : 2, [otpRequired, otpVerified, siteCode]);
 
   const beginClaim = async () => {
@@ -85,7 +85,10 @@ export default function ClaimLocationScreen() {
       const url = await uploadContributionImage(proof);
       const result = await submitClaim({ locationId, evidenceFiles: [{ url, fileType: "IMAGE", geo: { type: "Point", coordinates: [location.coords.longitude, location.coords.latitude] }, accuracyMeters: location.coords.accuracy || undefined, capturedAt: new Date(location.timestamp).toISOString(), metadata: { siteCode } }] });
       if (!result.success) setMessage(result.message || "Không thể gửi yêu cầu xác nhận.");
-      else Alert.alert("Đã gửi yêu cầu", "Yêu cầu xác nhận sở hữu đang chờ duyệt.", [{ text: "Đóng", onPress: () => router.back() }]);
+      else {
+        setSubmitted(true);
+        setMessage("Yêu cầu xác nhận sở hữu đang chờ duyệt.");
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Không thể tải bằng chứng.");
     } finally {
@@ -101,10 +104,10 @@ export default function ClaimLocationScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <WizardScreen continueLabel={continueLabel} currentStep={step} loading={loading} metadata={siteCode ? `Mã hiện trường: ${siteCode}` : undefined} onBack={() => router.back()} onContinue={continueAction} stepLabels={["Thông tin liên hệ", "Xác minh OTP", "Bằng chứng sở hữu"]} title="Xác nhận sở hữu">
         {step === 0 ? <Card><UIStack><AppText variant="headline">Bắt đầu xác minh</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">Hệ thống cấp mã hiện trường. Nếu địa điểm có số điện thoại, OTP sẽ được gửi tới số đó.</AppText></UIStack></Card> : null}
-        {step === 1 ? <Card><UIStack><AppText variant="headline">Xác minh số điện thoại</AppText><TextField keyboardType="number-pad" label="Mã OTP" maxLength={6} onChangeText={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))} value={otp} /></UIStack></Card> : null}
+        {step === 1 ? <FormSection supportingText="Nhập mã gồm 6 chữ số đã gửi tới số điện thoại của địa điểm." title="Xác minh số điện thoại"><TextField keyboardType="number-pad" label="Mã OTP" maxLength={6} onChangeText={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))} value={otp} /></FormSection> : null}
         {step === 2 ? <UIStack gap={spacing[4]}><Card><UIStack><AppText style={{ color: colors.accentPrimary, letterSpacing: 2 }} variant="largeTitle">{siteCode}</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">Đặt mã cạnh biển hiệu và chụp ảnh rõ ràng tại địa điểm.</AppText></UIStack></Card><MediaPicker addLabel={proof ? "Chụp lại ảnh" : "Chụp ảnh bằng chứng"} items={proof ? [{ id: proof.uri, name: proof.fileName, uri: proof.uri }] : []} maxCount={1} onAdd={pickProof} onRemove={() => setProof(null)} supportingText="Ảnh được gửi kèm vị trí hiện tại." title="Bằng chứng sở hữu" /></UIStack> : null}
-        {message ? <AppText accessibilityRole="alert" style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
       </WizardScreen>
+      <NoticeSnackbar action={submitted ? { label: "Đóng", onPress: () => router.back() } : undefined} message={message} onDismiss={() => setMessage("")} />
     </>
   );
 }

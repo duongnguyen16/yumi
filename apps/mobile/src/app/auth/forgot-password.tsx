@@ -1,9 +1,10 @@
 import AuthScreen from "@/components/auth/AuthScreen";
 import { forgotPassword } from "@/service/authService";
-import { AppText, Button, Stack, TextField } from "@/ui/components";
-import { colors, spacing } from "@/ui/tokens";
+import { BottomActionBar, Button, NoticeSnackbar, TextField } from "@/ui/components";
+import { spacing } from "@/ui/tokens";
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { ScrollView } from "react-native";
 
 export default function ForgotPassword() {
   const router = useRouter();
@@ -31,11 +32,13 @@ export default function ForgotPassword() {
 
   return (
     <AuthScreen onBack={() => router.back()} supportingText="Nhập email tài khoản để nhận mã xác nhận gồm 6 chữ số." title="Quên mật khẩu">
-      <Stack gap={spacing[3]}>
+      <ScrollView contentContainerStyle={{ gap: spacing[3], padding: spacing[4] }} keyboardShouldPersistTaps="handled">
         <TextField autoCapitalize="none" autoComplete="email" disabled={loading} keyboardType="email-address" label="Email" onChangeText={setEmail} value={email} />
-        {error ? <AppText accessibilityRole="alert" style={{ color: colors.accentRed }} variant="subhead">{error}</AppText> : null}
+      </ScrollView>
+      <BottomActionBar>
         <Button disabled={loading} label="Gửi mã xác nhận" loading={loading} onPress={handleSubmit} width="full" />
-      </Stack>
+      </BottomActionBar>
+      <NoticeSnackbar message={error} onDismiss={() => setError("")} />
     </AuthScreen>
   );
 }

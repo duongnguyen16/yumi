@@ -7,8 +7,10 @@ import { useLocationContext } from "@/contexts/locationContext";
 import LocationSearchResult from "./ui/LocationSearchResult";
 import { Button, EmptyState, Inline } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function LocationSearchScreen({ searchQuery }) {
+export default function LocationSearchScreen({ searchQuery, onSelectLocation }) {
+  const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [subVisible, setSubVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -86,7 +88,7 @@ export default function LocationSearchScreen({ searchQuery }) {
       onPress={() => Keyboard.dismiss()}
       accessible={false}
     >
-      <View style={{ backgroundColor: colors.surfaceApp, flex: 1, paddingHorizontal: spacing[4], paddingTop: 76 }}>
+      <View style={{ backgroundColor: colors.surfaceApp, flex: 1, paddingHorizontal: spacing[4], paddingTop: insets.top + 76 }}>
         <Inline>
           <Button label="Danh mục" onPress={() => setVisible(true)} variant="secondary" />
           {selectedCategory && (
@@ -118,7 +120,7 @@ export default function LocationSearchScreen({ searchQuery }) {
           keyExtractor={(item, index) =>
             item._id || item.id || index.toString()
           }
-          renderItem={({ item }) => <LocationSearchResult item={item} />}
+          renderItem={({ item }) => <LocationSearchResult item={item} onSelect={onSelectLocation} />}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           keyboardShouldPersistTaps="handled"

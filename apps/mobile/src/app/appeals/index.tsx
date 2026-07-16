@@ -1,7 +1,6 @@
 import { getWorkflowStatus } from "@/components/workflow/status";
 import { listAppeals, type AppealItem } from "@/service/appealService";
-import { ActivityRow, AppText, EmptyState, LoadingState, NavigationBar, Page, PageContent, Stack } from "@/ui/components";
-import { colors } from "@/ui/tokens";
+import { ActivityRow, EmptyState, LoadingState, NavigationBar, NoticeSnackbar, Page, PageContent, Stack } from "@/ui/components";
 import { Stack as RouterStack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 
@@ -28,17 +27,13 @@ export default function AppealsScreen() {
       <NavigationBar onBack={() => router.back()} title="Kháng cáo" />
       {loading ? <LoadingState /> : (
         <PageContent>
-          <Stack>
-            <AppText variant="title1">Kháng cáo của tôi</AppText>
-            <AppText style={{ color: colors.textSecondary }} variant="subhead">Theo dõi quyết định và các căn cứ đã gửi.</AppText>
-          </Stack>
           {items.length === 0 ? <EmptyState icon="file-document-outline" supportingText="Kháng cáo mới sẽ xuất hiện tại đây sau khi được gửi." title="Chưa có kháng cáo" /> : null}
           <Stack>
             {items.map((item) => <ActivityRow icon="file-document-outline" key={item._id} onPress={() => router.push(`/appeals/${item._id}` as never)} status={getWorkflowStatus(item.status)} supportingText={item.argument} title={item.type} />)}
           </Stack>
-          {message ? <AppText style={{ color: colors.accentRed }} variant="subhead">{message}</AppText> : null}
         </PageContent>
       )}
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );
 }
