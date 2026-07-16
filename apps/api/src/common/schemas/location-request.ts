@@ -171,7 +171,12 @@ LocationRequestSchema.index(
     unique: true,
     partialFilterExpression: {
       type: LocationRequestType.UPDATE,
-      status: LocationRequestStatus.PENDING,
+      status: {
+        $in: [
+          LocationRequestStatus.PENDING,
+          LocationRequestStatus.PENDING_RE_APPROVAL,
+        ],
+      },
     },
     name: 'uniq_pending_update_request_per_location',
   },
