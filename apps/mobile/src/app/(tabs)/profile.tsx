@@ -16,7 +16,6 @@ export default function AccountScreen() {
   const [message, setMessage] = useState("");
   const displayName = profile?.display_name ?? profile?.fullName ?? String(user?.fullName ?? "Người dùng");
   const email = String(profile?.email ?? user?.email ?? "");
-  const phone = String(profile?.phone ?? user?.phone ?? "");
   const phoneVerified = profile?.phoneVerified === true || user?.phoneVerified === true;
   const isVendor = profile?.role === "VENDOR" || user?.role === "VENDOR";
 
@@ -39,7 +38,7 @@ export default function AccountScreen() {
 
   return (
     <Page>
-      <PageContent>
+      <PageContent tabBarInset>
         <PageHeader title="Tài khoản" />
         <Surface elevation={0} style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.large, paddingHorizontal: spacing[4], paddingVertical: spacing[3] }}>
           <Stack gap={spacing[1]}>
@@ -50,8 +49,7 @@ export default function AccountScreen() {
 
         <Stack>
           <GroupedList>
-            <ListRow icon="account-edit-outline" label="Chỉnh sửa hồ sơ" onPress={() => router.push("/profile/edit")} supportingText="Tên hiển thị và ảnh đại diện" />
-            <ListRow icon="phone-check-outline" label={phoneVerified ? "Số điện thoại đã xác minh" : "Xác minh số điện thoại"} onPress={() => router.push("/profile/verify-phone")} supportingText={phone || undefined} />
+            <ListRow icon="account-edit-outline" label="Chỉnh sửa hồ sơ" onPress={() => router.push("/profile/edit")} supportingText="Tên hiển thị, ảnh đại diện và số điện thoại" />
           </GroupedList>
         </Stack>
 
