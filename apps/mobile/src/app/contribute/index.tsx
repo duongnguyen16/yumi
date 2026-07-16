@@ -44,6 +44,9 @@ const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
   "https://demotiles.maplibre.org/style.json";
 
+const GLYPH_URL = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+const TEXT_FONT = ["Open Sans Regular"];
+
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 2;
 const MAX_LICENSES = 3;
@@ -208,6 +211,18 @@ export default function ContributePlaceScreen() {
           fetch(MAP_STYLE_URL),
         ]);
         const styleJson = await styleResponse.json();
+        styleJson.glyphs = GLYPH_URL;
+        styleJson.layers = styleJson.layers.map((layer) =>
+          layer.type === "symbol"
+            ? {
+                ...layer,
+                layout: {
+                  ...(layer.layout ?? {}),
+                  "text-font": TEXT_FONT,
+                },
+              }
+            : layer,
+        );
 
         if (!optionsResponse.success) {
           throw new Error(

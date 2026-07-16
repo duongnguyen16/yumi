@@ -63,15 +63,16 @@ export default function Dialog({
         </PaperDialog.Content>
         <PaperDialog.Actions>
           {option ? (
-            <>
-              <Button onPress={() => answer(false)}>{cancelLabel}</Button>
-              <Button mode="contained" onPress={() => answer(true)}>
-                {confirmLabel}
-              </Button>
-            </>
-          ) : (
+            <Button onPress={() => answer(false)}>{cancelLabel}</Button>
+          ) : null}
+          {option ? (
+            <Button mode="contained" onPress={() => answer(true)}>
+              {confirmLabel}
+            </Button>
+          ) : null}
+          {!option ? (
             <Button onPress={close}>{dismissLabel}</Button>
-          )}
+          ) : null}
         </PaperDialog.Actions>
       </PaperDialog>
     </Portal>

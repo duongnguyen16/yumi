@@ -62,14 +62,14 @@ export class EditSuggestionsService {
     locationId: string,
     dto: CreateEditSuggestionDto,
   ) {
-    const userObjectId = this.toObjectId(userId, 'Nguoi dung khong hop le');
+    const userObjectId = this.toObjectId(userId, 'Người dùng không hợp lệ');
     const locationObjectId = this.toObjectId(
       locationId,
-      'Dia diem khong hop le',
+      'Địa điểm không hợp lệ',
     );
 
     if (!dto.changes?.length) {
-      throw new BadRequestException('Can it nhat mot de xuat chinh sua');
+      throw new BadRequestException('Cần ít nhất một đề xuất chỉnh sửa');
     }
 
     const [user, location] = await Promise.all([
@@ -78,14 +78,14 @@ export class EditSuggestionsService {
     ]);
 
     if (!user || user.status === UserStatus.BANNED) {
-      throw new ForbiddenException('Tai khoan khong the gui de xuat');
+      throw new ForbiddenException('Tài khoản không thể gửi đề xuất');
     }
     if (!location) {
-      throw new NotFoundException('Khong tim thay dia diem');
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
     if (location.status !== LocationStatus.PUBLISHED) {
       throw new BadRequestException(
-        'Chi co the de xuat chinh sua dia diem dang hien thi',
+        'Chỉ có thể đề xuất chỉnh sửa địa điểm đang hiển thị',
       );
     }
 
@@ -105,7 +105,7 @@ export class EditSuggestionsService {
 
     return {
       success: true,
-      message: 'Da gui de xuat chinh sua',
+      message: 'Đã gửi đề xuất chỉnh sửa',
       routingTarget,
       suggestions: suggestions.map((suggestion) =>
         this.serializeSuggestion(suggestion, location),
@@ -125,7 +125,7 @@ export class EditSuggestionsService {
   }
 
   async getVendorInbox(userId: string) {
-    const userObjectId = this.toObjectId(userId, 'Nguoi dung khong hop le');
+    const userObjectId = this.toObjectId(userId, 'Người dùng không hợp lệ');
     const suggestions = await this.getPendingSuggestionsForRoute(
       RoutingTarget.VENDOR,
       userObjectId,
@@ -140,11 +140,11 @@ export class EditSuggestionsService {
   async apply(userId: string, suggestionId: string, reason?: string) {
     const reviewerObjectId = this.toObjectId(
       userId,
-      'Nguoi duyet khong hop le',
+      'Người duyệt không hợp lệ',
     );
     const suggestionObjectId = this.toObjectId(
       suggestionId,
-      'De xuat khong hop le',
+      'Đề xuất không hợp lệ',
     );
 
     const { suggestion, location, reviewer, currentRoute } =
@@ -157,7 +157,7 @@ export class EditSuggestionsService {
         suggestion,
         reviewerObjectId,
         location,
-        'Dia diem khong con hien thi de ap dung de xuat',
+        'Địa điểm không còn hiển thị để áp dụng đề xuất',
       );
     }
 
@@ -197,8 +197,8 @@ export class EditSuggestionsService {
         type: 'EDIT_SUGGESTION_APPLIED',
         refCollection: 'edit_suggestions',
         refId: suggestion._id,
-        title: 'De xuat chinh sua da duoc ap dung',
-        body: 'De xuat chinh sua cua ban da duoc duyet.',
+        title: 'Đề xuất chỉnh sửa đã được áp dụng',
+        body: 'Đề xuất chỉnh sửa của bạn đã được duyệt.',
       }),
     ]);
 
@@ -213,11 +213,11 @@ export class EditSuggestionsService {
   async discard(userId: string, suggestionId: string, reason?: string) {
     const reviewerObjectId = this.toObjectId(
       userId,
-      'Nguoi duyet khong hop le',
+      'Người duyệt không hợp lệ',
     );
     const suggestionObjectId = this.toObjectId(
       suggestionId,
-      'De xuat khong hop le',
+      'Đề xuất không hợp lệ',
     );
 
     const { suggestion, location, reviewer, currentRoute } =
@@ -249,14 +249,14 @@ export class EditSuggestionsService {
         type: 'EDIT_SUGGESTION_DISCARDED',
         refCollection: 'edit_suggestions',
         refId: suggestion._id,
-        title: 'De xuat chinh sua da bi tu choi',
-        body: 'De xuat chinh sua cua ban chua duoc ap dung.',
+        title: 'Đề xuất chỉnh sửa đã bị từ chối',
+        body: 'Đề xuất chỉnh sửa của bạn chưa được áp dụng.',
       }),
     ]);
 
     return {
       success: true,
-      message: 'Da bo qua de xuat chinh sua',
+      message: 'Đã bỏ qua đề xuất chỉnh sửa',
       suggestion: this.serializeSuggestion(suggestion, location),
     };
   }
@@ -383,15 +383,15 @@ export class EditSuggestionsService {
     ]);
 
     if (!reviewer || reviewer.status === UserStatus.BANNED) {
-      throw new ForbiddenException('Tai khoan khong the duyet de xuat');
+      throw new ForbiddenException('Tài khoản không thể duyệt đề xuất');
     }
 
     if (!suggestion) {
-      throw new NotFoundException('Khong tim thay de xuat chinh sua');
+      throw new NotFoundException('Không tìm thấy đề xuất chỉnh sửa');
     }
 
     if (suggestion.status !== EditSuggestionStatus.PENDING) {
-      throw new BadRequestException('De xuat nay da duoc xu ly');
+      throw new BadRequestException('Đề xuất này đã được xử lý');
     }
 
     const location = await this.locationModel
@@ -399,7 +399,7 @@ export class EditSuggestionsService {
       .exec();
 
     if (!location) {
-      throw new NotFoundException('Khong tim thay dia diem');
+      throw new NotFoundException('Không tìm thấy địa điểm');
     }
 
     const currentRoute = this.getRoutingTarget(location);
@@ -419,7 +419,7 @@ export class EditSuggestionsService {
     if (currentRoute === RoutingTarget.ADMIN) {
       if (reviewer.role !== UserRole.ADMIN) {
         throw new ForbiddenException(
-          'Chi Admin duoc duyet de xuat cua dia diem chua co chu',
+          'Chỉ Admin được duyệt đề xuất của địa điểm chưa có chủ',
         );
       }
       return;
@@ -430,7 +430,7 @@ export class EditSuggestionsService {
       !location.ownerId.equals(reviewer._id as Types.ObjectId)
     ) {
       throw new ForbiddenException(
-        'Chi Vendor so huu dia diem moi duoc duyet de xuat nay',
+        'Chỉ Vendor sở hữu địa điểm mới được duyệt đề xuất này',
       );
     }
   }
@@ -453,17 +453,17 @@ export class EditSuggestionsService {
       case EditSuggestionField.OPENING_HOURS:
         location.openingHours = this.getSuggestedTextValue(suggestion);
         await location.save();
-        return { action: 'UPDATED', message: 'Da cap nhat gio mo cua' };
+        return { action: 'UPDATED', message: 'Đã cập nhật giờ mở cửa' };
       case EditSuggestionField.PHONE:
         location.phone = this.getSuggestedTextValue(suggestion);
         await location.save();
-        return { action: 'UPDATED', message: 'Da cap nhat so dien thoai' };
+        return { action: 'UPDATED', message: 'Đã cập nhật số điện thoại' };
       case EditSuggestionField.GEO:
         return this.applyGeoSuggestion(suggestion, location);
       case EditSuggestionField.FLAG:
         return this.applyFlagSuggestion(suggestion, location);
       default:
-        throw new BadRequestException('Truong de xuat khong hop le');
+        throw new BadRequestException('Trường đề xuất không hợp lệ');
     }
   }
 
@@ -476,7 +476,7 @@ export class EditSuggestionsService {
     const fieldName = suggestion.fieldName as EditSuggestionField;
     const nextValue = this.getSuggestedTextValue(suggestion);
     if (!nextValue) {
-      throw new BadRequestException('Gia tri de xuat khong hop le');
+      throw new BadRequestException('Giá trị đề xuất không hợp lệ');
     }
     const previousValue =
       fieldName === EditSuggestionField.NAME ? location.name : location.address;
@@ -500,7 +500,7 @@ export class EditSuggestionsService {
 
     if (existingPendingUpdate) {
       throw new BadRequestException(
-        'Dia diem dang co yeu cau duyet lai thong tin nhay cam',
+        'Địa điểm đang có yêu cầu duyệt lại thông tin nhạy cảm',
       );
     }
 
@@ -519,7 +519,7 @@ export class EditSuggestionsService {
 
     return {
       action: 'PENDING_RE_APPROVAL',
-      message: 'De xuat da duoc dua vao hang cho duyet lai',
+      message: 'Đề xuất đã được đưa vào hàng chờ duyệt lại',
     };
   }
 
@@ -537,7 +537,7 @@ export class EditSuggestionsService {
       typeof geoValue.latitude !== 'number' ||
       typeof geoValue.longitude !== 'number'
     ) {
-      throw new BadRequestException('Toa do de xuat khong hop le');
+      throw new BadRequestException('Tọa độ đề xuất không hợp lệ');
     }
 
     location.geo = {
@@ -547,7 +547,7 @@ export class EditSuggestionsService {
     location.accuracyMeters = geoValue.accuracyMeters;
     await location.save();
 
-    return { action: 'UPDATED', message: 'Da cap nhat toa do' };
+    return { action: 'UPDATED', message: 'Đã cập nhật tọa độ' };
   }
 
   private async applyFlagSuggestion(
@@ -562,7 +562,7 @@ export class EditSuggestionsService {
       await location.save();
       return {
         action: 'PUSHED_TO_DUPLICATE_REVIEW',
-        message: 'Da chuyen sang luong xac nhan trung lap',
+        message: 'Đã chuyển sang luồng xác nhận trùng lặp',
       };
     }
 
@@ -574,11 +574,11 @@ export class EditSuggestionsService {
       await location.save();
       return {
         action: 'HIDDEN',
-        message: 'Da an dia diem theo co trang thai',
+        message: 'Đã ẩn địa điểm theo cờ trạng thái',
       };
     }
 
-    throw new BadRequestException('Co de xuat khong hop le');
+    throw new BadRequestException('Cờ đề xuất không hợp lệ');
   }
 
   private async discardUnavailableSuggestion(

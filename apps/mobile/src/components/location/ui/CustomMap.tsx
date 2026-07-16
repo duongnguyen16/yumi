@@ -21,8 +21,11 @@ import { ActivityIndicator, Alert, View } from "react-native";
 import { IconButton, Text } from "react-native-paper";
 
 const MAP_API =
-  process.env.EXPO_PUBLIC_MAP_APu ||
+  process.env.EXPO_PUBLIC_MAP_API ||
   "https://demotiles.maplibre.org/style.json";
+
+const GLYPH_URL = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
+const TEXT_FONT = ["Open Sans Regular"];
 
 type MapStyleLayer = {
   id: string | number;
@@ -92,8 +95,7 @@ function CustomMap(
         if (!Array.isArray(styleJson.layers)) {
           throw new Error("Map style response is missing layers");
         }
-        styleJson.glyphs =
-          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
+        styleJson.glyphs = GLYPH_URL;
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
           const shouldHide =
@@ -110,12 +112,23 @@ function CustomMap(
               id.includes("atm") ||
               id.includes("parking"));
 
-          if (!shouldHide) return layer;
+          const nextLayer =
+            layer.type === "symbol"
+              ? {
+                  ...layer,
+                  layout: {
+                    ...(layer.layout ?? {}),
+                    "text-font": TEXT_FONT,
+                  },
+                }
+              : layer;
+
+          if (!shouldHide) return nextLayer;
 
           return {
-            ...layer,
+            ...nextLayer,
             layout: {
-              ...(layer.layout ?? {}),
+              ...(nextLayer.layout ?? {}),
               visibility: "none",
             },
           };

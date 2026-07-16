@@ -7,6 +7,7 @@ import {
   IsString,
   IsUrl,
   Max,
+  MinLength,
   Min,
 } from 'class-validator';
 
@@ -20,6 +21,7 @@ export class CreateReviewDto {
   rating!: number;
 
   @IsString()
+  @MinLength(20)
   comment!: string;
 
   @IsOptional()
