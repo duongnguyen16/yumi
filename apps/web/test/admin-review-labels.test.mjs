@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   appealDecisionOptions,
   appealStatusLabel,
@@ -67,4 +68,24 @@ test('returns only decisions allowed by the appeal type', () => {
     assert.ok(option.label.length > 0);
     assert.ok(option.description.length > 0);
   }
+});
+
+test('appeal surfaces use localized labels and accessible decision cards', async () => {
+  const [page, drawer] = await Promise.all([
+    readFile(new URL('../src/app/admin/(protected)/appeals/page.tsx', import.meta.url), 'utf8'),
+    readFile(
+      new URL(
+        '../src/app/admin/(protected)/appeals/components/AppealDetailDrawer.tsx',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  ]);
+
+  assert.match(page, /appealTypeLabel\(item\.type\)/);
+  assert.match(page, /appealStatusLabel\(item\.status\)/);
+  assert.doesNotMatch(page, />\{item\.type\}</);
+  assert.match(drawer, /appealDecisionOptions\(item\?\.type\)/);
+  assert.match(drawer, /aria-pressed=/);
+  assert.doesNotMatch(drawer, /label=\{value\}/);
 });
