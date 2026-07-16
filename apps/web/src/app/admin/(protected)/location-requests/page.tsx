@@ -5,9 +5,9 @@ import dayjs from 'dayjs';
 import {
   Alert,
   Box,
+  Button,
   Chip,
   CircularProgress,
-  IconButton,
   Stack,
   Table,
   TableBody,
@@ -20,11 +20,11 @@ import {
   type SxProps,
   type Theme,
 } from '@mui/material';
-import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import {
   approveLocationRequest,
   getLocationRequestQueue,
@@ -37,6 +37,10 @@ import { Topbar } from '@/components/admin/Topbar';
 import { AdminCard } from '@/components/admin/AdminCard';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { EmptyState } from '@/components/admin/EmptyState';
+import {
+  locationRequestStatusLabel,
+  locationRequestTypeLabel,
+} from '@/components/admin/admin-review-labels';
 import { tilePalette, tokens } from '@/theme/admin-tokens';
 import { LocationRequestDetailDrawer } from './components/LocationRequestDetailDrawer';
 
@@ -208,7 +212,7 @@ export default function LocationRequestsPage() {
           sx={{ flex: 1, borderRadius: 0, animation: 'admin-fade-in 320ms ease both' }}
         >
           <Box sx={{ overflowX: 'auto' }}>
-            <Table size="small">
+            <Table size="small" sx={{ minWidth: 1080 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: tokens.color.card }}>
                   <TableCell sx={headSx}>Tên địa điểm</TableCell>
@@ -274,7 +278,7 @@ export default function LocationRequestsPage() {
                               flexShrink: 0,
                             }}
                           >
-                            <WarningAmberOutlinedIcon sx={{ fontSize: 20 }} />
+                            <LocationOnOutlinedIcon sx={{ fontSize: 20 }} />
                           </Box>
                           <Typography
                             sx={{ fontWeight: 700, fontSize: 15, color: tokens.color.textPrimary }}
@@ -290,7 +294,7 @@ export default function LocationRequestsPage() {
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
-                          {req.type === 'UPDATE' ? 'Sửa' : req.type === 'CREATE' ? 'Tạo mới' : '—'}
+                          {locationRequestTypeLabel(req.type)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -312,37 +316,54 @@ export default function LocationRequestsPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip size="small" label={req.status} sx={{ borderRadius: 0 }} />
+                        <Chip
+                          size="small"
+                          label={locationRequestStatusLabel(req.status)}
+                          sx={requestStatusChipSx(req.status)}
+                        />
                       </TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
                           <Tooltip title="Xem chi tiết">
-                            <IconButton
+                            <Button
                               size="small"
+                              variant="outlined"
+                              aria-label="Xem chi tiết địa điểm"
                               onClick={() => openDetail(req)}
-                              sx={{ color: tokens.color.textSecondary }}
+                              startIcon={<VisibilityOutlinedIcon fontSize="small" />}
+                              sx={quickActionSx(tokens.color.textSecondary)}
                             >
-                              <VisibilityOutlinedIcon fontSize="small" />
-                            </IconButton>
+                              <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Xem</Box>
+                            </Button>
                           </Tooltip>
-                          {view === 'queue' && <Tooltip title="Duyệt">
-                            <IconButton
-                              size="small"
-                              onClick={() => openDetail(req)}
-                              sx={{ color: tokens.color.green, '&:hover': { bgcolor: 'rgba(46,125,50,0.08)' } }}
-                            >
-                              <CheckOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>}
-                          {view === 'queue' && <Tooltip title="Từ chối">
-                            <IconButton
-                              size="small"
-                              onClick={() => openDetail(req, true)}
-                              sx={{ color: tokens.color.red, '&:hover': { bgcolor: tokens.color.redSoftBg } }}
-                            >
-                              <BlockOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>}
+                          {view === 'queue' ? (
+                            <Tooltip title="Duyệt địa điểm">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                aria-label="Duyệt địa điểm"
+                                onClick={() => openDetail(req)}
+                                startIcon={<CheckOutlinedIcon fontSize="small" />}
+                                sx={quickActionSx(tokens.color.green, 'rgba(46,125,50,0.08)')}
+                              >
+                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Duyệt</Box>
+                              </Button>
+                            </Tooltip>
+                          ) : null}
+                          {view === 'queue' ? (
+                            <Tooltip title="Từ chối địa điểm">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                aria-label="Từ chối địa điểm"
+                                onClick={() => openDetail(req, true)}
+                                startIcon={<BlockOutlinedIcon fontSize="small" />}
+                                sx={quickActionSx(tokens.color.red, tokens.color.redSoftBg)}
+                              >
+                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Từ chối</Box>
+                              </Button>
+                            </Tooltip>
+                          ) : null}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -389,5 +410,40 @@ function flagChipSx(color: string, bg: string, border: string) {
     fontWeight: 600,
     fontSize: 11,
     height: 22,
+  };
+}
+
+function requestStatusChipSx(status: string) {
+  if (status === 'APPROVED') {
+    return {
+      bgcolor: tokens.color.sage,
+      color: tokens.color.sageText,
+      border: '1px solid transparent',
+    };
+  }
+  if (status === 'REJECTED' || status === 'CANCELLED') {
+    return {
+      bgcolor: tokens.color.redSoftBg,
+      color: tokens.color.red,
+      border: `1px solid ${tokens.color.redSoftBorder}`,
+    };
+  }
+  return {
+    bgcolor: tokens.color.pendingBg,
+    color: tokens.color.pendingText,
+    border: `1px solid ${tokens.color.border}`,
+  };
+}
+
+function quickActionSx(color: string, hoverBg = tokens.color.rowHover) {
+  return {
+    minWidth: { xs: 44, lg: 'auto' },
+    minHeight: 44,
+    px: { xs: 1.25, lg: 1.5 },
+    color,
+    borderColor: tokens.color.border,
+    whiteSpace: 'nowrap',
+    '& .MuiButton-startIcon': { m: { xs: 0, lg: '0 8px 0 -4px' } },
+    '&:hover': { color, borderColor: color, bgcolor: hoverBg },
   };
 }
