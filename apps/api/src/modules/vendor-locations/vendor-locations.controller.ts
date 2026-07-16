@@ -25,6 +25,7 @@ import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { VendorLocationsService } from './vendor-locations.service';
 import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
+import { CheckUserGuard } from 'src/common/guard/check-user.guard';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -117,7 +118,7 @@ export class VendorLocationsController {
   }
 
   @Post('update/:locationId')
-  @UseGuards(AuthGuard('jwt-at'), VendorGuard)
+  @UseGuards(AuthGuard('jwt-at'))
   @UseInterceptors(FilesInterceptor('media', 5))
   async updateLocation(
     @Param('locationId') locationId: string,
