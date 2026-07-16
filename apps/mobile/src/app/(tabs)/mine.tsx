@@ -6,7 +6,7 @@ export default function MineScreen() {
 
   return (
     <Page>
-      <PageContent>
+      <PageContent tabBarInset>
         <PageHeader title="Đã lưu" />
         <EmptyState actionLabel="Khám phá địa điểm" icon="bookmark-outline" onAction={() => router.push("/home" as never)} supportingText="Lưu địa điểm yêu thích để quay lại nhanh hơn." title="Chưa có địa điểm đã lưu" />
       </PageContent>

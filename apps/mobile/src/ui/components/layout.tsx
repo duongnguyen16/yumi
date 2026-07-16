@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { ScrollView, View, type RefreshControlProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { Text, type TextProps } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getTabContentBottomPadding } from "@/navigation/tab-content-inset";
 import { colors, spacing, typography } from "../tokens";
 import { Screen } from "./screen";
 
@@ -35,8 +37,9 @@ export function PageHeader({ title, supportingText }: { title: string; supportin
   );
 }
 
-export function PageContent({ children, scrollable = true, style, refreshControl }: { children: ReactNode; scrollable?: boolean; style?: StyleProp<ViewStyle>; refreshControl?: ReactElement<RefreshControlProps> }) {
-  const contentStyle: StyleProp<ViewStyle> = [{ gap: spacing[5], padding: spacing[4], paddingBottom: spacing[7] }, style];
+export function PageContent({ children, scrollable = true, style, refreshControl, tabBarInset = false }: { children: ReactNode; scrollable?: boolean; style?: StyleProp<ViewStyle>; refreshControl?: ReactElement<RefreshControlProps>; tabBarInset?: boolean }) {
+  const insets = useSafeAreaInsets();
+  const contentStyle: StyleProp<ViewStyle> = [{ gap: spacing[5], padding: spacing[4], paddingBottom: tabBarInset ? getTabContentBottomPadding(insets.bottom) : spacing[7] }, style];
 
   if (!scrollable) {
     return <View style={[{ flex: 1 }, contentStyle]}>{children}</View>;

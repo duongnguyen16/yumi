@@ -5,6 +5,7 @@ import { colors, elevation, fontFamily, navigationMetrics, radius, spacing } fro
 import type { IconName } from "./types";
 
 type NavigationAction = { icon: IconName; label: string; onPress?: () => void };
+type BottomTabAction = { accessibilityLabel: string; icon: IconName; onPress: () => void };
 
 export function NavigationBar({ title, onBack, action }: { title: string; onBack?: () => void; action?: NavigationAction }) {
   return (
@@ -16,14 +17,15 @@ export function NavigationBar({ title, onBack, action }: { title: string; onBack
   );
 }
 
-export function BottomTabBar({ items, selected, onSelect }: { items: { label: string; icon: IconName }[]; selected: string; onSelect?: (label: string) => void }) {
+export function BottomTabBar({ action, items, selected, onSelect }: { action?: BottomTabAction; items: { label: string; icon: IconName }[]; selected: string; onSelect?: (label: string) => void }) {
   const insets = useSafeAreaInsets();
   const barWidth = items.length * navigationMetrics.itemWidth + Math.max(0, items.length - 1) * spacing[1] + navigationMetrics.barPadding * 2;
 
   return (
     <View pointerEvents="box-none" style={{ alignItems: "center", bottom: 0, left: 0, paddingBottom: Math.max(insets.bottom, spacing[2]), paddingHorizontal: navigationMetrics.horizontalInset, position: "absolute", right: 0 }}>
-      <Surface elevation={0} style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.pill, boxShadow: elevation.floating, flexDirection: "row", gap: spacing[1], height: navigationMetrics.barHeight, padding: navigationMetrics.barPadding, width: barWidth }}>
-        {items.map((item) => {
+      <View style={{ alignItems: "center", flexDirection: "row", gap: spacing[2] }}>
+        <Surface elevation={0} style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.pill, boxShadow: elevation.floating, flexDirection: "row", gap: spacing[1], height: navigationMetrics.barHeight, padding: navigationMetrics.barPadding, width: barWidth }}>
+          {items.map((item) => {
           const active = item.label === selected;
           return (
             <View key={item.label} style={{ borderRadius: radius.pill, overflow: "hidden", width: navigationMetrics.itemWidth }}>
@@ -35,8 +37,18 @@ export function BottomTabBar({ items, selected, onSelect }: { items: { label: st
               </TouchableRipple>
             </View>
           );
-        })}
-      </Surface>
+          })}
+        </Surface>
+        {action ? (
+          <View style={{ borderRadius: radius.pill, boxShadow: elevation.floating, overflow: "hidden" }}>
+            <TouchableRipple accessibilityLabel={action.accessibilityLabel} accessibilityRole="button" borderless onPress={action.onPress} rippleColor={colors.navigationRipple} style={{ backgroundColor: colors.accentPrimary, borderRadius: radius.pill }}>
+              <View style={{ alignItems: "center", height: navigationMetrics.barHeight, justifyContent: "center", width: navigationMetrics.barHeight }}>
+                <Icon color={colors.textInverse} size={navigationMetrics.iconSize} source={action.icon} />
+              </View>
+            </TouchableRipple>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }
