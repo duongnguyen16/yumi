@@ -113,6 +113,8 @@ export class LocationService {
           rating: rating[0],
           products: products.map((product) => ({
             ...product,
+            imagePath: undefined,
+            imageUrl: product.imagePath ? product.imageUrl : undefined,
             _id: String(product._id),
             id: String(product._id),
             locationId: String(product.locationId),
