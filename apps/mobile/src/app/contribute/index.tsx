@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
-import { Stack as RouterStack, useLocalSearchParams, useRouter } from "expo-router";
+import {
+  Stack as RouterStack,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import * as ExpoLocation from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -25,8 +29,28 @@ import { getSystemCode } from "@/service/locationService";
 import LocationBasicFields from "@/components/location-form/location-basic-fields";
 import LocationCategoryFields from "@/components/location-form/location-category-fields";
 import LocationScheduleFields from "@/components/location-form/location-schedule-fields";
-import { ActionSheet, AppText, Button, Card, Chip, FormSection, GroupedList, ListRow, LoadingState, MediaPicker, NoticeSnackbar, Page, Stack, TextField, WizardScreen } from "@/ui/components";
+import {
+  ActionSheet,
+  AppText,
+  Button,
+  Card,
+  Chip,
+  FormSection,
+  GroupedList,
+  ListRow,
+  LoadingState,
+  MediaPicker,
+  NoticeSnackbar,
+  Page,
+  Stack,
+  TextField,
+  WizardScreen,
+} from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
+import {
+  validateContributionBasics,
+  validateVendorVideos,
+} from "./contribute-validation";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -161,7 +185,9 @@ export default function ContributePlaceScreen() {
   const [systemCode, setSystemCode] = useState<string | null>(null);
   const [duplicateOptionVisible, setDuplicateOptionVisible] = useState(false);
   const [notice, setNotice] = useState("");
-  const [noticeAction, setNoticeAction] = useState<{ label: string; onPress: () => void } | undefined>();
+  const [noticeAction, setNoticeAction] = useState<
+    { label: string; onPress: () => void } | undefined
+  >();
   const { type } = useLocalSearchParams();
   const contributionType = getFirstParamValue(type);
   const isVendorRegistration = contributionType === "register";
@@ -205,7 +231,9 @@ export default function ContributePlaceScreen() {
           if (response.success) {
             setSystemCode(response.systemCode);
           } else {
-            setNotice(response.message || "Không lấy được mã xác thực đăng ký.");
+            setNotice(
+              response.message || "Không lấy được mã xác thực đăng ký.",
+            );
           }
         }
         setCategories(
@@ -431,12 +459,18 @@ export default function ContributePlaceScreen() {
       return;
     }
 
+    const videoValidation = validateVendorVideos(result.assets);
+    if (!videoValidation.isValid) {
+      setNotice(videoValidation.message || "Video xác thực không hợp lệ.");
+      return;
+    }
+
     const newVideos = result.assets.map((asset, index) => ({
       id: `video-${Date.now()}-${index}`,
       uri: asset.uri,
       fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
       mimeType: asset.mimeType ?? "video/mp4",
-      fileSize: asset.fileSize ?? 1024,
+      fileSize: asset.fileSize as number,
     }));
 
     setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
@@ -553,8 +587,14 @@ export default function ContributePlaceScreen() {
 
   const handleContinue = async () => {
     if (step === 0) {
-      if (!name.trim() || !description.trim() || !selectedCategoryId) {
-        setNotice("Hãy nhập tên, mô tả và chọn danh mục.");
+      const basicValidation = validateContributionBasics({
+        name,
+        description,
+        selectedCategoryId,
+        openingHours,
+      });
+      if (!basicValidation.isValid) {
+        setNotice(basicValidation.message || "Thông tin địa điểm không hợp lệ.");
         return;
       }
       setStep(1);
@@ -579,7 +619,10 @@ export default function ContributePlaceScreen() {
           address: resolvedAddress,
         });
         if (!validatePosition.success) {
-          setNotice(validatePosition?.message || "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.");
+          setNotice(
+            validatePosition?.message ||
+              "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
+          );
           return;
         }
         if (!validatePosition.withinRange) {
@@ -606,12 +649,14 @@ export default function ContributePlaceScreen() {
 
         setStep(2);
       } catch (error: unknown) {
-        setNotice(getErrorMessage(
+        setNotice(
+          getErrorMessage(
             error,
             checkingDuplicates
               ? "Không thể kiểm tra địa điểm trùng lặp. Vui lòng thử lại."
               : "Không thể kiểm tra vị trí. Vui lòng thử lại.",
-          ));
+          ),
+        );
       } finally {
         setSaving(false);
       }
@@ -643,7 +688,10 @@ export default function ContributePlaceScreen() {
         if (isVendorRegistration) {
           const response = await submitVendorRegistrationDataToBackend();
           if (response?.success === false) {
-            setNotice(response?.message || "Không thể gửi đăng ký vendor. Vui lòng thử lại.");
+            setNotice(
+              response?.message ||
+                "Không thể gửi đăng ký vendor. Vui lòng thử lại.",
+            );
             return;
           }
           setImages([]);
@@ -653,17 +701,24 @@ export default function ContributePlaceScreen() {
           await submitCustomerDataToBackend();
         }
 
-        setNotice(isVendorRegistration
+        setNotice(
+          isVendorRegistration
             ? "Hồ sơ vendor của bạn đang chờ phê duyệt."
-            : "Địa điểm của bạn đang chờ phê duyệt.");
-        setNoticeAction({ label: "Đóng", onPress: () => router.replace("/(tabs)/home") });
+            : "Địa điểm của bạn đang chờ phê duyệt.",
+        );
+        setNoticeAction({
+          label: "Đóng",
+          onPress: () => router.replace("/(tabs)/home"),
+        });
       } catch (error: unknown) {
-        setNotice(getErrorMessage(
+        setNotice(
+          getErrorMessage(
             error,
             isVendorRegistration
               ? "Không thể gửi đăng ký vendor."
               : "Không thể gửi địa điểm để duyệt.",
-          ));
+          ),
+        );
       } finally {
         setSaving(false);
       }
@@ -691,9 +746,21 @@ export default function ContributePlaceScreen() {
     if (step === 0) {
       return (
         <Stack>
-          <LocationBasicFields description={description} name={name} onDescriptionChange={setDescription} onNameChange={setName} />
-          {draftAnalysisError ? <AppText style={{ color: colors.accentRed }} variant="caption">{draftAnalysisError}</AppText> : null}
-          <LocationScheduleFields onOpenPicker={() => setClockVisible(true)} openingHours={openingHours} />
+          <LocationBasicFields
+            description={description}
+            name={name}
+            onDescriptionChange={setDescription}
+            onNameChange={setName}
+          />
+          {draftAnalysisError ? (
+            <AppText style={{ color: colors.accentRed }} variant="caption">
+              {draftAnalysisError}
+            </AppText>
+          ) : null}
+          <LocationScheduleFields
+            onOpenPicker={() => setClockVisible(true)}
+            openingHours={openingHours}
+          />
           <TimePickerModal
             cancelLabel="Hủy"
             confirmLabel={pickerMode === "start" ? "Tiếp theo" : "Xác nhận"}
@@ -702,7 +769,9 @@ export default function ContributePlaceScreen() {
                 ? (openHours?.hours ?? 7)
                 : (closeHours?.hours ?? 8)
             }
-            label={pickerMode === "start" ? "Chọn giờ mở cửa" : "Chọn giờ đóng cửa"}
+            label={
+              pickerMode === "start" ? "Chọn giờ mở cửa" : "Chọn giờ đóng cửa"
+            }
             locale="en"
             minutes={
               pickerMode === "start"
@@ -736,28 +805,69 @@ export default function ContributePlaceScreen() {
     if (step === 1) {
       return (
         <Stack>
-          <FormSection supportingText="Kéo bản đồ để đặt ghim tại vị trí chính xác." title="Vị trí trên bản đồ">
+          <FormSection
+            supportingText="Kéo bản đồ để đặt ghim tại vị trí chính xác."
+            title="Vị trí trên bản đồ"
+          >
             {mapStyle && pinCoords ? (
-              <View style={{ borderRadius: radius.large, height: 330, overflow: "hidden" }}>
+              <View
+                style={{
+                  borderRadius: radius.large,
+                  height: 330,
+                  overflow: "hidden",
+                }}
+              >
                 <Map
                   mapStyle={mapStyle}
                   onRegionDidChange={handleMapRegionChange}
                   ref={mapRef}
                   style={{ flex: 1 }}
                 >
-                  <Camera initialViewState={{ center: [pinCoords.longitude, pinCoords.latitude], zoom: 17 }} />
+                  <Camera
+                    initialViewState={{
+                      center: [pinCoords.longitude, pinCoords.latitude],
+                      zoom: 17,
+                    }}
+                  />
                   <NativeUserLocation />
                 </Map>
-                <View pointerEvents="none" style={{ alignItems: "center", bottom: 0, justifyContent: "center", left: 0, position: "absolute", right: 0, top: -18 }}>
-                  <MaterialCommunityIcons color={colors.accentPrimary} name="map-marker" size={42} />
+                <View
+                  pointerEvents="none"
+                  style={{
+                    alignItems: "center",
+                    bottom: 0,
+                    justifyContent: "center",
+                    left: 0,
+                    position: "absolute",
+                    right: 0,
+                    top: -18,
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    color={colors.accentPrimary}
+                    name="map-marker"
+                    size={42}
+                  />
                 </View>
               </View>
             ) : (
-              <View style={{ height: 330 }}><LoadingState label="Đang tải bản đồ" /></View>
+              <View style={{ height: 330 }}>
+                <LoadingState label="Đang tải bản đồ" />
+              </View>
             )}
           </FormSection>
-          <FormSection supportingText={autoAddress || "Đang lấy địa chỉ từ vị trí đã chọn."} title="Địa chỉ">
-            <TextField label="Chỉnh sửa địa chỉ" onChangeText={setManualAddress} placeholder="Nhập địa chỉ chính xác" value={manualAddress} />
+          <FormSection
+            supportingText={
+              autoAddress || "Đang lấy địa chỉ từ vị trí đã chọn."
+            }
+            title="Địa chỉ"
+          >
+            <TextField
+              label="Chỉnh sửa địa chỉ"
+              onChangeText={setManualAddress}
+              placeholder="Nhập địa chỉ chính xác"
+              value={manualAddress}
+            />
           </FormSection>
         </Stack>
       );
@@ -767,22 +877,73 @@ export default function ContributePlaceScreen() {
       return (
         <Stack>
           {isVendorRegistration ? (
-            <Card><AppText variant="headline">Mã xác thực: {displaySystemCode}</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">Mã này cần xuất hiện rõ trong ảnh hoặc video xác thực.</AppText></Card>
+            <Card>
+              <AppText variant="headline">
+                Mã xác thực: {displaySystemCode}
+              </AppText>
+              <AppText
+                style={{ color: colors.textSecondary }}
+                variant="subhead"
+              >
+                Mã này cần xuất hiện rõ trong ảnh hoặc video xác thực.
+              </AppText>
+            </Card>
           ) : null}
           <MediaPicker
             addLabel="Thêm ảnh"
-            items={images.map((item) => ({ id: item.id, metadata: formatFileSize(item.fileSize), name: item.fileName, uri: item.uri }))}
+            items={images.map((item) => ({
+              id: item.id,
+              metadata: formatFileSize(item.fileSize),
+              name: item.fileName,
+              uri: item.uri,
+            }))}
             maxCount={MAX_IMAGES}
             onAdd={handlePickImages}
-            onRemove={(id) => setImages((current) => current.filter((item) => item.id !== id))}
+            onRemove={(id) =>
+              setImages((current) => current.filter((item) => item.id !== id))
+            }
             supportingText="Bắt buộc, ảnh đầu tiên được dùng làm ảnh chính."
             title="Hình ảnh"
           />
 
           {isVendorRegistration ? (
             <>
-              <MediaPicker addLabel="Thêm video" icon="play-circle-outline" items={videos.map((item) => ({ id: item.id, metadata: formatFileSize(item.fileSize), name: item.fileName }))} maxCount={MAX_VIDEOS} onAdd={handlePickVideos} onRemove={(id) => setVideos((current) => current.filter((item) => item.id !== id))} supportingText="Bắt buộc cho hồ sơ vendor." title="Video xác thực" />
-              <MediaPicker addLabel="Thêm giấy phép" icon="file-document-outline" items={licenseFiles.map((item) => ({ id: item.id, metadata: formatFileSize(item.fileSize), name: item.fileName }))} maxCount={MAX_LICENSES} onAdd={handlePickLicenseFiles} onRemove={(id) => setLicenseFiles((current) => current.filter((item) => item.id !== id))} supportingText="Tùy chọn, tối đa 3 tệp." title="Giấy phép" />
+              <MediaPicker
+                addLabel="Thêm video"
+                icon="play-circle-outline"
+                items={videos.map((item) => ({
+                  id: item.id,
+                  metadata: formatFileSize(item.fileSize),
+                  name: item.fileName,
+                }))}
+                maxCount={MAX_VIDEOS}
+                onAdd={handlePickVideos}
+                onRemove={(id) =>
+                  setVideos((current) =>
+                    current.filter((item) => item.id !== id),
+                  )
+                }
+                supportingText="Bắt buộc cho hồ sơ vendor."
+                title="Video xác thực"
+              />
+              <MediaPicker
+                addLabel="Thêm giấy phép"
+                icon="file-document-outline"
+                items={licenseFiles.map((item) => ({
+                  id: item.id,
+                  metadata: formatFileSize(item.fileSize),
+                  name: item.fileName,
+                }))}
+                maxCount={MAX_LICENSES}
+                onAdd={handlePickLicenseFiles}
+                onRemove={(id) =>
+                  setLicenseFiles((current) =>
+                    current.filter((item) => item.id !== id),
+                  )
+                }
+                supportingText="Tùy chọn, tối đa 3 tệp."
+                title="Giấy phép"
+              />
             </>
           ) : null}
         </Stack>
@@ -792,18 +953,64 @@ export default function ContributePlaceScreen() {
     return (
       <Stack>
         {duplicateWarning && (
-          <Card><AppText style={{ color: colors.accentOrange }} variant="headline">Có vẻ trùng với {similarLocations[0]?.name}</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">Một địa điểm tương tự đã tồn tại gần đây.</AppText><Button label="Xem địa điểm cũ" onPress={() => similarLocations[0]?.id && router.push(`/location/${similarLocations[0].id}`)} variant="secondary" /></Card>
+          <Card>
+            <AppText style={{ color: colors.accentOrange }} variant="headline">
+              Có vẻ trùng với {similarLocations[0]?.name}
+            </AppText>
+            <AppText style={{ color: colors.textSecondary }} variant="subhead">
+              Một địa điểm tương tự đã tồn tại gần đây.
+            </AppText>
+            <Button
+              label="Xem địa điểm cũ"
+              onPress={() =>
+                similarLocations[0]?.id &&
+                router.push(`/location/${similarLocations[0].id}`)
+              }
+              variant="secondary"
+            />
+          </Card>
         )}
         <Card>
           <AppText variant="title1">{name.trim()}</AppText>
-          <AppText style={{ color: colors.textSecondary }} variant="body">{description.trim()}</AppText>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing[2] }}><Chip label={selectedCategory?.name || "Danh mục"} selected />{selectedSubCategories.map((item) => <Chip key={item._id} label={item.name} />)}</View>
+          <AppText style={{ color: colors.textSecondary }} variant="body">
+            {description.trim()}
+          </AppText>
+          <View
+            style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing[2] }}
+          >
+            <Chip label={selectedCategory?.name || "Danh mục"} selected />
+            {selectedSubCategories.map((item) => (
+              <Chip key={item._id} label={item.name} />
+            ))}
+          </View>
         </Card>
         <GroupedList>
-          <ListRow icon="map-marker-outline" label="Địa chỉ" showChevron={false} supportingText={resolvedAddress} />
-          <ListRow icon="clock-outline" label="Giờ hoạt động" showChevron={false} value={openingHours || "Chưa chọn"} />
-          <ListRow icon="image-outline" label="Hình ảnh" showChevron={false} value={`${images.length} ảnh`} />
-          {isVendorRegistration ? <ListRow icon="shield-check-outline" label="Mã xác thực" showChevron={false} value={systemCode || "Đang tạo"} /> : null}
+          <ListRow
+            icon="map-marker-outline"
+            label="Địa chỉ"
+            showChevron={false}
+            supportingText={resolvedAddress}
+          />
+          <ListRow
+            icon="clock-outline"
+            label="Giờ hoạt động"
+            showChevron={false}
+            value={openingHours || "Chưa chọn"}
+          />
+          <ListRow
+            icon="image-outline"
+            label="Hình ảnh"
+            showChevron={false}
+            value={`${images.length} ảnh`}
+          />
+          {isVendorRegistration ? (
+            <ListRow
+              icon="shield-check-outline"
+              label="Mã xác thực"
+              showChevron={false}
+              value={systemCode || "Đang tạo"}
+            />
+          ) : null}
         </GroupedList>
         <AppText style={{ color: colors.textSecondary }} variant="subhead">
           {isVendorRegistration
@@ -826,26 +1033,49 @@ export default function ContributePlaceScreen() {
     <>
       <RouterStack.Screen options={{ headerShown: false }} />
       <WizardScreen
-        continueLabel={step === 3 ? isVendorRegistration ? "Gửi đăng ký" : "Gửi để duyệt" : "Tiếp tục"}
+        continueLabel={
+          step === 3
+            ? isVendorRegistration
+              ? "Gửi đăng ký"
+              : "Gửi để duyệt"
+            : "Tiếp tục"
+        }
         currentStep={step}
         loading={saving}
         metadata={isVendorRegistration ? `Mã: ${displaySystemCode}` : undefined}
-        onBack={() => step > 0 ? setStep((current) => current - 1) : router.back()}
+        onBack={() =>
+          step > 0 ? setStep((current) => current - 1) : router.back()
+        }
         onContinue={handleContinue}
-        stepLabels={activeStepLabels.map((label) => label.replace(/^\d+\.\s*/, ""))}
+        stepLabels={activeStepLabels.map((label) =>
+          label.replace(/^\d+\.\s*/, ""),
+        )}
         title={isVendorRegistration ? "Đăng ký địa điểm" : "Đóng góp địa điểm"}
       >
         {renderStepContent()}
       </WizardScreen>
 
       <ActionSheet
-        actions={[{ icon: "check-circle-outline", label: "Tiếp tục đăng", onPress: handleDuplicateDecision }]}
+        actions={[
+          {
+            icon: "check-circle-outline",
+            label: "Tiếp tục đăng",
+            onPress: handleDuplicateDecision,
+          },
+        ]}
         message={duplicateOptionMessage}
         onDismiss={() => setDuplicateOptionVisible(false)}
         title="Có thể bị trùng"
         visible={duplicateOptionVisible}
       />
-      <NoticeSnackbar action={noticeAction} message={notice} onDismiss={() => { setNotice(""); setNoticeAction(undefined); }} />
+      <NoticeSnackbar
+        action={noticeAction}
+        message={notice}
+        onDismiss={() => {
+          setNotice("");
+          setNoticeAction(undefined);
+        }}
+      />
     </>
   );
 }
