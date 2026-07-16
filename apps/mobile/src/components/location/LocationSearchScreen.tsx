@@ -1,130 +1,123 @@
-import React, { useEffect, useState } from "react";
-import { FlatList, Keyboard, TouchableWithoutFeedback, View } from "react-native";
-import Category from "./modals/Category";
-import SubCategory from "./modals/SubCategory";
-import { searchLocation } from "@/service/locationService";
 import { useLocationContext } from "@/contexts/locationContext";
-import LocationSearchResult from "./ui/LocationSearchResult";
-import { Button, EmptyState, Inline } from "@/ui/components";
+import { getAllCategories, getSubCategory } from "@/service/categoryService";
+import { searchLocation } from "@/service/locationService";
+import { Chip, Divider, EmptyState, LoadingState, NoticeSnackbar, Stack } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
+import { useEffect, useRef, useState } from "react";
+import { FlatList, Keyboard, ScrollView, TouchableWithoutFeedback, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SEARCH_DEBOUNCE_MS, canSearchLocations } from "./search-model";
+import LocationSearchResult from "./ui/LocationSearchResult";
 
-export default function LocationSearchScreen({ searchQuery, onSelectLocation }) {
+type CategoryOption = { _id: string; name: string; isActive?: boolean };
+type SearchItem = { _id?: string; id?: string; name?: string; address?: string; distance?: number };
+
+export default function LocationSearchScreen({ searchQuery, onSelectLocation }: { searchQuery: string; onSelectLocation?: (item: SearchItem) => void }) {
   const insets = useSafeAreaInsets();
-  const [visible, setVisible] = useState(false);
-  const [subVisible, setSubVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedSubCategory, setSelectedSubCategory] = useState([]);
-  const [searchResults, setSearchResults] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-
   const { location } = useLocationContext();
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [subCategories, setSubCategories] = useState<CategoryOption[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
+  const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const requestId = useRef(0);
+
+  useEffect(() => {
+    getAllCategories().then((response) => {
+      if (response.success) setCategories((response.data ?? []).filter((category: CategoryOption) => category.isActive !== false));
+      else setMessage("Không thể tải danh mục.");
+    });
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const currentRequest = ++requestId.current;
+    const runSearch = async () => {
+      await Promise.resolve();
+      setPage(1);
+      setHasMore(false);
+      if (!canSearchLocations(debouncedQuery, selectedCategory)) {
+        setSearchResults([]);
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      const response = await searchLocation(debouncedQuery, selectedCategory ?? "", selectedSubCategories, 1, 10, location[0], location[1]);
+      if (currentRequest !== requestId.current) return;
+      if (response.success) {
+        setSearchResults(response.locations ?? []);
+        setHasMore(Boolean(response.hasMore));
+      } else {
+        setSearchResults([]);
+        setMessage(response.message || "Không thể tìm kiếm địa điểm.");
+      }
+      if (currentRequest === requestId.current) setIsLoading(false);
+    };
+    void runSearch();
+  }, [debouncedQuery, location, selectedCategory, selectedSubCategories]);
 
   const loadMore = async () => {
     if (isLoading || !hasMore) return;
-
-    try {
-      setIsLoading(true);
-      const nextPage = page + 1;
-      const response = await searchLocation(
-        searchQuery,
-        selectedCategory,
-        selectedSubCategory,
-        nextPage,
-        10,
-        location[0],
-        location[1],
-      );
-
-      if (response.success) {
-        setSearchResults((prevResults) => [
-          ...prevResults,
-          ...response.locations,
-        ]);
-
-        setPage(nextPage);
-        setHasMore(response.hasMore);
-      }
-    } catch (error) {
-      console.error("Error loading more search results:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    const nextPage = page + 1;
+    setIsLoading(true);
+    const response = await searchLocation(debouncedQuery, selectedCategory ?? "", selectedSubCategories, nextPage, 10, location[0], location[1]);
+    if (response.success) {
+      setSearchResults((current) => [...current, ...(response.locations ?? [])]);
+      setPage(nextPage);
+      setHasMore(Boolean(response.hasMore));
+    } else setMessage(response.message || "Không thể tải thêm địa điểm.");
+    setIsLoading(false);
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!searchQuery && !selectedCategory) {
-        setSearchResults([]);
-        return;
-      }
-      setPage(1);
-      setHasMore(true);
-      const fetchSearchResults = async () => {
-        try {
-          const response = await searchLocation(
-            searchQuery,
-            selectedCategory,
-            selectedSubCategory,
-            1,
-            10,
-            location[0],
-            location[1],
-          );
-          if (response.success) setSearchResults(response.locations);
-        } catch (error) {
-          console.error("Error fetching search results:", error);
-        }
-      };
-      void fetchSearchResults();
-    }, searchQuery || selectedCategory ? 500 : 0);
-    return () => clearTimeout(timer);
-  }, [searchQuery, selectedCategory, selectedSubCategory, location]);
+  const toggleSubCategory = (id: string) => setSelectedSubCategories((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const selectCategory = async (id: string | null) => {
+    setSelectedCategory(id);
+    setSelectedSubCategories([]);
+    setSubCategories([]);
+    if (!id) return;
+    const response = await getSubCategory(id);
+    if (response.success) setSubCategories((response.data ?? []).filter((category: CategoryOption) => category.isActive !== false));
+    else setMessage(response.message || "Không thể tải danh mục con.");
+  };
+  const searchActive = canSearchLocations(debouncedQuery, selectedCategory);
 
   return (
-    <TouchableWithoutFeedback
-      onPress={() => Keyboard.dismiss()}
-      accessible={false}
-    >
-      <View style={{ backgroundColor: colors.surfaceApp, flex: 1, paddingHorizontal: spacing[4], paddingTop: insets.top + 76 }}>
-        <Inline>
-          <Button label="Danh mục" onPress={() => setVisible(true)} variant="secondary" />
-          {selectedCategory && (
-            <Button label="Danh mục con" onPress={() => setSubVisible(true)} variant="secondary" />
-          )}
-        </Inline>
-        {searchResults.length === 0 && searchQuery && selectedCategory && (
-          <EmptyState actionLabel="Thêm địa điểm này" icon="map-marker-plus-outline" title="Không tìm thấy địa điểm" />
+    <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
+      <View style={{ backgroundColor: colors.surfaceApp, flex: 1, paddingTop: insets.top + 76 }}>
+        <Stack gap={spacing[2]} style={{ paddingBottom: spacing[2] }}>
+          <ScrollView contentContainerStyle={{ gap: spacing[2], paddingHorizontal: spacing[4] }} horizontal showsHorizontalScrollIndicator={false}>
+            <Chip label="Tất cả" onPress={() => { void selectCategory(null); }} selected={!selectedCategory} />
+            {categories.map((category) => <Chip key={category._id} label={category.name} onPress={() => { void selectCategory(category._id); }} selected={selectedCategory === category._id} />)}
+          </ScrollView>
+          {subCategories.length > 0 ? (
+            <ScrollView contentContainerStyle={{ gap: spacing[2], paddingHorizontal: spacing[4] }} horizontal showsHorizontalScrollIndicator={false}>
+              {subCategories.map((category) => <Chip key={category._id} label={category.name} onPress={() => toggleSubCategory(category._id)} selected={selectedSubCategories.includes(category._id)} />)}
+            </ScrollView>
+          ) : null}
+        </Stack>
+        {isLoading && searchResults.length === 0 ? <LoadingState label="Đang tìm kiếm" /> : (
+          <FlatList
+            ItemSeparatorComponent={() => <Divider />}
+            ListEmptyComponent={searchActive ? <EmptyState actionLabel="Thêm địa điểm này" icon="map-marker-plus-outline" supportingText="Thử từ khóa hoặc danh mục khác." title="Không tìm thấy địa điểm" /> : null}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing[6], paddingHorizontal: spacing[4] }}
+            data={searchResults}
+            keyExtractor={(item, index) => item._id || item.id || String(index)}
+            keyboardShouldPersistTaps="handled"
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            renderItem={({ item }) => <LocationSearchResult item={item} onSelect={onSelectLocation} />}
+          />
         )}
-        <Category
-          setSelectedCategory={setSelectedCategory}
-          visible={visible}
-          setVisible={setVisible}
-          selectedCategory={selectedCategory}
-        />
-
-        <SubCategory
-          selectedCategory={selectedCategory}
-          selectedSubCategory={selectedSubCategory}
-          setSelectedSubCategory={setSelectedSubCategory}
-          setSubVisible={setSubVisible}
-          subVisible={subVisible}
-        />
-
-        <FlatList
-          contentContainerStyle={{ gap: spacing[2], paddingBottom: spacing[6] }}
-          style={{ flex: 1, marginTop: spacing[3] }}
-          data={searchResults}
-          keyExtractor={(item, index) =>
-            item._id || item.id || index.toString()
-          }
-          renderItem={({ item }) => <LocationSearchResult item={item} onSelect={onSelectLocation} />}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          keyboardShouldPersistTaps="handled"
-        />
+        <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
       </View>
     </TouchableWithoutFeedback>
   );

@@ -1,4 +1,5 @@
 import { userContext } from "@/contexts/userContext";
+import { invokeExploreLocationAction } from "@/navigation/exploreTabAction";
 import { getMainTabs, SHOW_TABS_HEADER } from "@/navigation/mainTabs";
 import { BottomTabBar } from "@/ui/components";
 import { Tabs } from "expo-router";
@@ -18,7 +19,7 @@ export default function TabsLayout() {
         const activeTabStyle = StyleSheet.flatten(descriptors[route.key]?.options.tabBarStyle) as { display?: string } | undefined;
         if (activeTabStyle?.display === "none") return null;
         const selected = tabs.find((tab) => tab.name === state.routes[state.index]?.name)?.title ?? tabs[0].title;
-        return <BottomTabBar items={tabs.map((tab) => ({ icon: tab.icon, label: tab.title }))} onSelect={(label) => { const tab = tabs.find((item) => item.title === label); if (tab) navigation.navigate(tab.name); }} selected={selected} />;
+        return <BottomTabBar action={route.name === "home" ? { accessibilityLabel: "Vị trí hiện tại", icon: "crosshairs-gps", onPress: invokeExploreLocationAction } : undefined} items={tabs.map((tab) => ({ icon: tab.icon, label: tab.title }))} onSelect={(label) => { const tab = tabs.find((item) => item.title === label); if (tab) navigation.navigate(tab.name); }} selected={selected} />;
       }}
       screenOptions={{ headerShown: SHOW_TABS_HEADER }}
     >
