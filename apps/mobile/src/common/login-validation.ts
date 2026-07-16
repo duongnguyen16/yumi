@@ -2,7 +2,7 @@ import {
   validateEmail,
   validatePassword,
   type ValidationResult,
-} from "@/common/function";
+} from "./function";
 
 export function validateLoginCredentials({
   email,

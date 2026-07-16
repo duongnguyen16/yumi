@@ -13,7 +13,7 @@ import { spacing } from "@/ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import { ScrollView } from "react-native";
-import { validateLoginCredentials } from "./login-validation";
+import { validateLoginCredentials } from "@/common/login-validation";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
