@@ -36,11 +36,14 @@ interface ServiceResponse {
 export class ClaimController {
   constructor(private readonly service: ClaimService) {}
 
+  // bắt đầu claim
+
   @Post('start')
   async start(@Body() body: StartClaimDto, @NestRequest() req: AuthenticatedRequest) {
     return this.handle(await this.service.start(body.locationId, req.user.userId));
   }
 
+  // check otp
   @Post('verify-otp')
   async verifyOtp(
     @Body() body: VerifyClaimOtpDto,
@@ -51,6 +54,7 @@ export class ClaimController {
     );
   }
 
+  // gửi req
   @Post('submit')
   async submit(@Body() body: SubmitClaimDto, @NestRequest() req: AuthenticatedRequest) {
     return this.handle(await this.service.submit(body, req.user.userId));

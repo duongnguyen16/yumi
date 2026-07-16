@@ -50,23 +50,37 @@ export class ClaimService {
     private readonly sms: SmsService,
   ) {}
 
+
+  // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
+
   async start(locationId: string, vendorId: string) {
     try {
+
+      // id k hle
       if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId)) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
 
+      // lấy location
       const location = await this.locationModel.findById(locationId).lean().exec();
+
+      // k có location
       if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
+
+      // location chưa publíh
       if (location.status !== LocationStatus.PUBLISHED) {
         return this.failure(409, 'Chỉ có thể claim địa điểm đã được công khai');
       }
+
+      // đã có ng sở hữu
       if (location.ownerId) {
         return this.failure(
           409,
           'Địa điểm này đã có chủ sở hữu. Nếu thông tin sai, hãy gửi báo cáo.',
         );
       }
+
+      // đã có ng yêu cầu trc r
       if (await this.hasPendingSlot(locationId)) {
         return this.failure(
           409,
@@ -74,14 +88,20 @@ export class ClaimService {
         );
       }
 
+      // lấy số điện thoại
       const phone = this.resolveListingPhone(location);
+      
+      // có sdt thì yêu cầu otp 
       const otpRequired = Boolean(phone);
       const otp = otpRequired ? this.generateOtp() : undefined;
       const siteCode = this.generateSiteCode();
       const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60_000);
 
+
+      // gửi mã
       if (otp && phone) await this.sms.sendOtp(phone, otp);
 
+      // lưu session, cái này được gọi là thêm k ?
       await this.sessionModel.findOneAndUpdate(
         {
           vendorId: new Types.ObjectId(vendorId),
@@ -114,6 +134,7 @@ export class ClaimService {
     }
   }
 
+  // xác minh otp
   async verifyOtp(locationId: string, vendorId: string, otp: string) {
     try {
       if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId)) {
@@ -134,10 +155,11 @@ export class ClaimService {
       if (session.attempts >= MAX_OTP_ATTEMPTS) {
         return this.failure(429, 'Bạn đã nhập sai OTP quá nhiều lần');
       }
-
+      // so sánh otp, trùng thì ngon luôn
       const matched = session.otpHash
         ? await bcrypt.compare(otp, session.otpHash)
         : false;
+      
       if (!matched) {
         session.attempts += 1;
         await session.save();
@@ -179,6 +201,7 @@ export class ClaimService {
         return this.failure(400, 'Bạn cần xác minh OTP trước khi nộp bằng chứng');
       }
 
+      // ảnh phải có vị trí và thời điểm chụp, và phải có ảnh cho thấy mã siteCode
       const hasGeoPhoto = dto.evidenceFiles.some(
         (file) =>
           file.fileType === 'IMAGE' &&
@@ -191,6 +214,8 @@ export class ClaimService {
           'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
         );
       }
+      // ảnh phải có siteCode, siteCode là gì ? 
+      // siteCode là cái code mà hệ thống cấp cho vendor để chụp ảnh, để chứng minh rằng vendor đã đến địa điểm đó, và ảnh phải có siteCode này trong metadata. siteCode này lấy ở đâu?
       const siteCodeSeen = dto.evidenceFiles.some(
         (file) => file.metadata?.siteCode === session.siteCode,
       );
@@ -201,6 +226,7 @@ export class ClaimService {
         return this.failure(409, 'Địa điểm đang có yêu cầu chờ xử lý');
       }
 
+      // tạo claim request
       const evidenceFiles = dto.evidenceFiles.map((file) => ({
         ...file,
         capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
@@ -211,7 +237,7 @@ export class ClaimService {
             : { adminScrutiny: 'NO_PHONE_HIGHER_SCRUTINY' }),
         },
       }));
-
+      // tạo claim request
       let claim: ClaimRequestDocument;
       try {
         claim = await this.claimModel.create({
@@ -231,6 +257,7 @@ export class ClaimService {
         throw error;
       }
 
+      // xóa session, vì đã nộp claim rồi
       await this.sessionModel.deleteOne({ _id: session._id }).exec();
       await this.notification.notify({
         userId: vendorId,
@@ -252,6 +279,8 @@ export class ClaimService {
     }
   }
 
+
+  // ktra xem có cái pending claim hay request access nào chưa, nếu có thì ko cho tạo mới
   private async hasPendingSlot(locationId: string) {
     const id = new Types.ObjectId(locationId);
     const [claim, requestAccess] = await Promise.all([
