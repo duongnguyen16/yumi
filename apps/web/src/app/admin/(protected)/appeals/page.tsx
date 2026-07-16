@@ -42,7 +42,7 @@ import { AppealDetailDrawer } from './components/AppealDetailDrawer';
 
 const PAGE_SIZE = 20;
 
-const headSx: SxProps<Theme> = {
+const headSx = {
   fontFamily: tokens.font.mono,
   fontSize: 11,
   fontWeight: 700,
@@ -52,6 +52,23 @@ const headSx: SxProps<Theme> = {
   borderBottom: `1px solid ${tokens.color.border}`,
   py: 2,
   whiteSpace: 'nowrap',
+} satisfies SxProps<Theme>;
+
+const stickyActionHeadSx: SxProps<Theme> = {
+  ...headSx,
+  position: 'sticky',
+  right: 0,
+  zIndex: 2,
+  bgcolor: tokens.color.card,
+  boxShadow: '-8px 0 12px rgba(25, 28, 33, 0.04)',
+};
+
+const stickyActionCellSx: SxProps<Theme> = {
+  position: 'sticky',
+  right: 0,
+  zIndex: 1,
+  bgcolor: tokens.color.card,
+  boxShadow: '-8px 0 12px rgba(25, 28, 33, 0.04)',
 };
 
 function message(err: unknown) {
@@ -219,7 +236,7 @@ export default function AppealsPage() {
                   <TableCell sx={headSx}>Nội dung</TableCell>
                   <TableCell sx={headSx}>Hạn xử lý</TableCell>
                   <TableCell sx={headSx}>Trạng thái</TableCell>
-                  <TableCell sx={headSx} align="right">Hành động</TableCell>
+                  <TableCell sx={stickyActionHeadSx} align="right">Hành động</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -297,7 +314,7 @@ export default function AppealsPage() {
                           sx={statusChipSx(item.status)}
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={stickyActionCellSx}>
                         <Button
                           variant="outlined"
                           size="small"
