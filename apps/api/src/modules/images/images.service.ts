@@ -74,7 +74,7 @@ export class ImagesService {
 
     if (error || !data) {
       throw new InternalServerErrorException(
-        `Khong tao duoc signed upload url: ${error?.message ?? 'Unknown error'}`,
+        `Không tạo được signed upload url: ${error?.message ?? 'Unknown error'}`,
       );
     }
 

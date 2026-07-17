@@ -1,8 +1,10 @@
 import { useLocationContext } from "@/contexts/locationContext";
 import { getAllCategories, getSubCategory } from "@/service/categoryService";
 import { searchLocation } from "@/service/locationService";
+import { getCustomerContributionDestination } from "@/navigation/authDestination";
 import { Chip, Divider, EmptyState, LoadingState, NoticeSnackbar, Stack } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { FlatList, Keyboard, ScrollView, TouchableWithoutFeedback, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,6 +15,7 @@ type CategoryOption = { _id: string; name: string; isActive?: boolean };
 type SearchItem = { _id?: string; id?: string; name?: string; address?: string; distance?: number };
 
 export default function LocationSearchScreen({ searchQuery, onSelectLocation }: { searchQuery: string; onSelectLocation?: (item: SearchItem) => void }) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { location } = useLocationContext();
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -107,7 +110,7 @@ export default function LocationSearchScreen({ searchQuery, onSelectLocation }: 
         {isLoading && searchResults.length === 0 ? <LoadingState label="Đang tìm kiếm" /> : (
           <FlatList
             ItemSeparatorComponent={() => <Divider />}
-            ListEmptyComponent={searchActive ? <EmptyState actionLabel="Thêm địa điểm này" icon="map-marker-plus-outline" supportingText="Thử từ khóa hoặc danh mục khác." title="Không tìm thấy địa điểm" /> : null}
+            ListEmptyComponent={searchActive ? <EmptyState actionLabel="Thêm địa điểm này" icon="map-marker-plus-outline" onAction={() => router.push(getCustomerContributionDestination())} supportingText="Thử từ khóa hoặc danh mục khác." title="Không tìm thấy địa điểm" /> : null}
             contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing[6], paddingHorizontal: spacing[4] }}
             data={searchResults}
             keyExtractor={(item, index) => item._id || item.id || String(index)}

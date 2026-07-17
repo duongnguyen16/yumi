@@ -270,6 +270,8 @@ export default function EditLocationScreen({
         setPinLocation={form.setPinLocation}
         setVisible={form.setVisible}
         visible={form.visible}
+        // locationName={form.name}
+        // categoryId={form.selectedCategory}
       />
     </PageContent>
   );

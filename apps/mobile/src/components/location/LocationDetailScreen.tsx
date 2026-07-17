@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Image, View, Share, useWindowDimensions } from "react-native";
+import { Image, Keyboard, Share, TouchableWithoutFeedback, useWindowDimensions, View } from "react-native";
 import { Icon } from "react-native-paper";
 import * as Linking from "expo-linking";
 import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
@@ -118,7 +118,8 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
+      <View style={{ flex: 1 }}>
       <Tabs.Container
         renderHeader={renderHeader}
         revealHeaderOnScroll
@@ -171,6 +172,7 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
           </Tabs.ScrollView>
         </Tabs.Tab>
       </Tabs.Container>
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
