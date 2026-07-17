@@ -1,4 +1,5 @@
 import api from "./aixos";
+import { formatApiMessage } from "./apiMessage";
 
 export type ReviewUser = {
   id?: string;
@@ -50,6 +51,8 @@ const emptySummary: ReviewSummary = {
 };
 
 const getReviewsByLocation = async (locationId: string) => {
+  const fallbackMessage = "Không thể tải danh sách đánh giá.";
+
   try {
     const response = await api.get(`/reviews/location/${locationId}`);
     return {
@@ -63,14 +66,16 @@ const getReviewsByLocation = async (locationId: string) => {
       success: false,
       summary: emptySummary,
       reviews: [],
-      message:
-        error?.response?.data?.message || "Không thể tải danh sách đánh giá.",
+      message: formatApiMessage(error?.response?.data?.message, fallbackMessage),
     };
   }
 };
 
 const createReview = async (payload: CreateReviewPayload) => {
+  const fallbackMessage = "Không thể gửi đánh giá lúc này.";
+
   try {
+    // console.log("Creating review with payload:", payload);
     const response = await api.post("/reviews", payload);
     return {
       success: true,
@@ -81,13 +86,14 @@ const createReview = async (payload: CreateReviewPayload) => {
     console.log("Error creating review:", error);
     return {
       success: false,
-      message:
-        error?.response?.data?.message || "Không thể gửi đánh giá lúc này.",
+      message: formatApiMessage(error?.response?.data?.message, fallbackMessage),
     };
   }
 };
 
 const updateReview = async (reviewId: string, payload: UpdateReviewPayload) => {
+  const fallbackMessage = "Không thể cập nhật đánh giá lúc này.";
+
   try {
     const response = await api.patch(`/reviews/${reviewId}`, payload);
     return {
@@ -99,14 +105,14 @@ const updateReview = async (reviewId: string, payload: UpdateReviewPayload) => {
     console.log("Error updating review:", error);
     return {
       success: false,
-      message:
-        error?.response?.data?.message ||
-        "Không thể cập nhật đánh giá lúc này.",
+      message: formatApiMessage(error?.response?.data?.message, fallbackMessage),
     };
   }
 };
 
 const deleteReview = async (reviewId: string) => {
+  const fallbackMessage = "Không thể xóa đánh giá lúc này.";
+
   try {
     const response = await api.delete(`/reviews/${reviewId}`);
     return {
@@ -117,8 +123,7 @@ const deleteReview = async (reviewId: string) => {
     console.log("Error deleting review:", error);
     return {
       success: false,
-      message:
-        error?.response?.data?.message || "Không thể xóa đánh giá lúc này.",
+      message: formatApiMessage(error?.response?.data?.message, fallbackMessage),
     };
   }
 };
