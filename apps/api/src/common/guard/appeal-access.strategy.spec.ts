@@ -2,12 +2,12 @@ import { UnauthorizedException } from '@nestjs/common';
 import { AppealAccessStrategy } from './appeal-access.strategy';
 import { AtStrategy } from './at.strategy';
 
-describe('Appeal access strategies', () => {
+describe('Kiểm thử chiến lược truy cập kháng nghị', () => {
   const configService = {
     get: jest.fn(() => 'secret'),
   };
 
-  it('rejects appeal-scoped tokens from normal protected routes', () => {
+  it('từ chối token giới hạn cho kháng nghị tại các tuyến được bảo vệ thông thường', () => {
     const strategy = new AtStrategy(configService as never);
 
     expect(() =>

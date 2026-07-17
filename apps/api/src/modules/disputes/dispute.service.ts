@@ -28,6 +28,7 @@ export class DisputeService {
     private readonly notification: NotificationPort,
   ) {}
 
+  // list disputes của user
   async listMine(userId: string) {
     if (!Types.ObjectId.isValid(userId)) return this.fail(400, 'ID không hợp lệ');
     const id = new Types.ObjectId(userId);
@@ -40,6 +41,7 @@ export class DisputeService {
     return { success: true, items };
   }
 
+  // get detail tranh chấp của user
   async getForUser(id: string, userId: string) {
     if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
     const item = await this.disputeModel
@@ -50,12 +52,14 @@ export class DisputeService {
       .lean()
       .exec();
     if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
+    // k thuộc bên nào thì k cho xem
     if (!this.isParty(item, userId)) {
       return this.fail(403, 'Bạn không có quyền xem tranh chấp này');
     }
     return { success: true, dispute: item };
   }
 
+  // add bằng chứng cho tranh chấp
   async addEvidence(id: string, userId: string, dto: AddDisputeEvidenceDTO) {
     try {
       if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
@@ -76,10 +80,12 @@ export class DisputeService {
     }
   }
 
+  // list tranh chấp cho admin
   async getQueue(query: ListDisputesDTO) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const isHistory = query.view === AdminListView.HISTORY;
+    // keep: giữ nguyên, transfer: chuyển quyền sở hữu, revoke: thu hồi quyền sở hữu
     const historyStatuses = [
       DisputeStatus.RESOLVED_KEEP,
       DisputeStatus.RESOLVED_TRANSFER,
@@ -143,10 +149,12 @@ export class DisputeService {
       if (String(loc.ownerId ?? '') !== String(item.vendorAId)) {
         return this.fail(409, 'Chủ địa điểm đã thay đổi');
       }
-
+      // giải quyết tranh chấp
       const oldOwner = String(item.vendorAId);
+
       let newOwner: Types.ObjectId | undefined = item.vendorAId;
       let status = DisputeStatus.RESOLVED_KEEP;
+      
       if (dto.outcome === DisputeOutcome.TRANSFER) {
         newOwner = item.vendorBId;
         status = DisputeStatus.RESOLVED_TRANSFER;

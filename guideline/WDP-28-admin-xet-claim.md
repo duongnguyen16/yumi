@@ -17,7 +17,7 @@ Bạn đang làm **màn hình Admin xét "claim"** (yêu cầu nhận sở hữu
 - **on-site proof** (bằng chứng tại chỗ) = ảnh/tệp vendor chụp **tại địa điểm**, kèm toạ độ (`geo`) và thời điểm chụp (`capturedAt`). Nằm trong `claim.evidenceFiles[]`.
 - **gán owner** = ghi `location.ownerId = vendorId`. Đây là **chỗ DUY NHẤT** của F24 gán chủ sở hữu.
 - **badge Verified** = **KHÔNG có field riêng**. Được **suy ra** từ `location.ownerId != null` (có chủ ⇒ hiển thị "Verified"). Vậy chỉ cần set `ownerId` là badge tự lên — đừng thêm cột mới (xem §3.2).
-- **EF20.1** = tình huống ngoại lệ: lúc Admin bấm duyệt mà địa điểm **đã có chủ là người KHÁC** → **không ghi đè** → mở **Dispute** (tranh chấp, trạng thái `OPEN`) để F27 phân xử sau.
+- **EF20.1** = tình huống ngoại lệ: lúc Admin bấm duyệt mà địa điểm **đã có chủ là người KHÁC** → **không ghi đè** → reject claim và hướng Vendor sang **RequestAccess**. Dispute chỉ được mở sau khi RequestAccess bị owner từ chối và Vendor appeal.
 - **BR-45** = luật: **chỉ được duyệt** claim khi `otpVerified === true` **và** có on-site proof khớp (geo + thời điểm).
 - **BR-46** = luật: **từ chối KHÔNG ghi đè** — giữ nguyên chủ hiện tại, và **giữ lại** bản claim cũ (cho audit/kháng cáo); vendor gửi claim mới là 1 document khác.
 
@@ -53,7 +53,7 @@ Bạn đang làm **màn hình Admin xét "claim"** (yêu cầu nhận sở hữu
 2. **Approve** (BR-45 — CHỈ khi `otpVerified === true` + proof khớp) → set `location.ownerId = claim.vendorId`, claim `status = APPROVED`, điền `adminDecision{decidedBy, reason, decidedAt}`.
 3. **Reject** (BR-46) → claim `status = REJECTED` + lý do; **KHÔNG đụng owner hiện tại**; bản claim bị từ chối **được giữ lại** (claim sau là document MỚI).
 4. **Request more evidence** → **giữ PENDING** + notify người gửi bổ sung (xem §3.3 — KHÔNG có enum riêng).
-5. **EF20.1** — nếu lúc duyệt `location.ownerId` đã là **người khác** → KHÔNG ghi đè → **route sang Dispute (F27/WDP-31)**.
+5. **EF20.1** — nếu lúc duyệt `location.ownerId` đã là **người khác** → KHÔNG ghi đè → claim `REJECTED`, trả `redirectToRequestAccess: true`; **không tạo Dispute trực tiếp**.
 6. **Notify** người gửi claim (Notification — tạm stub, WDP-7).
 7. **Cập nhật trust** khi approve (gọi `TrustEngineService.recordEvent` — KHÔNG tự cộng/trừ điểm, I8). Từ chối: mặc định **không** chấm trust (xem §3.6).
 8. **Ghi AuditLog** mọi hành động admin (I4 / BR-43).
@@ -68,7 +68,7 @@ Bạn đang làm **màn hình Admin xét "claim"** (yêu cầu nhận sở hữu
 | **Trust Engine (M2)** | ✅ Xong `modules/trust-engine/` — `TrustEngineService.recordEvent(...)` | **GỌI trực tiếp.** `imports:[SchemaModule, TrustEngineModule]`, inject `TrustEngineService`. **Không** còn port/stub trust; **không** tự cộng điểm (I8). |
 | **Notification (M3 / WDP-7, Đăng)** | ⏳ Chưa có module (chỉ có `notification.schema.ts`) | **STUB** — dùng lại `NotificationStub` / `NOTIFICATION_PORT` đã tạo ở WDP-19 (`common/contracts/notification.port.ts`). `// TODO: depends on WDP-7`. |
 | **AuditLog util (WDP-39, Trung)** | ⏳ Chưa có util chung | Ghi thẳng collection `audit_logs` (model `AuditLog`). **Báo Trung** để sau gộp về util chung. |
-| **Dispute (EF20.1)** | **F27 / [WDP-31](https://fptp.atlassian.net/browse/WDP-31)**, owner **Dương** (chính bạn), `To Do` | Bạn **chỉ TẠO 1 `Dispute` (OPEN)** để mở case khi gặp owner-khác lúc duyệt. **Logic resolve keep/transfer/revoke là việc của WDP-31** — đừng tự xử ở đây. |
+| **RequestAccess (EF20.1)** | **F26 / [WDP-30](https://fptp.atlassian.net/browse/WDP-30)** | Khi location đã có owner khác, reject claim và trả cờ `redirectToRequestAccess`. **Không tạo Dispute từ Claim**; Dispute thuộc nhánh RequestAccess bị từ chối + appeal được chấp nhận. |
 | **Record `ClaimRequest` PENDING** | ⏳ WDP-27/F23 (cũng Dương) chưa xong | **Seed tay** để test (§6). |
 
 > **I8 (không thương lượng):** thay đổi điểm trust chỉ qua `TrustEngineService.recordEvent`. Viết `user.trustScore += …` trong service = **fail review**.
@@ -86,11 +86,11 @@ Bạn đang làm **màn hình Admin xét "claim"** (yêu cầu nhận sở hữu
 1. **Service trả object, KHÔNG throw:** `{ success, statusCode?, message?, ...data }` (xem [auth.service.ts](apps/api/src/modules/auth/auth.service.ts), [location.service.ts](apps/api/src/modules/locations/location.service.ts)).
 2. **Controller** map object đó sang `HttpException` (xem [auth.controller.ts](apps/api/src/modules/auth/auth.controller.ts)).
 3. **Auth:** `@UseGuards(AuthGuard('jwt-at'), AdminGuard)`, lấy user qua `req.user.userId`. Token **chỉ có `userId`** ([at.strategy.ts](apps/api/src/common/guard/at.strategy.ts)) → `AdminGuard` tự query DB lấy role, chặn ai không phải ADMIN. Bạn không cần lo. (Không cần thêm `AtStrategy` vào providers — `AuthModule` đã đăng ký chiến lược `'jwt-at'` toàn cục.)
-4. **Module:** `imports: [SchemaModule, TrustEngineModule]` để có Model (tất cả schema đã đăng ký trong [schema.module.ts](apps/api/src/common/schemas/schema.module.ts) — gồm `ClaimRequest`, `Location`, `Dispute`, `AuditLog`, `Notification`, `User`) và `TrustEngineService`; providers gồm service + `AdminGuard` (+ Notification stub).
+4. **Module:** `imports: [SchemaModule, TrustEngineModule]` để có Model (gồm `ClaimRequest`, `Location`, `AuditLog`, `Notification`, `User`) và `TrustEngineService`; providers gồm service + `AdminGuard` (+ Notification stub).
 5. **DTO:** `class-validator`. `ValidationPipe({ whitelist: true, transform: true })` đã bật global ([main.ts](apps/api/src/main.ts)).
 6. **Prefix `api`** → route thật là `/api/...`. Swagger `/api/docs` (đã bật `addBearerAuth`).
 7. Message tiếng Việt có dấu.
-8. **Enum lấy từ `common.enums.ts`** — không hardcode magic string. Dùng `ClaimRequestStatus`, `DisputeStatus`, `TrustEventType`.
+8. **Enum lấy từ `common.enums.ts`** — không hardcode magic string. Dùng `ClaimRequestStatus`, `TrustEventType`.
 
 ---
 
@@ -100,7 +100,7 @@ Bạn đang làm **màn hình Admin xét "claim"** (yêu cầu nhận sở hữu
 | Hiện tại | Hành động | Mới | Trust (gọi Trust Engine) | Tác động phụ |
 |---|---|---|---|---|
 | `PENDING` | **approve** (OTP verified + proof khớp + chưa có owner khác) | `APPROVED` | `LOCATION_APPROVED` (+15) | set `location.ownerId = claim.vendorId`; điền `adminDecision`; notify "approved"; audit |
-| `PENDING` | **approve** nhưng `location.ownerId` đã là người KHÁC | *(giữ `PENDING`)* | *(không)* | **KHÔNG gán owner** → tạo `Dispute(OPEN)` (EF20.1) → notify; audit `CLAIM_ROUTED_TO_DISPUTE` |
+| `PENDING` | **approve** nhưng `location.ownerId` đã là người KHÁC | `REJECTED` | *(không)* | **KHÔNG gán owner** → trả `redirectToRequestAccess: true`; notify; audit `CLAIM_REDIRECT_TO_REQUEST_ACCESS` |
 | `PENDING` | **reject** | `REJECTED` | *(KHÔNG chấm trust — đã chốt, xem §3.6)* | điền `adminDecision.reason`; **KHÔNG đụng owner**; notify "rejected"; audit. Bản cũ giữ nguyên |
 | `PENDING` | **request more evidence** | *(giữ `PENDING`)* | *(không)* | notify người gửi bổ sung; audit `CLAIM_REQUEST_EVIDENCE`. **Không đổi status** |
 | khác PENDING | bất kỳ | — | — | trả 409 "Claim không ở trạng thái PENDING" |
@@ -217,7 +217,7 @@ export class RequestEvidenceDTO {
 
 ---
 
-### Bước 2 — AdminClaimService (gọi M2/M3 qua port; tạo Dispute khi EF20.1)
+### Bước 2 — AdminClaimService (gọi M2/M3; redirect RequestAccess khi EF20.1)
 
 **`modules/admin-claims/admin-claim.service.ts`**
 ```ts
@@ -229,11 +229,9 @@ import {
   ClaimRequestDocument,
 } from 'src/common/schemas/claim-request.schema';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
-import { Dispute } from 'src/common/schemas/dispute.schema';
 import { AuditLog } from 'src/common/schemas/audit-log.schema';
 import {
   ClaimRequestStatus,
-  DisputeStatus,
   TrustEventType,
 } from 'src/common/schemas/common.enums';
 import { TrustEngineService } from 'src/modules/trust-engine/trust-engine.service';
@@ -249,7 +247,6 @@ export class AdminClaimService {
     @InjectModel(ClaimRequest.name)
     private claimModel: Model<ClaimRequestDocument>,
     @InjectModel(Location.name) private locationModel: Model<LocationDocument>,
-    @InjectModel(Dispute.name) private disputeModel: Model<Dispute>,
     @InjectModel(AuditLog.name) private auditLogModel: Model<AuditLog>,
     private readonly trust: TrustEngineService,
     @Inject(NOTIFICATION_PORT) private notification: NotificationPort,
@@ -324,13 +321,13 @@ export class AdminClaimService {
         };
       }
 
-      // EF20.1: nếu location đã có owner KHÁC vendor đang claim → KHÔNG ghi đè,
-      // mở Dispute (F27/WDP-31) thay vì gán owner.
+      // EF20.1: location đã có owner khác thì không ghi đè.
+      // Claim bị reject và client được hướng sang RequestAccess.
       if (
         location.ownerId &&
         String(location.ownerId) !== String(claim.vendorId)
       ) {
-        return this.routeToDispute(claim, location, adminId);
+        return this.redirectToRequestAccess(claim, location, adminId);
       }
 
       // (Đã đúng owner sẵn) hoặc chưa có owner → gán owner (I5/I6 — chỗ DUY NHẤT F24 gán).
@@ -507,43 +504,48 @@ export class AdminClaimService {
     return { success: true, claim, location };
   }
 
-  /** EF20.1: location đã có owner khác → mở Dispute(OPEN), KHÔNG gán owner. */
-  private async routeToDispute(claim: any, location: any, adminId: string) {
-    // Chỉ MỞ case. Logic resolve keep/transfer/revoke là của F27/WDP-31 — KHÔNG xử ở đây.
-    const dispute = await this.disputeModel.create({
-      locationId: location._id,
-      vendorAId: location.ownerId, // chủ hiện tại
-      vendorBId: claim.vendorId, // người đang claim
-      evidenceB: claim.evidenceFiles ?? [], // bằng chứng phía người claim
-      status: DisputeStatus.OPEN,
-    });
+  private async redirectToRequestAccess(
+    claim: any,
+    location: any,
+    adminId: string,
+  ) {
+    const reason = 'Địa điểm đã có chủ, hãy gửi RequestAccess';
+    claim.status = ClaimRequestStatus.REJECTED;
+    claim.adminDecision = {
+      decidedBy: new Types.ObjectId(adminId),
+      reason,
+      decidedAt: new Date(),
+    };
+    await claim.save();
 
-    // Claim GIỮ PENDING — chờ F27 phân xử rồi mới chốt APPROVED/REJECTED.
     await this.notification.notify({
       userId: String(claim.vendorId),
-      type: 'CLAIM_ROUTED_TO_DISPUTE',
-      title: 'Claim của bạn được chuyển sang tranh chấp',
-      body: `"${location.name}" đã có chủ sở hữu khác. Yêu cầu của bạn được chuyển sang quy trình giải quyết tranh chấp.`,
-      refCollection: 'disputes',
-      refId: String(dispute._id),
+      type: 'CLAIM_REDIRECTED_TO_REQUEST_ACCESS',
+      title: 'Hãy gửi yêu cầu chuyển quyền',
+      body: `"${location.name}" đã có chủ. Bạn có thể gửi RequestAccess để yêu cầu quyền quản lý.`,
+      refCollection: 'claim_requests',
+      refId: String(claim._id),
     });
 
     await this.writeAudit(
       adminId,
-      'CLAIM_ROUTED_TO_DISPUTE',
+      'CLAIM_REDIRECT_TO_REQUEST_ACCESS',
       claim._id,
-      'Location đã có chủ khác tại thời điểm duyệt (EF20.1)',
-      { disputeId: String(dispute._id), locationId: String(location._id) },
+      reason,
+      {
+        claimStatus: {
+          from: ClaimRequestStatus.PENDING,
+          to: ClaimRequestStatus.REJECTED,
+        },
+        locationId: String(location._id),
+      },
     );
 
     return {
       success: true,
-      statusCode: 200,
-      message:
-        'Địa điểm đã có chủ sở hữu khác — đã mở tranh chấp (F27), claim giữ PENDING',
-      dispute: { id: dispute._id, status: dispute.status },
+      redirectToRequestAccess: true,
+      message: reason,
       claim: { id: claim._id, status: claim.status },
-      // TODO: depends on F27/WDP-31 — quy trình phân xử dispute.
     };
   }
 
@@ -677,7 +679,7 @@ import { AdminClaimController } from './admin-claim.controller';
 import { AdminClaimService } from './admin-claim.service';
 
 @Module({
-  // SchemaModule: ClaimRequest, Location, Dispute, AuditLog, Notification, User.
+  // SchemaModule: ClaimRequest, Location, AuditLog, Notification, User.
   // TrustEngineModule: export TrustEngineService (Trust Engine đã thật).
   imports: [SchemaModule, TrustEngineModule],
   controllers: [AdminClaimController],
@@ -708,7 +710,7 @@ imports: [
 
 ---
 
-## 6. Seed data để test (không cần WDP-27 xong)
+## 6. Dữ liệu mẫu để kiểm thử (không cần WDP-27 hoàn thành)
 
 Vì WDP-27 (tạo claim) chưa xong, **seed tay** bằng **MongoDB Compass / mongosh**. Cần: 1 `Location`, 1 user `VENDOR` (người claim), 1 user `ADMIN` (để login), và 1 `ClaimRequest` PENDING.
 
@@ -756,13 +758,13 @@ db.users.insertOne({
 
 **Biến thể để test các nhánh:**
 - **Thiếu điều kiện (BR-45):** tạo 1 claim PENDING với `otpVerified: false` **hoặc** `evidenceFiles: []` → approve phải trả **422**.
-- **EF20.1 (owner khác):** thêm `ownerId: ObjectId('<userKhác>')` vào location (khác `vendorId`) → approve phải **mở Dispute**, KHÔNG gán owner.
+- **EF20.1 (owner khác):** thêm `ownerId: ObjectId('<userKhác>')` vào location (khác `vendorId`) → approve phải reject claim, trả `redirectToRequestAccess: true`, KHÔNG gán owner và KHÔNG tạo Dispute.
 
 > Test xong **xoá** record seed. (Đừng commit seed.)
 
 ---
 
-## 7. Chạy & test
+## 7. Chạy và kiểm thử
 
 ```bash
 # từ thư mục gốc repo (repo đã chuyển pnpm → npm)
@@ -778,7 +780,7 @@ npm run start:dev --workspace=api
 | `GET .../queue?status=REJECTED` | chỉ claim REJECTED |
 | `PATCH .../:id/approve` (claim đủ OTP+proof) | claim → `APPROVED`; `location.ownerId = vendorId`; `adminDecision` điền đủ |
 | `PATCH .../:id/approve` (claim thiếu OTP/proof) | **422** "Chưa đủ điều kiện duyệt..." |
-| `PATCH .../:id/approve` (location đã có owner khác) | mở **Dispute(OPEN)**; claim **giữ PENDING**; KHÔNG đổi `ownerId` |
+| `PATCH .../:id/approve` (location đã có owner khác) | claim → `REJECTED`; `redirectToRequestAccess: true`; KHÔNG đổi `ownerId`; KHÔNG tạo Dispute |
 | `PATCH .../:id/reject` `{reason}` | claim → `REJECTED` + `adminDecision.reason`; `location.ownerId` **không đổi** |
 | `PATCH .../:id/request-evidence` `{message}` | 200; claim **vẫn PENDING**; có notification |
 | approve/reject claim đã APPROVED/REJECTED | **409** |
@@ -788,9 +790,9 @@ npm run start:dev --workspace=api
 3. Kiểm DB:
    - `locations`: sau approve → field `ownerId` = vendorId (⇒ badge Verified của F10 tự lên).
    - `claim_requests`: status đổi đúng; `adminDecision{decidedBy,reason,decidedAt}` có dữ liệu; **bản REJECTED vẫn còn** (không bị xoá/ghi đè).
-   - `disputes`: có 1 doc `OPEN` ở nhánh EF20.1 (`vendorAId` = chủ cũ, `vendorBId` = người claim).
+   - `disputes`: không có document mới từ nhánh EF20.1; Dispute chỉ sinh từ RequestAccess bị từ chối + appeal được chấp nhận.
    - `notifications`: có doc tương ứng mỗi hành động (stub M3).
-   - `audit_logs`: có doc `CLAIM_APPROVE / CLAIM_REJECT / CLAIM_REQUEST_EVIDENCE / CLAIM_ROUTED_TO_DISPUTE`.
+   - `audit_logs`: có doc `CLAIM_APPROVE / CLAIM_REJECT / CLAIM_REQUEST_EVIDENCE / CLAIM_REDIRECT_TO_REQUEST_ACCESS`.
    - Trust: sau khi **approve**, `users.<vendor>.trustScore` **tăng 15** và có 1 doc trong `trust_events` (Trust Engine thật đã chạy). Reject: mặc định **không** có trust event (xem §3.6).
 
 4. **Test lại reject → claim mới (BR-46):** sau khi reject claim cũ (đã REJECTED), insert 1 `ClaimRequest` PENDING **mới** cùng `locationId` → phải insert **thành công** (partial unique index cho phép vì bản cũ đã rời PENDING). Đây là bằng chứng "reject mở claim mới mà không ghi đè".
@@ -805,13 +807,13 @@ npm run start:dev --workspace=api
 - [ ] **Reject** bắt buộc lý do → claim `REJECTED` + `adminDecision.reason`; **KHÔNG đụng owner**; **bản claim cũ được giữ lại** (BR-46)
 - [ ] Reject xong → có thể tạo **claim PENDING mới** cùng location (partial unique index mở lại — I6)
 - [ ] **Request more evidence** → claim **giữ PENDING** + notify (KHÔNG đẻ enum); có `// RULE-AMBIGUOUS`
-- [ ] **EF20.1:** location có owner khác lúc duyệt → **mở Dispute(OPEN)**, KHÔNG ghi đè owner, claim giữ PENDING (cross-ref F27/WDP-31)
+- [ ] **EF20.1:** location có owner khác lúc duyệt → claim `REJECTED`, trả `redirectToRequestAccess: true`, KHÔNG ghi đè owner và KHÔNG tạo Dispute
 - [ ] Approve gọi `TrustEngineService.recordEvent(LOCATION_APPROVED)` → điểm vendor +15 (KHÔNG tự cộng — I8). Reject: **KHÔNG** chấm trust (đã chốt — không gọi `recordEvent`; xem §3.6)
 - [ ] **Notify** người gửi claim ở mọi nhánh (stub M3)
 - [ ] **Audit log** ghi mọi hành động admin (I4 / BR-43)
 - [ ] Chỉ ADMIN qua `AdminGuard`; VENDOR/CUSTOMER **403**; no-token **401**
 - [ ] Không xử lý lại claim đã APPROVED/REJECTED (**409**)
-- [ ] Có `// TODO: depends on WDP-7` ở seam Notification (và cross-ref F27/WDP-31 cho Dispute)
+- [ ] Có `// TODO: depends on WDP-7` ở seam Notification
 
 ---
 
@@ -819,9 +821,9 @@ npm run start:dev --workspace=api
 
 1. **Phụ thuộc WDP-27/F23 (tạo claim — cũng Dương):** phải có `ClaimRequest` PENDING để có cái mà duyệt. WDP-27 chưa xong → **seed tay** (§6) để test độc lập. Khi WDP-27 xong, đối chiếu lại các field (`otpVerified`, `evidenceFiles[].geo/capturedAt`, `deviceDistanceMeters`) đúng như F23 sinh ra.
 2. **Trust khi từ chối — ✅ ĐÃ CHỐT: KHÔNG trừ trust** (giống từ chối địa điểm WDP-19). Nhánh reject không gọi `recordEvent`. Claim gian lận/giả mạo → xử bằng report + đề xuất ban (F31/WDP-35), không trừ điểm ở hành động reject. (Approve dùng `LOCATION_APPROVED` +15.)
-3. **Sync M3/WDP-7 (Đăng, chưa xong):** chốt `notify(...)` + danh mục eventType (`CLAIM_APPROVED / CLAIM_REJECTED / CLAIM_NEEDS_MORE_EVIDENCE / CLAIM_ROUTED_TO_DISPUTE`) để Đăng làm template. Notification vẫn stub (tái dùng port WDP-19).
-4. **Routes sang WDP-31/F27 (dispute — cũng Dương):** bản này CHỈ **mở** `Dispute(OPEN)` cho EF20.1. **Logic resolve keep/transfer/revoke nằm ở WDP-31** — khi làm F27, xử lý các dispute do F24 mở (đọc `vendorAId`=chủ cũ, `vendorBId`=người claim, `evidenceB`). Chốt với chính mình: F24 mở case, F27 phân xử, đừng nhân đôi logic.
-5. **Báo Trung (WDP-39 audit):** đang ghi `audit_logs` trực tiếp; sau gộp về util audit chung. Action dùng: `CLAIM_APPROVE / CLAIM_REJECT / CLAIM_REQUEST_EVIDENCE / CLAIM_ROUTED_TO_DISPUTE`.
+3. **Sync M3/WDP-7 (Đăng, chưa xong):** chốt `notify(...)` + danh mục eventType (`CLAIM_APPROVED / CLAIM_REJECTED / CLAIM_NEEDS_MORE_EVIDENCE / CLAIM_REDIRECTED_TO_REQUEST_ACCESS`) để Đăng làm template. Notification vẫn stub (tái dùng port WDP-19).
+4. **RequestAccess/Dispute:** F24 chỉ reject và redirect sang RequestAccess. Dispute chỉ được tạo khi RequestAccess bị owner từ chối và appeal của requester được chấp nhận; không mở đường Claim → Dispute trực tiếp.
+5. **Báo Trung (WDP-39 audit):** đang ghi `audit_logs` trực tiếp; sau gộp về util audit chung. Action dùng: `CLAIM_APPROVE / CLAIM_REJECT / CLAIM_REQUEST_EVIDENCE / CLAIM_REDIRECT_TO_REQUEST_ACCESS`.
 6. **AdminGuard / Notification stub:** `AdminGuard` đã có sẵn trong repo (module `admin-category` đang dùng) — dùng lại, KHÔNG dựng RolesGuard. Notification stub tái dùng từ WDP-19; nếu WDP-19 chưa merge, phối hợp để `notification.port.ts` vào trước (hoặc tự tạo theo WDP-19 §5 Bước 1).
 7. **Schema-gap cần chốt:** (a) `ClaimRequestStatus` **thiếu** trạng thái "cần bổ sung bằng chứng" — hiện workaround = giữ PENDING + notify; cân nhắc thêm enum `NEEDS_MORE_EVIDENCE`. (b) "Verified badge" **không có field** trong `location.schema.ts` — đang suy ra từ `ownerId != null`; nếu UI cần cờ tường minh thì bàn thêm field ở WDP-5 (đừng tự thêm lẻ).
 8. **UI Admin claim queue** nằm ở `web` (Next.js 15 + MUI) — tách khỏi backend; nếu bạn không làm web, bàn giao contract API ở trên cho người làm web.
@@ -834,7 +836,7 @@ npm run start:dev --workspace=api
 2. DTO (list / reject / request-evidence).
 3. Seed 1 location no-owner + 1 vendor + 1 claim PENDING + 1 admin.
 4. `getQueue` + controller `GET queue` → test list + flags.
-5. `approve` (kèm chặn BR-45 + nhánh EF20.1 Dispute) → test 422 / approved / dispute.
+5. `approve` (kèm chặn BR-45 + nhánh EF20.1 redirect RequestAccess) → test 422 / approved / redirect.
 6. `reject` → test status + giữ owner + bản cũ còn; rồi test tạo claim PENDING mới.
 7. `requestMoreEvidence` → test giữ PENDING + notify.
 8. Gắn `trust.recordEvent` (chỉ nhánh approve) + `notify` + `writeAudit` vào từng nhánh.

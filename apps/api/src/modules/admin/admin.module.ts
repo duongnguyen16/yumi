@@ -15,7 +15,7 @@ import {
   providers: [
     AdminLocationService,
     AdminGuard,
-    { provide: NOTIFICATION_PORT, useClass: NotificationStub }, // TODO: swap M3 khi WDP-7 xong
+    { provide: NOTIFICATION_PORT, useClass: NotificationStub },
   ],
 })
 export class AdminModule {}
