@@ -19,6 +19,7 @@ const ALLOWED_MIME_TYPES = [
   'video/mpeg',
 ];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const PRODUCT_IMAGE_ROOT = 'location-products';
 
 @Injectable()
 export class ImagesService {
@@ -162,6 +163,84 @@ export class ImagesService {
     const folderPath = `${baseFolder}/${randomUUID()}`;
     return Promise.all(files.map((file) => this.updateMedia(folderPath, file)));
   }
+
+  async uploadProductImage(
+    locationId: string,
+    productId: string,
+    file: Express.Multer.File,
+  ) {
+    this.validateProductImage(file);
+
+    const extension =
+      file.mimetype === 'image/png'
+        ? '.png'
+        : extname(file.originalname).toLowerCase() === '.jpeg'
+          ? '.jpeg'
+          : '.jpg';
+    const objectPath = `${PRODUCT_IMAGE_ROOT}/${locationId}/${productId}/${randomUUID()}${extension}`;
+    const supabase = this.getSupabaseClient();
+    const bucket = this.getBucket();
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(objectPath, file.buffer, {
+        contentType: file.mimetype,
+        cacheControl: '31536000',
+        upsert: false,
+      });
+
+    if (error || !data) {
+      throw new BadRequestException(
+        `Không thể tải ảnh sản phẩm lên: ${error?.message ?? 'Unknown error'}`,
+      );
+    }
+
+    const { data: publicData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return {
+      url: publicData.publicUrl,
+      path: data.path,
+    };
+  }
+
+  async deleteProductImage(path?: string | null) {
+    if (!path) {
+      return;
+    }
+
+    if (!path.startsWith(`${PRODUCT_IMAGE_ROOT}/`)) {
+      throw new BadRequestException('Đường dẫn ảnh sản phẩm không hợp lệ');
+    }
+
+    const { error } = await this.getSupabaseClient()
+      .storage.from(this.getBucket())
+      .remove([path]);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Không thể xóa ảnh sản phẩm: ${error.message}`,
+      );
+    }
+  }
+
+  private validateProductImage(file: Express.Multer.File) {
+    const extension = extname(file.originalname).toLowerCase();
+
+    if (
+      !['image/jpeg', 'image/jpg', 'image/png'].includes(file.mimetype) ||
+      !['.jpg', '.jpeg', '.png'].includes(extension)
+    ) {
+      throw new BadRequestException(
+        'Định dạng tệp không hợp lệ. Chỉ hỗ trợ .jpg, .jpeg, .png',
+      );
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      throw new BadRequestException('Ảnh sản phẩm phải nhỏ hơn hoặc bằng 5MB');
+    }
+  }
+
   private getBucket() {
     return (
       this.configService.get<string>('SUPABASE_STORAGE_BUCKET') ?? 'images'

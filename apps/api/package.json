@@ -20,6 +20,7 @@
     "start:debug": "nest start --debug --watch",
     "prestart:prod": "npm run build --workspace=@wdp301/shared",
     "start:prod": "node dist/main",
+    "migrate:clear-product-images": "node --env-file=.env scripts/clear-legacy-product-images.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

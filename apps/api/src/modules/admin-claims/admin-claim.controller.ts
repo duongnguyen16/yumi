@@ -40,11 +40,13 @@ interface ServiceResult {
 export class AdminClaimController {
   constructor(private readonly service: AdminClaimService) {}
 
+  // list claims
   @Get('queue')
   async getQueue(@Query() query: ListClaimsDTO) {
     return this.handle(await this.service.getQueue(query));
   }
 
+  // đồng ý 
   @Patch(':id/approve')
   async approve(
     @Param('id') id: string,
@@ -56,6 +58,8 @@ export class AdminClaimController {
     );
   }
 
+  // từ chối
+
   @Patch(':id/reject')
   async reject(
     @Param('id') id: string,
@@ -66,6 +70,8 @@ export class AdminClaimController {
       await this.service.reject(id, req.user.userId, body.reason),
     );
   }
+
+  // thêm bằng chứng đi
 
   @Patch(':id/request-evidence')
   async requestEvidence(

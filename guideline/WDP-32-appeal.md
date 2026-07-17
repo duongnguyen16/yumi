@@ -127,7 +127,7 @@ Không dùng `OVERTURNED` cho RequestAccess appeal.
 
 ## Authorization
 
-- Submit và xem Appeal của mình: `AuthGuard('jwt-at')`.
+- Submit và xem Appeal của mình: `AuthGuard('jwt-appeal-access')` để tài khoản bị ban vẫn có đường kháng cáo; strategy này chỉ cấp phạm vi appeal, không mở quyền truy cập API thông thường.
 - Queue, detail và resolve Admin: `AuthGuard('jwt-at')` cùng `AdminGuard`.
 - User không được submit Appeal thay người chịu quyết định.
 - User chỉ được xem Appeal của chính mình.

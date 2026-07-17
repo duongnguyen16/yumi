@@ -28,11 +28,13 @@ export class SubmitAppealDTO {
   @IsMongoId()
   targetId!: string;
 
+  // lý do kháng nghị
   @IsString()
   @MinLength(10)
   @MaxLength(1000)
   argument!: string;
 
+  // bằng chứng bổ sung
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(5)

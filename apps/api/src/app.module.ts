@@ -30,6 +30,7 @@ import { RequestAccessModule } from './modules/request-access/request-access.mod
 import { AppealModule } from './modules/appeals/appeal.module';
 import { DisputeModule } from './modules/disputes/dispute.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     AppealModule,
     DisputeModule,
     NotificationsModule,
+    BookmarksModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

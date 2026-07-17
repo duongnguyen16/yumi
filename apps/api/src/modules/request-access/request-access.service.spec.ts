@@ -15,7 +15,7 @@ function query<T>(value: T) {
   return { exec: jest.fn().mockResolvedValue(value) };
 }
 
-describe('RequestAccessService', () => {
+describe('Kiểm thử RequestAccessService', () => {
   const reqId = new Types.ObjectId();
   const locId = new Types.ObjectId();
   const ownerId = new Types.ObjectId();
@@ -69,7 +69,7 @@ describe('RequestAccessService', () => {
     };
   }
 
-  it('resolves pending state lazily without changing status', () => {
+  it('xác định trạng thái chờ một cách lười biếng mà không đổi trạng thái lưu trữ', () => {
     const { service } = setup();
     const open = request({ timeoutAt: new Date('2026-07-12T00:00:00.000Z') });
     const late = request({ timeoutAt: new Date('2026-07-10T00:00:00.000Z') });
@@ -81,7 +81,7 @@ describe('RequestAccessService', () => {
     expect(late.status).toBe(RequestAccessStatus.PENDING);
   });
 
-  it('blocks creation when a pending claim owns the slot', async () => {
+  it('chặn tạo mới khi claim chờ duyệt đã chiếm vị trí', async () => {
     const { service, locModel, claimModel, reqModel } = setup();
     locModel.findById.mockReturnValue(query(location()));
     claimModel.exists.mockResolvedValue({ _id: new Types.ObjectId() });
@@ -94,7 +94,7 @@ describe('RequestAccessService', () => {
     expect(reqModel.create).not.toHaveBeenCalled();
   });
 
-  it('creates one pending request and notifies the owner', async () => {
+  it('tạo một yêu cầu chờ duyệt và thông báo cho chủ sở hữu', async () => {
     const { service, locModel, claimModel, reqModel, notify } = setup();
     const created = request();
     locModel.findById.mockReturnValue(query(location()));
@@ -118,7 +118,7 @@ describe('RequestAccessService', () => {
     expect(notify.notify).toHaveBeenCalledTimes(1);
   });
 
-  it('lists incoming requests with effective state', async () => {
+  it('liệt kê yêu cầu đến kèm trạng thái hiệu lực', async () => {
     const { service, reqModel } = setup();
     const item = request();
     const find = {
@@ -138,7 +138,7 @@ describe('RequestAccessService', () => {
     });
   });
 
-  it('grants ownership and starts a seven day hold', async () => {
+  it('chuyển quyền sở hữu và bắt đầu khóa bảy ngày', async () => {
     const { service, reqModel, locModel, notify, logModel } = setup();
     const req = request();
     const loc = location();
@@ -157,7 +157,7 @@ describe('RequestAccessService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects without changing owner or hold', async () => {
+  it('từ chối mà không thay đổi chủ sở hữu hoặc thời hạn khóa', async () => {
     const { service, reqModel, locModel, notify } = setup();
     const req = request();
     const loc = location();
@@ -177,7 +177,7 @@ describe('RequestAccessService', () => {
     expect(notify.notify).toHaveBeenCalledTimes(2);
   });
 
-  it('blocks owner response after the three day timeout', async () => {
+  it('chặn phản hồi của chủ sở hữu sau thời hạn ba ngày', async () => {
     const { service, reqModel } = setup();
     reqModel.findById.mockReturnValue(
       query(request({ timeoutAt: new Date(Date.now() - 60_000) })),
@@ -190,7 +190,7 @@ describe('RequestAccessService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 409 });
   });
 
-  it('blocks transfer when the location owner changed', async () => {
+  it('chặn chuyển quyền khi chủ sở hữu địa điểm đã thay đổi', async () => {
     const { service, reqModel, locModel } = setup();
     reqModel.findById.mockReturnValue(query(request()));
     locModel.findById.mockReturnValue(
@@ -204,7 +204,7 @@ describe('RequestAccessService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 409 });
   });
 
-  it('blocks takeover before the lazy timeout', async () => {
+  it('chặn tiếp quản trước thời hạn chờ tự xác định', async () => {
     const { service, reqModel } = setup();
     reqModel.findById.mockReturnValue(query(request()));
 
@@ -222,7 +222,7 @@ describe('RequestAccessService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 409 });
   });
 
-  it('auto grants after timeout with onsite proof and hold', async () => {
+  it('tự động cấp quyền sau khi hết hạn khi có bằng chứng tại chỗ và thời hạn khóa', async () => {
     const { service, reqModel, locModel, notify, logModel } = setup();
     const req = request({ timeoutAt: new Date(Date.now() - 60_000) });
     const loc = location();

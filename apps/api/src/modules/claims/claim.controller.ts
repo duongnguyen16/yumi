@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
@@ -36,11 +37,19 @@ interface ServiceResponse {
 export class ClaimController {
   constructor(private readonly service: ClaimService) {}
 
+  // bắt đầu claim
+
   @Post('start')
-  async start(@Body() body: StartClaimDto, @NestRequest() req: AuthenticatedRequest) {
-    return this.handle(await this.service.start(body.locationId, req.user.userId));
+  async start(
+    @Body() body: StartClaimDto,
+    @NestRequest() req: AuthenticatedRequest,
+  ) {
+    return this.handle(
+      await this.service.start(body.locationId, req.user.userId),
+    );
   }
 
+  // check otp
   @Post('verify-otp')
   async verifyOtp(
     @Body() body: VerifyClaimOtpDto,
@@ -51,8 +60,12 @@ export class ClaimController {
     );
   }
 
+  // gửi req
   @Post('submit')
-  async submit(@Body() body: SubmitClaimDto, @NestRequest() req: AuthenticatedRequest) {
+  async submit(
+    @Body() body: SubmitClaimDto,
+    @NestRequest() req: AuthenticatedRequest,
+  ) {
     return this.handle(await this.service.submit(body, req.user.userId));
   }
 
@@ -63,6 +76,8 @@ export class ClaimController {
         throw new BadRequestException(result.message);
       case 404:
         throw new NotFoundException(result.message);
+      case 403:
+        throw new ForbiddenException(result.message);
       case 409:
         throw new ConflictException(result.message);
       case 410:
