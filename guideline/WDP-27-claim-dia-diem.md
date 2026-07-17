@@ -46,15 +46,16 @@ Giấy phép kinh doanh là **tuỳ chọn** — xác minh dựa vào *kiểm so
 | **Quan trọng** | Core · Sprint S3 · Feature Ownership · HF-3 |
 | **Mô tả** | Vendor claim một địa điểm **đã có sẵn** (no-owner). Bắt buộc **3 yếu tố xác minh độc lập** (BR-14): (a) **OTP gửi tới SĐT của listing**; (b) **mã dùng-một-lần do hệ thống cấp** mà người claim phải đặt tại hiện trường; (c) **ảnh hiện trường có geotag + timestamp** (biển hiệu + mã hệ thống). Giấy phép kinh doanh **tùy chọn** (BR-15). Chặn nếu đã có 1 PENDING (BR-61/I6) hoặc địa điểm đã có chủ. |
 | **Đụng tới** | `api` (module Claim) + `mobile` (vendor claim wizard tại `app/claim/[locationId].tsx`) |
-| **DoD** | (1) Claim chỉ gửi được khi **đủ cả 3 yếu tố**; (2) chặn **duplicate PENDING slot**; (3) **KHÔNG** gán owner (để F24 làm); (4) gọi **M3 notify** báo đã nhận claim. |
+| **DoD** | (1) Chỉ user `VENDOR`, `ACTIVE`, `phoneVerified=true` được thao tác claim; (2) Claim chỉ gửi được khi **đủ cả 3 yếu tố**; (3) chặn **duplicate PENDING slot**; (4) **KHÔNG** gán owner (để F24 làm); (5) gọi **M3 notify** báo đã nhận claim. |
 
 ### Phân rã DoD
-1. **Bước OTP:** gửi OTP tới `phone` của **listing** (không phải SĐT người dùng) → chứng minh kiểm soát số điện thoại của địa điểm. Reuse `SmsService.sendOtp`.
-2. **Bước cấp mã:** hệ thống sinh **mã dùng-một-lần** (one-time site code) cho cặp (vendor, location), TTL ngắn. Người claim mang mã này ra **đặt tại biển hiệu** rồi chụp ảnh.
-3. **Bước nộp claim:** upload **EvidenceFile** ảnh hiện trường có `geo` + `capturedAt` + (mã hệ thống nhìn thấy trong ảnh) → tạo `ClaimRequest { type: CLAIM_EXISTING_LOCATION, status: PENDING, otpVerified, evidenceFiles[], licenseUrl? }`.
-4. **Chặn trùng:** đã có claim/request-access `PENDING` cho location này → **409** (I6/BR-61). Địa điểm đã `ownerId` → **409**, gợi ý **báo cáo (report)** thay vì claim (→ UC25).
-5. **KHÔNG set `location.ownerId`** ở bất kỳ chỗ nào trong ticket này (I5).
-6. **Gọi M3** (notification) báo vendor "đã nhận yêu cầu claim, đang chờ admin duyệt".
+1. **Authorization:** tại cả `start`, `verify-otp` và `submit`, service tải user và chặn nếu không phải `VENDOR`, không `ACTIVE` hoặc chưa xác minh SĐT.
+2. **Bước OTP:** gửi OTP tới `phone` của **listing** (không phải SĐT người dùng) → chứng minh kiểm soát số điện thoại của địa điểm. Reuse `SmsService.sendOtp`.
+3. **Bước cấp mã:** hệ thống sinh **mã dùng-một-lần** (one-time site code) cho cặp (vendor, location), TTL ngắn. Người claim mang mã này ra **đặt tại biển hiệu** rồi chụp ảnh.
+4. **Bước nộp claim:** upload **EvidenceFile** ảnh hiện trường có `geo` + `capturedAt` + (mã hệ thống nhìn thấy trong ảnh) → tạo `ClaimRequest { type: CLAIM_EXISTING_LOCATION, status: PENDING, otpVerified, evidenceFiles[], licenseUrl? }`.
+5. **Chặn trùng:** đã có claim/request-access `PENDING` cho location này → **409** (I6/BR-61). Địa điểm đã `ownerId` → **409**, gợi ý **báo cáo (report)** thay vì claim (→ UC25).
+6. **KHÔNG set `location.ownerId`** ở bất kỳ chỗ nào trong ticket này (I5).
+7. **Gọi M3** (notification) báo vendor "đã nhận yêu cầu claim, đang chờ admin duyệt".
 
 ---
 
@@ -84,7 +85,7 @@ Nhắc lại 3 invariant chi phối ticket này (đã giải nghĩa ở khối "
 
 1. **Service trả object, KHÔNG throw:** `{ success, statusCode?, message?, ...data }` (xem [auth.service.ts](apps/api/src/modules/auth/auth.service.ts)).
 2. **Controller** map object đó sang `HttpException` (xem [auth.controller.ts](apps/api/src/modules/auth/auth.controller.ts)).
-3. **Auth:** `@UseGuards(AuthGuard('jwt-at'))`, lấy user qua `req.user.userId`. Token **chỉ có `userId`** ([at.strategy.ts](apps/api/src/common/guard/at.strategy.ts)).
+3. **Auth:** `@UseGuards(AuthGuard('jwt-at'))` chỉ xác thực token. Vì token chỉ có `userId`, `ClaimService` phải tải `User` ở **mọi method** và kiểm `role === VENDOR`, `status === ACTIVE`, `phoneVerified === true`; vi phạm trả 403.
 4. **Module:** `imports: [SchemaModule]` để có mọi Model; `providers: [ClaimService]` (`AtStrategy` **không** cần thêm — `AuthModule` đã đăng ký chiến lược `'jwt-at'` toàn cục ở AppModule).
 5. **DTO:** `class-validator`. `ValidationPipe({ whitelist: true, transform: true })` đã bật global ([main.ts](apps/api/src/main.ts)).
 6. **Prefix `api`** → route thật là `/api/...`. Swagger `/api/docs` (đã bật `addBearerAuth`).
@@ -416,6 +417,7 @@ import { Model, Types } from 'mongoose';
 import { randomInt } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
 import {
   ClaimRequest,
   ClaimRequestDocument,
@@ -433,6 +435,8 @@ import {
   ClaimRequestType,
   LocationStatus,
   RequestAccessStatus,
+  UserRole,
+  UserStatus,
 } from 'src/common/schemas/common.enums';
 import {
   NOTIFICATION_PORT,
@@ -456,6 +460,7 @@ export class ClaimService {
     private requestAccessModel: Model<RequestAccessDocument>,
     @InjectModel(ClaimVerificationSession.name)
     private sessionModel: Model<ClaimVerificationSessionDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(NOTIFICATION_PORT) private notification: NotificationPort,
     private smsService: SmsService,
   ) {}
@@ -463,8 +468,10 @@ export class ClaimService {
   // ───────────────────────── BƯỚC 1: start ─────────────────────────
   async start(locationId: string, vendorId: string) {
     try {
-      if (!Types.ObjectId.isValid(locationId))
-        return { success: false, statusCode: 400, message: 'ID địa điểm không hợp lệ' };
+      if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId))
+        return { success: false, statusCode: 400, message: 'ID địa điểm hoặc người yêu cầu không hợp lệ' };
+      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      if (eligibilityFailure) return eligibilityFailure;
 
       const location = await this.locationModel.findById(locationId).lean().exec();
       if (!location)
@@ -531,6 +538,10 @@ export class ClaimService {
   // ───────────────────────── BƯỚC 2: verify-otp ─────────────────────────
   async verifyOtp(locationId: string, vendorId: string, otp: string) {
     try {
+      if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId))
+        return { success: false, statusCode: 400, message: 'ID địa điểm hoặc người yêu cầu không hợp lệ' };
+      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      if (eligibilityFailure) return eligibilityFailure;
       const session = await this.sessionModel.findOne({
         vendorId: new Types.ObjectId(vendorId),
         locationId: new Types.ObjectId(locationId),
@@ -563,6 +574,10 @@ export class ClaimService {
   async submit(dto: SubmitClaimDTO, vendorId: string) {
     try {
       const { locationId } = dto;
+      if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId))
+        return { success: false, statusCode: 400, message: 'ID địa điểm hoặc người yêu cầu không hợp lệ' };
+      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      if (eligibilityFailure) return eligibilityFailure;
       const location = await this.locationModel.findById(locationId).lean().exec();
       if (!location)
         return { success: false, statusCode: 404, message: 'Không tìm thấy địa điểm' };
@@ -656,6 +671,17 @@ export class ClaimService {
   }
 
   // ───────────────────────── helpers ─────────────────────────
+  private async getEligibilityFailure(vendorId: string) {
+    const user = await this.userModel.findById(vendorId).lean().exec();
+    if (!user || user.role !== UserRole.VENDOR)
+      return { success: false, statusCode: 403, message: 'Chỉ tài khoản Vendor mới có thể claim địa điểm' };
+    if (user.status !== UserStatus.ACTIVE)
+      return { success: false, statusCode: 403, message: 'Tài khoản Vendor không ở trạng thái hoạt động' };
+    if (user.phoneVerified !== true)
+      return { success: false, statusCode: 403, message: 'Vendor phải xác minh số điện thoại trước khi claim địa điểm' };
+    return null;
+  }
+
   /** I6/BR-61: slot PENDING bị chiếm bởi claim HOẶC request-access. */
   private async hasPendingSlot(locationId: string): Promise<boolean> {
     const locId = new Types.ObjectId(locationId);
@@ -836,6 +862,7 @@ Swagger `http://localhost:3000/api/docs` → `POST /api/auth/login` (VENDOR) →
 | `verify-otp` sai 6 lần | `429` "sai quá nhiều lần" |
 | `submit` sau khi session hết hạn (TTL) | `410` "phiên hết hạn" |
 | Không token | `401` |
+| CUSTOMER, user không ACTIVE hoặc Vendor chưa verify phone gọi bất kỳ claim endpoint nào | `403`; không tạo session/claim |
 | Listing **không có phone** | `start` trả `otpRequired:false`; bỏ qua bước 2; `submit` vẫn yêu cầu proof; evidence có `metadata.adminScrutiny` |
 
 **Kiểm DB sau happy-path:**
@@ -856,7 +883,7 @@ Swagger `http://localhost:3000/api/docs` → `POST /api/auth/login` (VENDOR) →
 - [ ] **BR-15:** `licenseUrl` **optional** — submit không có license vẫn pass.
 - [ ] **Nhánh no-phone:** bỏ OTP, vẫn bắt buộc proof, gắn `adminScrutiny` cho F24 soi kỹ.
 - [ ] **Đã có chủ:** `start`/`submit` → 409 + gợi ý report (không cho claim đè).
-- [ ] **I3:** mọi endpoint sau `AuthGuard('jwt-at')`; no-token → 401.
+- [ ] **I3:** mọi endpoint sau `AuthGuard('jwt-at')`; no-token → 401; service kiểm lại `VENDOR + ACTIVE + phoneVerified` ở cả `start`, `verify-otp`, `submit`; sai điều kiện → 403.
 - [ ] **I8:** ticket này **không** đụng trust score (trust cộng ở F24).
 - [ ] Có `// RULE-AMBIGUOUS` ở: (1) chỗ lưu siteCode (schema gap §3.4), (2) nguồn SĐT listing (§3.5), và `// TODO: depends on F03/WDP-7` ở seam M3.
 - [ ] Session tạm tự hết hạn (TTL index) + bị xóa sau submit.

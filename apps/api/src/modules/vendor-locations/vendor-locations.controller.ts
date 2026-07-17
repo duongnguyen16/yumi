@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   HttpException,
   InternalServerErrorException,
@@ -146,7 +147,7 @@ export class VendorLocationsController {
           throw new BadRequestException(result.message);
         }
         if (result.statusCode === 403) {
-          throw new BadRequestException(result.message);
+          throw new ForbiddenException(result.message);
         }
         if (result.statusCode === 404) {
           throw new NotFoundException(result.message);
