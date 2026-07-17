@@ -46,6 +46,8 @@ type ReviewRequiredData = {
   geo?: GeoPoint | null;
   deviceLocation?: GeoPoint | null;
   deviceDistanceMeters?: number | null;
+  isPotentialDuplicate?: boolean;
+  suspectedDuplicateLocationIds?: Types.ObjectId[];
 };
 
 @Injectable()
@@ -146,7 +148,7 @@ export class VendorLocationsService {
               updateData.pinLatitude ?? 0,
               updateData.pinLongitude ?? 0,
             );
-          if (reviewRequiredData.deviceDistanceMeters > 50) {
+          if (reviewRequiredData.deviceDistanceMeters > 500) {
             return {
               success: false,
               message:
@@ -154,6 +156,19 @@ export class VendorLocationsService {
               statusCode: 400,
             };
           }
+        }
+        const checkDuplicate =
+          await this.duplicateDetectionService.findPossibleDuplicates(
+            updateData?.name || location.name,
+            updateData?.pinLatitude || location.geo.coordinates[1],
+            updateData?.pinLongitude || location.geo.coordinates[0],
+            updateData?.categoryId || location.categoryId.toString(),
+          );
+        if (checkDuplicate.length > 0) {
+          reviewRequiredData.isPotentialDuplicate = true;
+          reviewRequiredData.suspectedDuplicateLocationIds = checkDuplicate.map(
+            (item) => new Types.ObjectId(item.id),
+          );
         }
         const cleanData = Object.fromEntries(
           Object.entries(reviewRequiredData).filter(
@@ -185,6 +200,10 @@ export class VendorLocationsService {
             proofUrls: urls.map((url) => url.url),
             capturedAt: now,
           },
+          isPotentialDuplicate:
+            reviewRequiredData.isPotentialDuplicate ?? false,
+          suspectedDuplicateLocationIds:
+            reviewRequiredData.suspectedDuplicateLocationIds ?? [],
         });
       }
       const nonReviewData = {

@@ -5,9 +5,10 @@ import { AppText, Button, Card, Chip, EmptyState, IconButton, Inline, LoadingSta
 import { colors, radius, spacing } from "@/ui/tokens";
 import * as Location from "expo-location";
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, View } from "react-native";
 import { Tabs } from "react-native-collapsible-tab-view";
 import { Icon, Modal, Portal, Surface } from "react-native-paper";
+import { getReviewComposerKeyboardBehavior } from "./review-composer-keyboard";
 
 type ReviewTabProps = { embedded?: boolean; locationData?: { _id?: string; id?: string; ownerId?: string | { _id?: string; id?: string } | null }; initialRating?: Partial<ReviewSummary> | null };
 
@@ -162,7 +163,23 @@ function ReviewCard({ review, canEdit, onEdit, onDelete, deleting }: { review: L
 }
 
 function ReviewComposer({ visible, editing, rating, comment, submitting, onDismiss, onChangeRating, onChangeComment, onSubmit }: { visible: boolean; editing: boolean; rating: number; comment: string; submitting: boolean; onDismiss: () => void; onChangeRating: (rating: number) => void; onChangeComment: (comment: string) => void; onSubmit: () => void }) {
-  return <Portal><Modal contentContainerStyle={{ backgroundColor: colors.surfaceRaised, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, gap: spacing[4], marginTop: "auto", padding: spacing[5], paddingBottom: spacing[7] }} onDismiss={onDismiss} visible={visible}><Inline style={{ justifyContent: "space-between" }}><AppText variant="title2">{editing ? "Sửa đánh giá" : "Viết đánh giá"}</AppText><IconButton icon="close" label="Đóng" onPress={onDismiss} /></Inline><PressableStarRating onChange={onChangeRating} rating={rating} /><TextArea label="Trải nghiệm của bạn" onChangeText={onChangeComment} placeholder="Chia sẻ trải nghiệm của bạn" value={comment} /><Button disabled={submitting} icon={editing ? "content-save" : "send"} label={editing ? "Cập nhật" : "Gửi đánh giá"} loading={submitting} onPress={onSubmit} width="full" /></Modal></Portal>;
+  const dismissComposer = () => {
+    Keyboard.dismiss();
+    onDismiss();
+  };
+
+  return (
+    <Portal>
+      <KeyboardAvoidingView behavior={getReviewComposerKeyboardBehavior()} pointerEvents="box-none" style={{ flex: 1 }}>
+        <Modal contentContainerStyle={{ backgroundColor: colors.surfaceRaised, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, gap: spacing[4], marginTop: "auto", padding: spacing[5], paddingBottom: spacing[7] }} onDismiss={dismissComposer} visible={visible}>
+          <Inline style={{ justifyContent: "space-between" }}><AppText variant="title2">{editing ? "Sửa đánh giá" : "Viết đánh giá"}</AppText><IconButton icon="close" label="Đóng" onPress={dismissComposer} /></Inline>
+          <PressableStarRating onChange={onChangeRating} rating={rating} />
+          <TextArea label="Trải nghiệm của bạn" onChangeText={onChangeComment} placeholder="Chia sẻ trải nghiệm của bạn" value={comment} />
+          <Button disabled={submitting} icon={editing ? "content-save" : "send"} label={editing ? "Cập nhật" : "Gửi đánh giá"} loading={submitting} onPress={onSubmit} width="full" />
+        </Modal>
+      </KeyboardAvoidingView>
+    </Portal>
+  );
 }
 
 function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {

@@ -17,3 +17,7 @@ export function getVendorRegistrationDestination(phoneVerified: boolean) {
         params: { redirect: "/contribute?type=register" },
       };
 }
+
+export function getCustomerContributionDestination() {
+  return { pathname: "/contribute" as const, params: { type: "add" } };
+}
