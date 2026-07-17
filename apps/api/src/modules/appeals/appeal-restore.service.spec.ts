@@ -11,7 +11,7 @@ function query<T>(value: T) {
   };
 }
 
-describe('AppealRestoreService', () => {
+describe('Kiểm thử AppealRestoreService', () => {
   const id = new Types.ObjectId();
   const locId = new Types.ObjectId();
 
@@ -54,7 +54,7 @@ describe('AppealRestoreService', () => {
     return { save: jest.fn().mockResolvedValue(undefined), ...data };
   }
 
-  it('publishes a rejected location request and location', async () => {
+  it('công khai yêu cầu địa điểm bị từ chối và địa điểm tương ứng', async () => {
     const { service, reqModel, locModel } = setup();
     const req = doc({ status: 'REJECTED', locationId: locId });
     const loc = doc({ status: LocationStatus.REJECTED });
@@ -68,7 +68,7 @@ describe('AppealRestoreService', () => {
     expect(loc.status).toBe(LocationStatus.PUBLISHED);
   });
 
-  it('returns a rejected claim to pending without assigning an owner', async () => {
+  it('trả claim bị từ chối về trạng thái chờ mà không gán chủ sở hữu', async () => {
     const { service, claimModel, locModel } = setup();
     const claim = doc({ status: ClaimRequestStatus.REJECTED, locationId: locId });
     claimModel.findById.mockReturnValue(query(claim));
@@ -80,7 +80,7 @@ describe('AppealRestoreService', () => {
     expect(locModel.findById).not.toHaveBeenCalled();
   });
 
-  it('restores a duplicate location', async () => {
+  it('khôi phục địa điểm trùng lặp', async () => {
     const { service, locModel } = setup();
     const loc = doc({ status: LocationStatus.HIDDEN, isDuplicate: true });
     locModel.findById.mockReturnValue(query(loc));
@@ -92,7 +92,7 @@ describe('AppealRestoreService', () => {
     expect(loc.isDuplicate).toBe(false);
   });
 
-  it('restores the prior owner from the dispute audit', async () => {
+  it('khôi phục chủ sở hữu trước đó từ nhật ký kiểm toán tranh chấp', async () => {
     const { service, disputeModel, locModel, logModel } = setup();
     const oldOwner = new Types.ObjectId();
     const dispute = doc({ locationId: locId, status: 'RESOLVED_REVOKE' });
@@ -109,7 +109,7 @@ describe('AppealRestoreService', () => {
     expect(loc.ownerId).toEqual(oldOwner);
   });
 
-  it('publishes a removed review', async () => {
+  it('công khai đánh giá đã bị gỡ', async () => {
     const { service, reviewModel } = setup();
     const review = doc({ status: ReviewStatus.REMOVED_BY_ADMIN });
     reviewModel.findById.mockReturnValue(query(review));
@@ -120,7 +120,7 @@ describe('AppealRestoreService', () => {
     expect(review.status).toBe(ReviewStatus.PUBLISHED);
   });
 
-  it('restores the user status from audit', async () => {
+  it('khôi phục trạng thái người dùng từ nhật ký kiểm toán', async () => {
     const { service, userModel, logModel, trust } = setup();
     const user = doc({ status: UserStatus.BANNED });
     userModel.findById.mockReturnValue(query(user));
@@ -138,7 +138,7 @@ describe('AppealRestoreService', () => {
     );
   });
 
-  it('restores a warned user without running unban', async () => {
+  it('khôi phục người dùng bị cảnh báo mà không chạy thao tác gỡ cấm', async () => {
     const { service, userModel, logModel, trust } = setup();
     const user = doc({ status: UserStatus.WARNED });
     userModel.findById.mockReturnValue(query(user));

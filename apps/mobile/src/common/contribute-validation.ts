@@ -61,7 +61,7 @@ function validateContributionOpeningHours(
   }
 
   return validateTimeRange(parts[0], parts[1], {
-    allowOvernight: true,
+    allowOvernight: false,
     allowSameTime: false,
   });
 }

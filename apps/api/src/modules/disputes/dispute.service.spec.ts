@@ -15,7 +15,7 @@ function query<T>(value: T) {
   };
 }
 
-describe('DisputeService', () => {
+describe('Kiểm thử DisputeService', () => {
   const disputeId = new Types.ObjectId();
   const reqId = new Types.ObjectId();
   const locId = new Types.ObjectId();
@@ -67,7 +67,7 @@ describe('DisputeService', () => {
     };
   }
 
-  it('lets each participant append evidence to their own side', async () => {
+  it('cho phép mỗi bên tham gia bổ sung bằng chứng cho phía của mình', async () => {
     const { service, disputeModel } = setup();
     const item = dispute();
     disputeModel.findById.mockReturnValue(query(item));
@@ -82,7 +82,7 @@ describe('DisputeService', () => {
     expect(item.evidenceB).toEqual([]);
   });
 
-  it('blocks an outsider from viewing a dispute', async () => {
+  it('chặn người ngoài xem tranh chấp', async () => {
     const { service, disputeModel } = setup();
     disputeModel.findById.mockReturnValue(query(dispute()));
 
@@ -94,7 +94,7 @@ describe('DisputeService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 403 });
   });
 
-  it('lists resolved disputes as newest-first history', async () => {
+  it('liệt kê tranh chấp đã giải quyết theo lịch sử mới nhất trước', async () => {
     const { service, disputeModel } = setup();
     const find = {
       sort: jest.fn().mockReturnThis(),
@@ -159,7 +159,7 @@ describe('DisputeService', () => {
     expect(notify.notify).toHaveBeenCalledTimes(2);
   });
 
-  it('blocks resolution when the current owner changed', async () => {
+  it('chặn giải quyết khi chủ sở hữu hiện tại đã thay đổi', async () => {
     const { service, disputeModel, locModel } = setup();
     disputeModel.findById.mockReturnValue(query(dispute()));
     locModel.findById.mockReturnValue(

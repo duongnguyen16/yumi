@@ -11,11 +11,40 @@ import { viewCount } from "@/service/locationService";
 import { AppText, IconButton, Inline, Stack } from "@/ui/components";
 import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
 import { buildDirectionsUrl, getMapLocationPreview } from "@/common/map-location";
+import { useContext, useEffect, useState } from "react";
+import { userContext } from "@/contexts/userContext";
+import { checkBookmark, addBookmark, removeBookmark } from "@/service/bookmarkService";
 
 export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const { width } = useWindowDimensions();
   const location = data?.data;
   const locationId = location?._id;
+
+  const { user } = useContext(userContext);
+  const canBookmark = !!user; // chỉ user đã đăng nhập mới dùng được
+
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+
+  useEffect(() => {
+    if (!locationId || !canBookmark) return;
+    checkBookmark(locationId).then((res) => {
+      if (res.success) setIsBookmarked(res.isBookmarked);
+    });
+  }, [locationId, canBookmark]);
+
+  const handleToggleBookmark = async () => {
+    if (!locationId || bookmarkLoading) return;
+    setBookmarkLoading(true);
+    if (isBookmarked) {
+      const res = await removeBookmark(locationId);
+      if (res.success) setIsBookmarked(false);
+    } else {
+      const res = await addBookmark(locationId);
+      if (res.success) setIsBookmarked(true);
+    }
+    setBookmarkLoading(false);
+  };
 
   const coverImage =
     location?.imagesUrls?.find?.((image) => image?.isCover)?.url ||
@@ -70,7 +99,18 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
           <AppText variant="title1">{location?.name || "Chi tiết địa điểm"}</AppText>
           <Inline style={{ justifyContent: "space-between" }}>
             <Inline><Icon color={colors.accentOrange} size={20} source="star" /><AppText variant="headline">{location?.rating?.avgRating || 0}</AppText><AppText style={{ color: colors.textSecondary }} variant="subhead">{location?.rating?.reviewCount || 0} đánh giá</AppText></Inline>
-            <Inline gap={spacing[1]}><IconButton icon="navigation-variant-outline" label="Chỉ đường tôi đến đó" onPress={handleDirections} /><IconButton icon="share-variant-outline" label="Chia sẻ địa điểm" onPress={handleShare} /></Inline>
+            <Inline gap={spacing[1]}>
+              {canBookmark && (
+                <IconButton
+                  icon={isBookmarked ? "bookmark" : "bookmark-outline"}
+                  label={isBookmarked ? "Bỏ lưu" : "Lưu vào yêu thích"}
+                  onPress={handleToggleBookmark}
+                  disabled={bookmarkLoading}
+                />
+              )}
+              <IconButton icon="navigation-variant-outline" label="Chỉ đường tôi đến đó" onPress={handleDirections} />
+              <IconButton icon="share-variant-outline" label="Chia sẻ địa điểm" onPress={handleShare} />
+            </Inline>
           </Inline>
         </Stack>
       </View>
