@@ -99,10 +99,16 @@ export class VendorLocationsService {
         };
       }
       const isHold = isUnderHold(location.toObject());
-      if (isHold) {
+      const changesCoreInfo =
+        updateData.name !== undefined ||
+        updateData.address !== undefined ||
+        updateData.categoryId !== undefined ||
+        updateData.subCategoryIds !== undefined;
+      if (isHold && changesCoreInfo) {
         return {
           success: false,
-          message: 'Địa điểm đang bị tạm giữ, không thể chỉnh sửa',
+          message:
+            'Địa điểm đang bị tạm giữ, không thể thay đổi thông tin cốt lõi',
           statusCode: 403,
         };
       }

@@ -8,6 +8,8 @@ import {
   ClaimRequestType,
   LocationStatus,
   RequestAccessStatus,
+  UserRole,
+  UserStatus,
 } from 'src/common/schemas/common.enums';
 import {
   ClaimRequest,
@@ -22,6 +24,7 @@ import {
   RequestAccess,
   RequestAccessDocument,
 } from 'src/common/schemas/request-access.schema';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
 import {
   NOTIFICATION_PORT,
   NotificationPort,
@@ -45,24 +48,32 @@ export class ClaimService {
     private readonly requestAccessModel: Model<RequestAccessDocument>,
     @InjectModel(ClaimVerificationSession.name)
     private readonly sessionModel: Model<ClaimVerificationSessionDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
     private readonly sms: SmsService,
   ) {}
 
-
   // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
 
   async start(locationId: string, vendorId: string) {
     try {
-
       // id k hle
-      if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId)) {
+      if (
+        !Types.ObjectId.isValid(locationId) ||
+        !Types.ObjectId.isValid(vendorId)
+      ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
+      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      if (eligibilityFailure) return eligibilityFailure;
 
       // lấy location
-      const location = await this.locationModel.findById(locationId).lean().exec();
+      const location = await this.locationModel
+        .findById(locationId)
+        .lean()
+        .exec();
 
       // k có location
       if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
@@ -90,13 +101,12 @@ export class ClaimService {
 
       // lấy số điện thoại
       const phone = this.resolveListingPhone(location);
-      
-      // có sdt thì yêu cầu otp 
+
+      // có sdt thì yêu cầu otp
       const otpRequired = Boolean(phone);
       const otp = otpRequired ? this.generateOtp() : undefined;
       const siteCode = this.generateSiteCode();
       const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60_000);
-
 
       // gửi mã
       if (otp && phone) await this.sms.sendOtp(phone, otp);
@@ -137,9 +147,14 @@ export class ClaimService {
   // xác minh otp
   async verifyOtp(locationId: string, vendorId: string, otp: string) {
     try {
-      if (!Types.ObjectId.isValid(locationId) || !Types.ObjectId.isValid(vendorId)) {
+      if (
+        !Types.ObjectId.isValid(locationId) ||
+        !Types.ObjectId.isValid(vendorId)
+      ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
+      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      if (eligibilityFailure) return eligibilityFailure;
       const session = await this.sessionModel
         .findOne({
           vendorId: new Types.ObjectId(vendorId),
@@ -147,7 +162,10 @@ export class ClaimService {
         })
         .exec();
       if (!session) {
-        return this.failure(410, 'Phiên xác minh không tồn tại hoặc đã hết hạn');
+        return this.failure(
+          410,
+          'Phiên xác minh không tồn tại hoặc đã hết hạn',
+        );
       }
       if (!session.otpRequired) {
         return { success: true, message: 'Địa điểm không yêu cầu OTP' };
@@ -159,7 +177,7 @@ export class ClaimService {
       const matched = session.otpHash
         ? await bcrypt.compare(otp, session.otpHash)
         : false;
-      
+
       if (!matched) {
         session.attempts += 1;
         await session.save();
@@ -180,12 +198,21 @@ export class ClaimService {
 
   async submit(dto: SubmitClaimDto, vendorId: string) {
     try {
-      if (!Types.ObjectId.isValid(dto.locationId) || !Types.ObjectId.isValid(vendorId)) {
+      if (
+        !Types.ObjectId.isValid(dto.locationId) ||
+        !Types.ObjectId.isValid(vendorId)
+      ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
-      const location = await this.locationModel.findById(dto.locationId).lean().exec();
+      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      if (eligibilityFailure) return eligibilityFailure;
+      const location = await this.locationModel
+        .findById(dto.locationId)
+        .lean()
+        .exec();
       if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
-      if (location.ownerId) return this.failure(409, 'Địa điểm này đã có chủ sở hữu');
+      if (location.ownerId)
+        return this.failure(409, 'Địa điểm này đã có chủ sở hữu');
       if (location.status !== LocationStatus.PUBLISHED) {
         return this.failure(409, 'Chỉ có thể claim địa điểm đã được công khai');
       }
@@ -198,7 +225,10 @@ export class ClaimService {
         .exec();
       if (!session) return this.failure(410, 'Phiên xác minh đã hết hạn');
       if (session.otpRequired && !session.otpVerified) {
-        return this.failure(400, 'Bạn cần xác minh OTP trước khi nộp bằng chứng');
+        return this.failure(
+          400,
+          'Bạn cần xác minh OTP trước khi nộp bằng chứng',
+        );
       }
 
       // ảnh phải có vị trí và thời điểm chụp, và phải có ảnh cho thấy mã siteCode
@@ -214,7 +244,7 @@ export class ClaimService {
           'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
         );
       }
-      // ảnh phải có siteCode, siteCode là gì ? 
+      // ảnh phải có siteCode, siteCode là gì ?
       // siteCode là cái code mà hệ thống cấp cho vendor để chụp ảnh, để chứng minh rằng vendor đã đến địa điểm đó, và ảnh phải có siteCode này trong metadata. siteCode này lấy ở đâu?
       const siteCodeSeen = dto.evidenceFiles.some(
         (file) => file.metadata?.siteCode === session.siteCode,
@@ -279,12 +309,14 @@ export class ClaimService {
     }
   }
 
-
   // ktra xem có cái pending claim hay request access nào chưa, nếu có thì ko cho tạo mới
   private async hasPendingSlot(locationId: string) {
     const id = new Types.ObjectId(locationId);
     const [claim, requestAccess] = await Promise.all([
-      this.claimModel.exists({ locationId: id, status: ClaimRequestStatus.PENDING }),
+      this.claimModel.exists({
+        locationId: id,
+        status: ClaimRequestStatus.PENDING,
+      }),
       this.requestAccessModel.exists({
         locationId: id,
         status: RequestAccessStatus.PENDING,
@@ -295,6 +327,26 @@ export class ClaimService {
 
   private resolveListingPhone(location: { phone?: string }) {
     return location.phone?.trim() || undefined;
+  }
+
+  private async getEligibilityFailure(vendorId: string) {
+    const user = await this.userModel.findById(vendorId).lean().exec();
+    if (!user || user.role !== UserRole.VENDOR) {
+      return this.failure(
+        403,
+        'Chỉ tài khoản Vendor mới có thể claim địa điểm',
+      );
+    }
+    if (user.status !== UserStatus.ACTIVE) {
+      return this.failure(403, 'Tài khoản Vendor không ở trạng thái hoạt động');
+    }
+    if (user.phoneVerified !== true) {
+      return this.failure(
+        403,
+        'Vendor phải xác minh số điện thoại trước khi claim địa điểm',
+      );
+    }
+    return null;
   }
 
   private generateOtp() {
@@ -315,7 +367,12 @@ export class ClaimService {
   }
 
   private isDuplicateKeyError(error: unknown): error is { code: number } {
-    return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 11000
+    );
   }
 
   private logError(context: string, error: unknown) {

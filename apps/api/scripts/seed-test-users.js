@@ -434,6 +434,18 @@ const fixtureCollections = () => ({
       status: 'ESCALATED',
       timeoutAt: daysAgo(1),
     },
+    {
+      _id: id('66f300000000000000000005'),
+      locationId: fixtureLocationId(5),
+      requesterId: IDS.vendorClaimant,
+      currentOwnerId: IDS.vendorDisputed,
+      evidenceFiles: [evidence('access-open-dispute')],
+      otpVerified: true,
+      status: 'ESCALATED',
+      timeoutAt: daysAgo(2),
+      responseReason: 'Chu hien tai tu choi chuyen quyen.',
+      respondedAt: daysAgo(1),
+    },
   ],
   edit_suggestions: [
     {
@@ -504,6 +516,7 @@ const fixtureCollections = () => ({
       type: 'CREATE',
       status: 'PENDING',
       submittedBy: IDS.vendorPending,
+      locationId: fixtureLocationId(17),
       newData: {
         name: 'Dia diem vendor cho duyet',
         description: 'Fixture cho hang doi admin.',
@@ -541,6 +554,7 @@ const fixtureCollections = () => ({
       type: 'CREATE',
       status: 'PENDING',
       submittedBy: IDS.customerContributor,
+      locationId: fixtureLocationId(19),
       newData: {
         name: 'Dong gop moi can kiem duyet',
         description: 'Dia diem do nguoi dung dong gop, dang cho admin kiem tra.',
@@ -558,6 +572,7 @@ const fixtureCollections = () => ({
       type: 'CREATE',
       status: 'REJECTED',
       submittedBy: IDS.customerContributor,
+      locationId: fixtureLocationId(31),
       newData: {
         name: 'Dong gop bi tu choi',
         description: 'Dia diem dong gop co thong tin chua du de phe duyet.',
@@ -593,10 +608,10 @@ const fixtureCollections = () => ({
   disputes: [
     {
       _id: IDS.dispute,
-      requestAccessId: IDS.requestRejected,
-      locationId: IDS.locationOwnedSecond,
-      vendorAId: IDS.vendorOwner,
-      vendorBId: IDS.vendorChallenger,
+      requestAccessId: id('66f300000000000000000005'),
+      locationId: fixtureLocationId(5),
+      vendorAId: IDS.vendorDisputed,
+      vendorBId: IDS.vendorClaimant,
       evidenceA: [evidence('dispute-owner')],
       evidenceB: [evidence('dispute-challenger')],
       status: 'OPEN',
@@ -687,14 +702,14 @@ const fixtureCollections = () => ({
       targetCollection: 'location_requests',
       targetId: id('66f400000000000000000002'),
       appellantId: IDS.customerContributor,
-      additionalEvidenceFiles: [evidence('appeal-location-dispute')],
-      argument: 'Nguoi dong gop de nghi mo tranh chap de bo sung bang chung moi.',
-      status: 'ACCEPTED_TO_DISPUTE',
+      additionalEvidenceFiles: [evidence('appeal-location-upheld')],
+      argument: 'Nguoi dong gop de nghi xem xet lai voi bang chung moi.',
+      status: 'UPHELD',
       originalDecisionReason: 'Anh xac minh va dia chi chua du ro rang.',
       originalDeciderId: IDS.admin,
       originalDecidedAt: daysAgo(3),
       appealDeadline: daysFromNow(4),
-      adminDecision: { decidedBy: IDS.admin, reason: 'Can kiem tra lai tai thuc dia.', decidedAt: daysAgo(1) },
+      adminDecision: { decidedBy: IDS.admin, reason: 'Bang chung bo sung van chua du de khoi phuc yeu cau.', decidedAt: daysAgo(1) },
     },
   ],
   bookmarks: [
