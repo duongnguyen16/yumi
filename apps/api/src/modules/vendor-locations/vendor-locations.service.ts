@@ -142,7 +142,7 @@ export class VendorLocationsService {
               updateData.pinLatitude ?? 0,
               updateData.pinLongitude ?? 0,
             );
-          if (reviewRequiredData.deviceDistanceMeters > 50) {
+          if (reviewRequiredData.deviceDistanceMeters > 500) {
             return {
               success: false,
               message:
