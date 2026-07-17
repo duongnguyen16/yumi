@@ -1,4 +1,4 @@
-import { getAuthenticatedDestination, getVendorRegistrationDestination } from "./authDestination";
+import { getAuthenticatedDestination, getCustomerContributionDestination, getVendorRegistrationDestination } from "./authDestination";
 
 describe("getAuthenticatedDestination", () => {
   it("sends banned users to their appeals", () => {
@@ -23,5 +23,11 @@ describe("getVendorRegistrationDestination", () => {
       pathname: "/profile/edit",
       params: { redirect: "/contribute?type=register" },
     });
+  });
+});
+
+describe("getCustomerContributionDestination", () => {
+  it("opens the regular contribution flow", () => {
+    expect(getCustomerContributionDestination()).toEqual({ pathname: "/contribute", params: { type: "add" } });
   });
 });
