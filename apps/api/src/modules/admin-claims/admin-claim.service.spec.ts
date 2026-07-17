@@ -14,7 +14,7 @@ function query<T>(value: T) {
   return { exec: jest.fn().mockResolvedValue(value) };
 }
 
-describe('AdminClaimService', () => {
+describe('Kiểm thử AdminClaimService', () => {
   const claimId = new Types.ObjectId();
   const locId = new Types.ObjectId();
   const vendorId = new Types.ObjectId();
@@ -78,7 +78,7 @@ describe('AdminClaimService', () => {
     };
   }
 
-  it('lists pending claims with review flags', async () => {
+  it('liệt kê claim chờ duyệt kèm cờ xem xét', async () => {
     const { service, claimModel } = createService();
     const list = [claim({ licenseUrl: 'https://example.com/license.pdf' })];
     const find = {
@@ -115,7 +115,7 @@ describe('AdminClaimService', () => {
     });
   });
 
-  it('lists completed claims as newest-first history', async () => {
+  it('liệt kê claim đã hoàn tất theo lịch sử mới nhất trước', async () => {
     const { service, claimModel } = createService();
     const find = {
       sort: jest.fn().mockReturnThis(),
@@ -147,7 +147,7 @@ describe('AdminClaimService', () => {
     });
   });
 
-  it('allows no-phone claims with admin scrutiny proof', async () => {
+  it('cho phép claim không có số điện thoại khi có bằng chứng xét duyệt của quản trị viên', async () => {
     const { service, claimModel, locModel } = createService();
     const req = claim({
       otpVerified: false,
@@ -175,7 +175,7 @@ describe('AdminClaimService', () => {
     expect(loc.ownerId).toEqual(vendorId);
   });
 
-  it('rejects approval when proof is incomplete', async () => {
+  it('từ chối duyệt khi bằng chứng chưa đầy đủ', async () => {
     const { service, claimModel, locModel, trust } = createService();
     const req = claim({ evidenceFiles: [] });
     claimModel.findById.mockReturnValue(query(req));
@@ -187,7 +187,7 @@ describe('AdminClaimService', () => {
     expect(trust.recordEvent).not.toHaveBeenCalled();
   });
 
-  it('approves claim and records side effects', async () => {
+  it('duyệt claim và ghi nhận các tác động kèm theo', async () => {
     const { service, claimModel, locModel, trust, notification, logModel } =
       createService();
     const req = claim();
@@ -207,7 +207,7 @@ describe('AdminClaimService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
-  it('closes a conflicting claim before directing to request access', async () => {
+  it('đóng claim xung đột trước khi chuyển sang yêu cầu quyền truy cập', async () => {
     const { service, claimModel, locModel, trust, notification, logModel } =
       createService();
     const ownerId = new Types.ObjectId();
@@ -230,7 +230,7 @@ describe('AdminClaimService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects claim without changing the owner', async () => {
+  it('từ chối claim mà không thay đổi chủ sở hữu', async () => {
     const { service, claimModel, locModel, trust } = createService();
     const ownerId = new Types.ObjectId();
     const req = claim();
@@ -251,7 +251,7 @@ describe('AdminClaimService', () => {
     expect(trust.recordEvent).not.toHaveBeenCalled();
   });
 
-  it('requests evidence and keeps claim pending', async () => {
+  it('yêu cầu thêm bằng chứng và giữ claim ở trạng thái chờ duyệt', async () => {
     const { service, claimModel, locModel, notification, logModel } =
       createService();
     const req = claim();

@@ -23,9 +23,8 @@ import {
 import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
-const FAR_PIN_THRESHOLD = 50; // mét — BR-42/59
+const FAR_PIN_THRESHOLD = 500;
 
-// Trạng thái phiếu mà admin được phép xử lý (PENDING = tạo mới, PENDING_RE_APPROVAL = sửa BR-30).
 const REVIEWABLE_STATUSES: LocationRequestStatus[] = [
   LocationRequestStatus.PENDING,
   LocationRequestStatus.PENDING_RE_APPROVAL,
@@ -37,8 +36,6 @@ const HISTORY_STATUSES: LocationRequestStatus[] = [
   LocationRequestStatus.CANCELLED,
 ];
 
-// Các field của Location được phép cập nhật từ newData (allow-list).
-// Loại trừ các field hệ thống (submittedBy, ownerId, status, source, viewCount, isDuplicate, ...).
 const ALLOWED_SNAPSHOT_FIELDS = new Set([
   'name',
   'description',
@@ -174,6 +171,8 @@ export class AdminLocationService {
         };
       }
 
+      // reject nmak lý do
+
       const rejectionReason = reason?.trim();
       if (
         action === 'REJECT' &&
@@ -186,6 +185,8 @@ export class AdminLocationService {
         };
       }
 
+      // k thấy request id 
+
       const req = await this.reqModel.findById(requestId).exec();
       if (!req) {
         return {
@@ -194,7 +195,11 @@ export class AdminLocationService {
           message: 'Không tìm thấy phiếu duyệt',
         };
       }
+
       const fromReqStatus = req.status;
+      
+      // status cấm duyệt
+
       if (!REVIEWABLE_STATUSES.includes(req.status)) {
         return {
           success: false,
@@ -203,7 +208,12 @@ export class AdminLocationService {
         };
       }
 
+      // bắt đầu thay đổi
+
       const location = await this.locModel.findById(req.locationId).exec();
+
+      // k thấy location để đổi
+
       if (!location) {
         return {
           success: false,
@@ -211,18 +221,23 @@ export class AdminLocationService {
           message: 'Không tìm thấy địa điểm liên kết',
         };
       }
+
+      // check trạng thái cũ
+
       const fromLocStatus = location.status;
 
       req.reviewerId = new Types.ObjectId(adminId);
       req.reviewedAt = new Date();
 
+      // cập nhật trạng thái req và location
+      
       if (action === 'APPROVE') {
         req.status = LocationRequestStatus.APPROVED;
         req.reviewNote = null;
-        // Áp newData (snapshot đề xuất) vào bản chính rồi công khai.
         this.applySnapshot(location, req.newData);
         location.status = LocationStatus.PUBLISHED;
       } else {
+
         const note = duplicateOfLocationId
           ? `${rejectionReason} (trùng với địa điểm ${duplicateOfLocationId})`
           : rejectionReason;
@@ -233,10 +248,12 @@ export class AdminLocationService {
         }
       }
 
+      // lưu db
       await req.save();
       await location.save();
 
-      // (1) Trust — CHỈ khi duyệt (I8). Từ chối KHÔNG trừ trust (đã chốt) → không gọi recordEvent.
+      // update cho user trust và notification
+
       if (action === 'APPROVE') {
         await this.trust.recordEvent({
           userId: String(req.submittedBy),
@@ -247,7 +264,6 @@ export class AdminLocationService {
         });
       }
 
-      // (2) Notification — stub M3
       await this.notification.notify({
         userId: String(req.submittedBy),
         type: action === 'APPROVE' ? 'LOCATION_APPROVED' : 'LOCATION_REJECTED',
@@ -263,7 +279,8 @@ export class AdminLocationService {
         refId: String(req._id),
       });
 
-      // (3) Audit (I4)
+      // log tí cho bt ai vs ai
+
       await this.logModel.create({
         actorId: new Types.ObjectId(adminId),
         action: action === 'APPROVE' ? 'LOCATION_APPROVE' : 'LOCATION_REJECT',
@@ -292,11 +309,17 @@ export class AdminLocationService {
       };
     }
   }
+
+  // apply cái thay đổi vào db chính
+
   private applySnapshot(
     location: LocationDocument,
     snapshot: Record<string, unknown> | null | undefined,
   ) {
+    // k có snapshot thì th
     if (!snapshot || typeof snapshot !== 'object') return;
+
+    // apply các attribute vào locaiton th
 
     for (const key of Object.keys(snapshot)) {
       if (!ALLOWED_SNAPSHOT_FIELDS.has(key)) continue;

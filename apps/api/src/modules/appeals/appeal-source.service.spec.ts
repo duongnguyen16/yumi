@@ -10,8 +10,8 @@ function query<T>(value: T) {
   };
 }
 
-describe('AppealSourceService', () => {
-  it('loads the rejected requester as the affected user', async () => {
+describe('Kiểm thử AppealSourceService', () => {
+  it('tải người yêu cầu bị từ chối là người dùng bị ảnh hưởng', async () => {
     const requesterId = new Types.ObjectId();
     const ownerId = new Types.ObjectId();
     const targetId = new Types.ObjectId();

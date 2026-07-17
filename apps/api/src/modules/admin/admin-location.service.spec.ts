@@ -15,7 +15,7 @@ function query<T>(value: T) {
   return { exec: jest.fn().mockResolvedValue(value) };
 }
 
-describe('AdminLocationService', () => {
+describe('Kiểm thử AdminLocationService', () => {
   const requestId = new Types.ObjectId();
   const locationId = new Types.ObjectId();
   const submitterId = new Types.ObjectId();
@@ -49,14 +49,14 @@ describe('AdminLocationService', () => {
     };
   }
 
-  it('lists pending and re-approval requests with queue flags', async () => {
+  it('liệt kê yêu cầu chờ duyệt và duyệt lại kèm cờ hàng đợi', async () => {
     const { service, reqModel } = createService();
     const list = [
       {
         _id: requestId,
         isPotentialDuplicate: true,
         suspectedDuplicateLocationIds: [locationId],
-        deviceDistanceMeters: 51,
+        deviceDistanceMeters: 501,
       },
     ];
     const findChain = {
@@ -95,7 +95,27 @@ describe('AdminLocationService', () => {
     });
   });
 
-  it('lists completed requests as newest-first history', async () => {
+  it('không gắn cờ pin xa khi khoảng cách đúng 500 mét', async () => {
+    const { service, reqModel } = createService();
+    const findChain = {
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      populate: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ deviceDistanceMeters: 500 }]),
+    };
+    reqModel.find.mockReturnValue(findChain);
+    reqModel.countDocuments.mockReturnValue(query(1));
+
+    const result = await service.getList({ page: 1, limit: 20 });
+
+    expect(result).toMatchObject({
+      items: [{ flags: { farPin: false } }],
+    });
+  });
+
+  it('liệt kê yêu cầu đã hoàn tất theo lịch sử mới nhất trước', async () => {
     const { service, reqModel } = createService();
     const findChain = {
       sort: jest.fn().mockReturnThis(),
@@ -126,7 +146,7 @@ describe('AdminLocationService', () => {
     });
   });
 
-  it('approves a re-approval request and publishes its snapshot', async () => {
+  it('duyệt yêu cầu duyệt lại và công khai bản chụp dữ liệu', async () => {
     const { service, reqModel, locModel, trust, notification, logModel } =
       createService();
     const request = {
@@ -161,7 +181,7 @@ describe('AdminLocationService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects an empty rejection reason before changing data', async () => {
+  it('từ chối lý do từ chối rỗng trước khi thay đổi dữ liệu', async () => {
     const { service, reqModel, locModel } = createService();
     const request = {
       _id: requestId,
