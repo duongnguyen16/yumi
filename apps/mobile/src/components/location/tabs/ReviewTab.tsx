@@ -6,7 +6,7 @@ import { colors, radius, spacing } from "@/ui/tokens";
 import * as Location from "expo-location";
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Alert, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, View } from "react-native";
-import { Tabs } from "react-native-collapsible-tab-view";
+import { Tabs } from "../collapsible-tabs";
 import { Icon, Modal, Portal, Surface } from "react-native-paper";
 import { getReviewComposerKeyboardBehavior } from "./review-composer-keyboard";
 

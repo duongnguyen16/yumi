@@ -11,6 +11,8 @@
     "seed": "node scripts/seed.js",
     "seed:users": "node scripts/seed-test-users.js",
     "seed:test": "npm run seed && npm run seed:users",
+    "demo:reset": "node scripts/demo-reset.js",
+    "test:demo-seed": "node --test scripts/demo-reset.test.js",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "prestart": "npm run build --workspace=@wdp301/shared",
     "start": "nest start",
