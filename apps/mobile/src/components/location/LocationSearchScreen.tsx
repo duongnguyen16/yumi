@@ -12,15 +12,15 @@ import { SEARCH_DEBOUNCE_MS, canSearchLocations } from "./search-model";
 import LocationSearchResult from "./ui/LocationSearchResult";
 
 type CategoryOption = { _id: string; name: string; isActive?: boolean };
-type SearchItem = { _id?: string; id?: string; name?: string; address?: string; distance?: number };
+type SearchItem = { _id?: string; id?: string; name?: string; address?: string; distance?: number; rating?: { avgRating?: number; reviewCount?: number } | number };
 
-export default function LocationSearchScreen({ searchQuery, onSelectLocation }: { searchQuery: string; onSelectLocation?: (item: SearchItem) => void }) {
+export default function LocationSearchScreen({ searchQuery, initialCategoryId, onSelectLocation }: { searchQuery: string; initialCategoryId?: string | null; onSelectLocation?: (item: SearchItem) => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { location } = useLocationContext();
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [subCategories, setSubCategories] = useState<CategoryOption[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategoryId ?? null);
   const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
@@ -36,6 +36,13 @@ export default function LocationSearchScreen({ searchQuery, onSelectLocation }: 
       else setMessage("Không thể tải danh mục.");
     });
   }, []);
+
+  useEffect(() => {
+    if (!initialCategoryId) return;
+    getSubCategory(initialCategoryId).then((response) => {
+      if (response.success) setSubCategories((response.data ?? []).filter((category: CategoryOption) => category.isActive !== false));
+    });
+  }, [initialCategoryId]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), SEARCH_DEBOUNCE_MS);

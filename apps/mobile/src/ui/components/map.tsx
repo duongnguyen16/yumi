@@ -1,10 +1,9 @@
 import type { ReactNode, RefObject } from "react";
-import { View, type TextInput } from "react-native";
+import { Text, View, type TextInput } from "react-native";
 import { Badge, FAB, IconButton as PaperIconButton, Searchbar, Surface } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, elevation, fontFamily, navigationMetrics, radius, spacing } from "../tokens";
 import { IconButton } from "./button";
-import { AppText } from "./layout";
 
 export function MapSearchDock({ value, notificationCount = 0, isSearchOpen, onChangeText, onSearchClose, onSearchOpen, onNotifications, inputRef }: { value: string; notificationCount?: number; isSearchOpen: boolean; onChangeText: (value: string) => void; onSearchClose: () => void; onSearchOpen: () => void; onNotifications: () => void; inputRef?: RefObject<TextInput | null> }) {
   const insets = useSafeAreaInsets();
@@ -20,7 +19,9 @@ export function MapSearchDock({ value, notificationCount = 0, isSearchOpen, onCh
         <PaperIconButton accessibilityLabel="Thông báo" containerColor={colors.surfaceBase} icon="bell-outline" iconColor={colors.textPrimary} mode="contained" onPress={onNotifications} size={22} style={{ borderRadius: radius.pill, boxShadow: elevation.floating, height: 48, margin: 0, width: 48 }} />
         {notificationCount > 0 ? <Badge size={18} style={{ backgroundColor: colors.accentPrimary, color: colors.textInverse, position: "absolute", right: -2, top: -2 }}>{notificationCount > 99 ? "99+" : notificationCount}</Badge> : null}
       </View>
-      <AppText pointerEvents="none" style={{ position: "absolute", textAlign: "center", width: "100%" }} variant="headline">Yumi</AppText>
+      <View pointerEvents="none" style={{ alignItems: "center", flexDirection: "row", justifyContent: "center", position: "absolute", width: "100%" }}>
+        <Text selectable={false} style={{ color: colors.textPrimary, fontFamily: "serif", fontSize: 29, fontWeight: "700", letterSpacing: -1.4, lineHeight: 34 }}>Yu<Text style={{ color: colors.accentPrimary, fontStyle: "italic" }}>mi</Text></Text>
+      </View>
       <PaperIconButton accessibilityLabel="Tìm kiếm địa điểm" containerColor={colors.surfaceBase} icon="magnify" iconColor={colors.textPrimary} mode="contained" onPress={onSearchOpen} size={22} style={{ borderRadius: radius.pill, boxShadow: elevation.floating, height: 48, margin: 0, width: 48 }} />
     </View>
   );
