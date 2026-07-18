@@ -1,14 +1,16 @@
 import { distanceText } from "@/common/function";
+import { getDistanceTone, getSearchRating } from "@/components/home/explore-presentation";
 import { AppText, Inline, Stack } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
 import { useRouter } from "expo-router";
-import { TouchableRipple } from "react-native-paper";
+import { Icon, TouchableRipple } from "react-native-paper";
 
-type SearchLocation = { _id?: string; id?: string; name?: string; address?: string; distance?: number };
+type SearchLocation = { _id?: string; id?: string; name?: string; address?: string; distance?: number; rating?: { avgRating?: number; reviewCount?: number } | number };
 
 export default function LocationSearchResult({ item, onSelect }: { item: SearchLocation; onSelect?: (item: SearchLocation) => void }) {
   const router = useRouter();
   const distance = typeof item.distance === "number" ? distanceText(item.distance) : undefined;
+  const rating = getSearchRating(item.rating);
 
   const openLocation = () => {
     if (onSelect) {
@@ -24,9 +26,13 @@ export default function LocationSearchResult({ item, onSelect }: { item: SearchL
       <Inline gap={spacing[3]} style={{ justifyContent: "space-between", minHeight: 72, paddingHorizontal: spacing[1], paddingVertical: spacing[3] }}>
         <Stack gap={spacing[1]} style={{ flex: 1 }}>
           <AppText numberOfLines={1} variant="headline">{item.name || "Địa điểm"}</AppText>
+          <Inline gap={2}>
+            {Array.from({ length: 5 }).map((_, index) => <Icon color={index < Math.round(rating.avgRating) ? colors.accentYellow : colors.borderStrong} key={index} size={14} source={index < Math.round(rating.avgRating) ? "star" : "star-outline"} />)}
+            <AppText style={{ color: colors.textSecondary }} variant="footnote">{rating.avgRating.toFixed(1)} · {rating.reviewCount} đánh giá</AppText>
+          </Inline>
           {item.address ? <AppText numberOfLines={1} style={{ color: colors.textSecondary }} variant="caption">{item.address}</AppText> : null}
         </Stack>
-        {distance ? <AppText style={{ color: colors.textSecondary }} variant="footnote">{distance}</AppText> : null}
+        {distance ? <AppText style={{ color: getDistanceTone(item.distance as number) }} variant="footnote">{distance}</AppText> : null}
       </Inline>
     </TouchableRipple>
   );

@@ -44,6 +44,7 @@ Thumbs.db
 
 # Testing
 coverage/
+.demo-mongodb/
 
 # Local implementation guides (not shared)
 /guideline/

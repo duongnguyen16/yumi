@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Keyboard, View, type TextInput } from "react-native";
+import {
+  BackHandler,
+  Keyboard,
+  ScrollView,
+  View,
+  type TextInput,
+} from "react-native";
 import {
   Camera,
   type CameraRef,
@@ -26,20 +32,27 @@ import {
   getCurrentLocation,
   getLocationById,
 } from "@/service/locationService";
+import { getAllCategories } from "@/service/categoryService";
 import { getUnreadCount } from "@/service/notificationService";
 import {
   clearExploreLocationAction,
   setExploreLocationAction,
 } from "@/navigation/exploreTabAction";
 import {
+  Chip,
   EmptyState,
   LoadingState,
   MapCanvas,
   MapSearchDock,
 } from "@/ui/components";
-import { colors } from "@/ui/tokens";
+import { colors, spacing } from "@/ui/tokens";
 import LocationSearchScreen from "../location/LocationSearchScreen";
 import { MapLocationDrawer } from "./MapLocationDrawer";
+import {
+  EXPLORE_CATEGORY_BAR_HEIGHT,
+  EXPLORE_NEARBY_ZOOM,
+} from "./explore-presentation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -56,6 +69,7 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
   glyphs?: string;
   layers: MapStyleLayer[];
 };
+type CategoryOption = { _id: string; name: string; isActive?: boolean };
 
 export default function MapScreen() {
   const { location, setLocation } = useLocationContext();
@@ -66,18 +80,33 @@ export default function MapScreen() {
   const [geoJson, setGeoJson] = useState(emptyGeoJson);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScreen, setSearchScreen] = useState(false);
+  const [searchCategoryId, setSearchCategoryId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [selectedLocation, setSelectedLocation] =
     useState<MapLocationPreview | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const cameraRef = useRef<CameraRef>(null);
   const searchInputRef = useRef<TextInput>(null);
+  const hasAutoCentered = useRef(false);
   const navigation = useNavigation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     getAllLocations()
       .then((response) => setGeoJson(response.locations ?? emptyGeoJson))
       .catch((error) => console.error("Error fetching locations:", error));
+    getAllCategories()
+      .then((response) => {
+        if (response.success) {
+          setCategories(
+            (response.data ?? []).filter(
+              (category: CategoryOption) => category.isActive !== false,
+            ),
+          );
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -146,6 +175,7 @@ export default function MapScreen() {
     Keyboard.dismiss();
     setSearchQuery("");
     setSearchScreen(false);
+    setSearchCategoryId(null);
   }, []);
 
   const focusLocation = useCallback((preview: MapLocationPreview) => {
@@ -162,8 +192,9 @@ export default function MapScreen() {
     });
   }, []);
 
-  const openSearch = useCallback(() => {
+  const openSearch = useCallback((categoryId?: string) => {
     setSelectedLocation(null);
+    setSearchCategoryId(categoryId ?? null);
     setSearchScreen(true);
     requestAnimationFrame(() => searchInputRef.current?.focus());
   }, []);
@@ -213,11 +244,17 @@ export default function MapScreen() {
     setLocation(coordinates);
     cameraRef.current?.setStop({
       center: coordinates,
-      zoom: 15,
+      zoom: EXPLORE_NEARBY_ZOOM,
       duration: 1000,
       easing: "ease",
     });
   }, [setLocation]);
+
+  useEffect(() => {
+    if (!mapStyle || locationId || hasAutoCentered.current) return;
+    hasAutoCentered.current = true;
+    void setCurrentLocation();
+  }, [locationId, mapStyle, setCurrentLocation]);
 
   useEffect(() => {
     setExploreLocationAction(() => {
@@ -245,11 +282,38 @@ export default function MapScreen() {
         onChangeText={setSearchQuery}
         onNotifications={() => router.push("/notifications")}
         onSearchClose={closeSearch}
-        onSearchOpen={openSearch}
+        onSearchOpen={() => openSearch()}
         value={searchQuery}
       />
+      {!searchScreen && categories.length > 0 ? (
+        <ScrollView
+          contentContainerStyle={{
+            gap: spacing[2],
+            paddingHorizontal: spacing[4],
+          }}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{
+            height: EXPLORE_CATEGORY_BAR_HEIGHT,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: insets.top + 68,
+            zIndex: 9,
+          }}
+        >
+          {categories.map((category) => (
+            <Chip
+              key={category._id}
+              label={category.name}
+              onPress={() => openSearch(category._id)}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
       {searchScreen ? (
         <LocationSearchScreen
+          initialCategoryId={searchCategoryId}
           onSelectLocation={(item) => {
             const preview = getMapLocationPreview(item);
             if (preview) focusLocation(preview);
@@ -261,7 +325,10 @@ export default function MapScreen() {
         <View style={{ flex: 1 }}>
           <Map mapStyle={mapStyle} style={{ flex: 1 }}>
             <Camera
-              initialViewState={{ center: location, zoom: 10 }}
+              initialViewState={{
+                center: location,
+                zoom: EXPLORE_NEARBY_ZOOM,
+              }}
               ref={cameraRef}
             />
             <NativeUserLocation />
@@ -337,6 +404,72 @@ export default function MapScreen() {
               />
             </GeoJSONSource>
           </Map>
+          <View
+            pointerEvents="none"
+            style={{
+              height: insets.top + 144,
+              left: 0,
+              position: "absolute",
+              right: 0,
+              top: 0,
+              zIndex: 2,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surfaceApp,
+                flex: 3,
+                opacity: 0.72,
+              }}
+            />
+            <View
+              style={{
+                backgroundColor: colors.surfaceApp,
+                flex: 2,
+                opacity: 0.36,
+              }}
+            />
+            <View
+              style={{
+                backgroundColor: colors.surfaceApp,
+                flex: 1,
+                opacity: 0.12,
+              }}
+            />
+          </View>
+          <View
+            pointerEvents="none"
+            style={{
+              bottom: 0,
+              height: 156,
+              left: 0,
+              position: "absolute",
+              right: 0,
+              zIndex: 2,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: colors.surfaceApp,
+                flex: 1,
+                opacity: 0.1,
+              }}
+            />
+            <View
+              style={{
+                backgroundColor: colors.surfaceApp,
+                flex: 2,
+                opacity: 0.34,
+              }}
+            />
+            <View
+              style={{
+                backgroundColor: colors.surfaceApp,
+                flex: 3,
+                opacity: 0.7,
+              }}
+            />
+          </View>
           {selectedLocation ? (
             <MapLocationDrawer
               key={selectedLocation.id}

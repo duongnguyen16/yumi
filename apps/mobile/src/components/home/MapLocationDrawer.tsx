@@ -8,17 +8,21 @@ import {
   type MapLocationPreview,
 } from "@/common/map-location";
 import ProductSection from "@/components/location/ProductSection";
+import { LocationReportSheet } from "@/components/location/LocationReportSheet";
 import GeneralTab, {
   LocationManagementActions,
 } from "@/components/location/tabs/GeneralTab";
 import ReviewTab from "@/components/location/tabs/ReviewTab";
+import { getLocationReportAction } from "@/components/location/location-report";
+import { userContext } from "@/contexts/userContext";
 import { getLocationById } from "@/service/locationService";
 import { toAbsoluteUrl } from "@/service/url";
 import { AppText, Button, IconButton, Inline, Stack } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Icon, Surface } from "react-native-paper";
@@ -64,8 +68,11 @@ export function MapLocationDrawer({
 }) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const { loading: userLoading, user } = useContext(userContext);
+  const router = useRouter();
   const [details, setDetails] = useState<LocationDetails | null>(null);
   const [detent, setDetent] = useState<DrawerDetent>("half");
+  const [reportVisible, setReportVisible] = useState(false);
   const halfHeight = getDrawerDetentHeight("half", windowHeight, insets.top);
   const fullHeight = getDrawerDetentHeight("full", windowHeight, insets.top);
   const halfOffset = fullHeight - halfHeight;
@@ -79,6 +86,15 @@ export function MapLocationDrawer({
   };
   const rating = getRating(current.rating);
   const imageUrls = getImageUrls(current);
+  const locationId = current._id ?? current.id;
+  const ownerId = getId(current.ownerId);
+  const reportAction = userLoading
+    ? "hidden"
+    : getLocationReportAction({
+        locationId,
+        ownerId,
+        userId: getId(user),
+      });
 
   const refreshDetails = useCallback(async () => {
     const response = await getLocationById(location.id);
@@ -261,6 +277,20 @@ export function MapLocationDrawer({
             label="Chỉ đường"
             onPress={() => void Linking.openURL(buildDirectionsUrl(current))}
           />
+          {reportAction !== "hidden" ? (
+            <Button
+              icon="flag-outline"
+              label="Báo cáo"
+              onPress={() => {
+                if (reportAction === "authenticate") {
+                  router.push("/auth/login");
+                  return;
+                }
+                setReportVisible(true);
+              }}
+              variant="destructive"
+            />
+          ) : null}
           <LocationManagementActions data={current} />
         </ScrollView>
         <SheetScroll
@@ -293,6 +323,12 @@ export function MapLocationDrawer({
             </Stack>
           </View>
         </SheetScroll>
+        <LocationReportSheet
+          hasOwner={Boolean(ownerId)}
+          locationId={locationId}
+          onDismiss={() => setReportVisible(false)}
+          visible={reportVisible}
+        />
       </Surface>
     </Animated.View>
   );
@@ -373,4 +409,14 @@ function getRating(value: LocationDetails["rating"]): Required<Rating> {
     avgRating: Number(value?.avgRating ?? 0),
     reviewCount: Number(value?.reviewCount ?? 0),
   };
+}
+
+function getId(value: unknown) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const item = value as { _id?: string; id?: string };
+    return item._id ?? item.id ?? "";
+  }
+  return "";
 }

@@ -1,8 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Image, Keyboard, Share, TouchableWithoutFeedback, useWindowDimensions, View } from "react-native";
 import { Icon } from "react-native-paper";
 import * as Linking from "expo-linking";
-import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
+import { MaterialTabBar, Tabs } from "./collapsible-tabs";
 
 import GeneralTab from "./tabs/GeneralTab";
 import ReviewTab from "./tabs/ReviewTab";
@@ -11,7 +11,6 @@ import { viewCount } from "@/service/locationService";
 import { AppText, IconButton, Inline, Stack } from "@/ui/components";
 import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
 import { buildDirectionsUrl, getMapLocationPreview } from "@/common/map-location";
-import { useContext, useEffect, useState } from "react";
 import { userContext } from "@/contexts/userContext";
 import { checkBookmark, addBookmark, removeBookmark } from "@/service/bookmarkService";
 
@@ -104,8 +103,7 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
                 <IconButton
                   icon={isBookmarked ? "bookmark" : "bookmark-outline"}
                   label={isBookmarked ? "Bỏ lưu" : "Lưu vào yêu thích"}
-                  onPress={handleToggleBookmark}
-                  disabled={bookmarkLoading}
+                  onPress={bookmarkLoading ? undefined : handleToggleBookmark}
                 />
               )}
               <IconButton icon="navigation-variant-outline" label="Chỉ đường tôi đến đó" onPress={handleDirections} />

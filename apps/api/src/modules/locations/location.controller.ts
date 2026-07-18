@@ -58,6 +58,7 @@ export class LocationController {
           throw new NotFoundException('Không tìm thấy địa điểm nào');
         }
       }
+      return result;
     } catch (error) {
       console.log('Error occur at searchLocation: ', error);
       if (error instanceof HttpException) {
