@@ -9,6 +9,7 @@ import {
 } from 'src/common/schemas/location-view';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 import { Product, ProductDocument } from 'src/common/schemas/product.schema';
+import { buildLocationSearchPipeline } from './location-search';
 
 type LocationRating = {
   _id: unknown;
@@ -201,26 +202,9 @@ export class LocationService {
         }
       }
       const skip = (page - 1) * limit;
-      const result = await this.locationModel.aggregate([
-        {
-          $geoNear: {
-            near: {
-              type: 'Point',
-              coordinates: [lng, lat],
-            },
-            distanceField: 'distance',
-            spherical: true,
-            query: filter,
-          },
-        },
-
-        {
-          $facet: {
-            locations: [{ $skip: skip }, { $limit: limit }],
-            total: [{ $count: 'count' }],
-          },
-        },
-      ]);
+      const result = await this.locationModel.aggregate(
+        buildLocationSearchPipeline({ filter, lat, limit, lng, skip }),
+      );
       const locations = result[0].locations || [];
       const total = result[0].total[0]?.count || 0;
 

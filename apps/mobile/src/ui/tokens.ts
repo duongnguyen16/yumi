@@ -25,6 +25,7 @@ export const colors = {
   navigationSelected: "rgba(201, 100, 66, 0.07)",
   navigationRipple: "rgba(201, 100, 66, 0.06)",
   accentGreen: "#2E7D32",
+  accentYellow: "#A86F00",
   accentOrange: "#B4552D",
   accentRed: "#141413",
 } as const;

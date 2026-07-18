@@ -112,7 +112,6 @@ export function MetricBadge({
   );
 }
 
-<<<<<<< Updated upstream
 export function NoticeSnackbar({
   message,
   onDismiss,
@@ -122,11 +121,7 @@ export function NoticeSnackbar({
   onDismiss: () => void;
   action?: { label: string; onPress: () => void };
 }) {
-=======
-export function NoticeSnackbar({ message, onDismiss, action }: { message: string; onDismiss: () => void; action?: { label: string; onPress: () => void } }) {
   const bottomOffset = useContext(NoticeSnackbarInsetContext);
-
->>>>>>> Stashed changes
   return (
     <Portal>
       <Snackbar
