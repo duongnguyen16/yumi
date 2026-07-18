@@ -1,12 +1,14 @@
 import type { ProfileData } from "@/components/profile/profile-types";
+import { resolveProfileAvatar } from "@/components/profile/profile-avatar";
 import { userContext } from "@/contexts/userContext";
 import { getProfile } from "@/service/profileService";
+import { toAbsoluteUrl } from "@/service/url";
 import { getCustomerContributionDestination, getVendorRegistrationDestination } from "@/navigation/authDestination";
-import { AppText, Button, GroupedList, ListRow, LoadingState, NoticeSnackbar, Page, PageContent, PageHeader, SectionHeader, Stack } from "@/ui/components";
-import { colors, radius, spacing } from "@/ui/tokens";
+import { AppText, Button, GroupedList, Inline, ListRow, LoadingState, NoticeSnackbar, Page, PageContent, PageHeader, SectionHeader, Stack } from "@/ui/components";
+import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useContext, useState } from "react";
-import { Surface } from "react-native-paper";
+import { Avatar, Surface } from "react-native-paper";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -16,6 +18,9 @@ export default function AccountScreen() {
   const [message, setMessage] = useState("");
   const displayName = profile?.display_name ?? profile?.fullName ?? String(user?.fullName ?? "Người dùng");
   const email = String(profile?.email ?? user?.email ?? "");
+  const sessionAvatarUrl = typeof user?.avatarUrl === "string" ? user.avatarUrl : typeof user?.avatar_url === "string" ? user.avatar_url : null;
+  const { avatarUrl, avatarInitial } = resolveProfileAvatar(profile?.avatar_url ?? profile?.avatarUrl, sessionAvatarUrl, displayName);
+  const absoluteAvatarUrl = toAbsoluteUrl(avatarUrl);
   const phoneVerified = profile?.phoneVerified === true || user?.phoneVerified === true;
   const isVendor = profile?.role === "VENDOR" || user?.role === "VENDOR";
 
@@ -41,15 +46,19 @@ export default function AccountScreen() {
       <PageContent tabBarInset>
         <PageHeader title="Tài khoản" />
         <Surface elevation={0} style={{ backgroundColor: colors.surfaceBase, borderRadius: radius.large, paddingHorizontal: spacing[4], paddingVertical: spacing[3] }}>
-          <Stack gap={spacing[1]}>
-            <AppText numberOfLines={1} variant="headline">{displayName}</AppText>
-            <AppText numberOfLines={1} style={{ color: colors.textSecondary }} variant="caption">{email}</AppText>
-          </Stack>
+          <Inline gap={spacing[3]}>
+            {absoluteAvatarUrl ? <Avatar.Image accessibilityLabel={`Ảnh đại diện của ${displayName}`} size={56} source={{ uri: absoluteAvatarUrl }} /> : <Avatar.Text accessibilityLabel={`Ảnh đại diện của ${displayName}`} color={colors.textInverse} label={avatarInitial} labelStyle={{ fontFamily: fontFamily.bold }} size={56} style={{ backgroundColor: colors.accentPrimary }} />}
+            <Stack gap={spacing[1]} style={{ flex: 1, minWidth: 0 }}>
+              <AppText numberOfLines={1} variant="title2">{displayName}</AppText>
+              <AppText numberOfLines={1} style={{ color: colors.textSecondary }} variant="subhead">{email}</AppText>
+            </Stack>
+          </Inline>
         </Surface>
 
         <Stack>
           <GroupedList>
             <ListRow icon="account-edit-outline" label="Chỉnh sửa hồ sơ" onPress={() => router.push("/profile/edit")} supportingText="Tên hiển thị, ảnh đại diện và số điện thoại" />
+            {isVendor ? <ListRow icon="bookmark-outline" label="Đã lưu" onPress={() => router.push("/mine")} supportingText="Các địa điểm bạn đã lưu" /> : null}
           </GroupedList>
         </Stack>
 
