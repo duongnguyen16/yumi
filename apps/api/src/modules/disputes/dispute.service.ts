@@ -220,9 +220,16 @@ export class DisputeService {
   }
 
   private sideOf(item: Dispute, userId: string) {
-    if (String(item.vendorAId) === userId) return 'A';
-    if (String(item.vendorBId) === userId) return 'B';
+    if (this.participantId(item.vendorAId) === userId) return 'A';
+    if (this.participantId(item.vendorBId) === userId) return 'B';
     return null;
+  }
+
+  private participantId(participant: unknown) {
+    if (participant && typeof participant === 'object' && '_id' in participant) {
+      return String((participant as { _id: unknown })._id);
+    }
+    return String(participant);
   }
 
   private fail(statusCode: number, message: string) {

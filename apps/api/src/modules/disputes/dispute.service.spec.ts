@@ -94,6 +94,22 @@ describe('Kiểm thử DisputeService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 403 });
   });
 
+  it('cho phép bên tham gia xem tranh chấp khi vendor đã được populate', async () => {
+    const { service, disputeModel } = setup();
+    disputeModel.findById.mockReturnValue(
+      query(
+        dispute({
+          vendorAId: { _id: vendorA, email: 'duong@gmail.com' },
+          vendorBId: { _id: vendorB },
+        }),
+      ),
+    );
+
+    const result = await service.getForUser(String(disputeId), String(vendorA));
+
+    expect(result.success).toBe(true);
+  });
+
   it('liệt kê tranh chấp đã giải quyết theo lịch sử mới nhất trước', async () => {
     const { service, disputeModel } = setup();
     const find = {

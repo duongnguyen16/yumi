@@ -683,3 +683,76 @@ export async function resolveAppeal(
   );
   return res.data;
 }
+
+export interface AdminEditSuggestionLocation {
+  id: string;
+  name?: string;
+  address?: string;
+  status?: string;
+  ownerId?: string | null;
+}
+
+export interface AdminEditSuggestionUser {
+  _id: string;
+  fullName?: string;
+  email?: string;
+  avatarUrl?: string;
+}
+
+export interface AdminEditSuggestion {
+  id: string;
+  locationId: string;
+  location: AdminEditSuggestionLocation | null;
+  user: AdminEditSuggestionUser | string;
+  fieldName: string;
+  oldValue: unknown;
+  newValue: unknown;
+  status: "PENDING" | "APPLIED" | "DISCARDED";
+  routingTarget: "ADMIN" | "VENDOR";
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewReason?: string;
+}
+
+export interface EditSuggestionQueueResponse {
+  success: boolean;
+  suggestions: AdminEditSuggestion[];
+}
+
+export interface EditSuggestionActionResponse {
+  success: boolean;
+  message: string;
+  suggestion: AdminEditSuggestion;
+  result?: { action: string; message?: string };
+}
+
+export async function getAdminEditSuggestions(): Promise<EditSuggestionQueueResponse> {
+  const res = await api.get<EditSuggestionQueueResponse>(
+    "/edit-suggestions/admin/queue",
+  );
+  return res.data;
+}
+
+export async function applyEditSuggestion(
+  id: string,
+  reason?: string,
+): Promise<EditSuggestionActionResponse> {
+  const normalizedReason = reason?.trim();
+  const res = await api.patch<EditSuggestionActionResponse>(
+    `/edit-suggestions/${id}/apply`,
+    normalizedReason ? { reason: normalizedReason } : {},
+  );
+  return res.data;
+}
+
+export async function discardEditSuggestion(
+  id: string,
+  reason?: string,
+): Promise<EditSuggestionActionResponse> {
+  const normalizedReason = reason?.trim();
+  const res = await api.patch<EditSuggestionActionResponse>(
+    `/edit-suggestions/${id}/discard`,
+    normalizedReason ? { reason: normalizedReason } : {},
+  );
+  return res.data;
+}

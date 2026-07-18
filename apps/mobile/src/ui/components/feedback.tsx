@@ -1,8 +1,14 @@
-import type { ReactNode } from "react";
-import { Snackbar, Chip, Icon, Surface } from "react-native-paper";
+import { createContext, useContext, type ReactNode } from "react";
+import { Snackbar, Chip, Icon, Portal, Surface } from "react-native-paper";
 import { colors, fontFamily, radius, spacing } from "../tokens";
 import { AppText } from "./layout";
 import type { IconName } from "./types";
+
+const NoticeSnackbarInsetContext = createContext(0);
+
+export function NoticeSnackbarInsetProvider({ bottomOffset, children }: { bottomOffset: number; children: ReactNode }) {
+  return <NoticeSnackbarInsetContext.Provider value={bottomOffset}>{children}</NoticeSnackbarInsetContext.Provider>;
+}
 
 export function Badge({
   label,
@@ -106,6 +112,7 @@ export function MetricBadge({
   );
 }
 
+<<<<<<< Updated upstream
 export function NoticeSnackbar({
   message,
   onDismiss,
@@ -115,15 +122,23 @@ export function NoticeSnackbar({
   onDismiss: () => void;
   action?: { label: string; onPress: () => void };
 }) {
+=======
+export function NoticeSnackbar({ message, onDismiss, action }: { message: string; onDismiss: () => void; action?: { label: string; onPress: () => void } }) {
+  const bottomOffset = useContext(NoticeSnackbarInsetContext);
+
+>>>>>>> Stashed changes
   return (
-    <Snackbar
-      action={action}
-      duration={4500}
-      onDismiss={onDismiss}
-      style={{ borderRadius: radius.medium, margin: spacing[4] }}
-      visible={Boolean(message)}
-    >
-      {message as ReactNode}
-    </Snackbar>
+    <Portal>
+      <Snackbar
+        action={action}
+        duration={4500}
+        onDismiss={onDismiss}
+        style={{ borderRadius: radius.medium, margin: spacing[4] }}
+        visible={Boolean(message)}
+        wrapperStyle={bottomOffset > 0 ? { bottom: bottomOffset } : undefined}
+      >
+        {message as ReactNode}
+      </Snackbar>
+    </Portal>
   );
 }
