@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { SchemaModule } from 'src/common/schemas/schema.module';
 import { TrustEngineModule } from '../trust-engine/trust-engine.module';
-import { AdminLocationController } from './admin-location.controller';
+import {
+  AdminLocationController,
+  AdminLocationsController,
+} from './admin-location.controller';
 import { AdminLocationService } from './admin-location.service';
 import { AdminGuard } from 'src/common/guard/admin.guard';
 import {
@@ -11,7 +14,7 @@ import {
 
 @Module({
   imports: [SchemaModule, TrustEngineModule],
-  controllers: [AdminLocationController],
+  controllers: [AdminLocationController, AdminLocationsController],
   providers: [
     AdminLocationService,
     AdminGuard,

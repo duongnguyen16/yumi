@@ -7,6 +7,10 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "npm run --workspace=mobile start --",
+    "android": "npm run --workspace=mobile android --",
+    "ios": "npm run --workspace=mobile ios --",
+    "web": "npm run --workspace=mobile web --",
     "test": "npm test --workspaces --if-present",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\"",
     "dev:api": "npm run start:dev --workspace=api",

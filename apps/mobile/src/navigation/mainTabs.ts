@@ -5,20 +5,21 @@ export type MainTab = {
   name: MainTabName;
   title: string;
   icon: MainTabIcon;
+  href: `/(tabs)/${MainTabName}`;
 };
 
 export const SHOW_TABS_HEADER = false;
 
 const CUSTOMER_TABS: MainTab[] = [
-  { name: "home", title: "Khám phá", icon: "compass-outline" },
-  { name: "mine", title: "Đã lưu", icon: "bookmark-outline" },
-  { name: "profile", title: "Tài khoản", icon: "account-outline" },
+  { name: "home", title: "Khám phá", icon: "compass-outline", href: "/(tabs)/home" },
+  { name: "mine", title: "Đã lưu", icon: "bookmark-outline", href: "/(tabs)/mine" },
+  { name: "profile", title: "Tài khoản", icon: "account-outline", href: "/(tabs)/profile" },
 ];
 
 const VENDOR_TABS: MainTab[] = [
-  { name: "home", title: "Khám phá", icon: "compass-outline" },
-  { name: "manage", title: "Quản lý", icon: "storefront-outline" },
-  { name: "profile", title: "Tài khoản", icon: "account-outline" },
+  { name: "home", title: "Khám phá", icon: "compass-outline", href: "/(tabs)/home" },
+  { name: "manage", title: "Quản lý", icon: "storefront-outline", href: "/(tabs)/manage" },
+  { name: "profile", title: "Tài khoản", icon: "account-outline", href: "/(tabs)/profile" },
 ];
 
 export function getMainTabs(role?: string | null) {
