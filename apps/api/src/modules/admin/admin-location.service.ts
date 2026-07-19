@@ -155,6 +155,110 @@ export class AdminLocationService {
     return this.decide(id, adminId, 'REJECT', reason, dupId);
   }
 
+  async confirmDuplicateLocation(
+    locationId: string,
+    adminId: string,
+    reason: string,
+    duplicateOfLocationId?: string,
+  ) {
+    try {
+      if (!Types.ObjectId.isValid(locationId)) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'ID địa điểm không hợp lệ',
+        };
+      }
+
+      const decisionReason = reason?.trim();
+      if (!decisionReason || decisionReason.length < 5) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'Lý do xác nhận trùng lặp phải có ít nhất 5 ký tự',
+        };
+      }
+
+      if (
+        duplicateOfLocationId &&
+        !Types.ObjectId.isValid(duplicateOfLocationId)
+      ) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'ID địa điểm gốc không hợp lệ',
+        };
+      }
+
+      const location = await this.locModel.findById(locationId).exec();
+      if (!location) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Không tìm thấy địa điểm',
+        };
+      }
+
+      if (location.isDuplicate && location.status === LocationStatus.HIDDEN) {
+        return {
+          success: false,
+          statusCode: 409,
+          message: 'Địa điểm đã được xác nhận trùng lặp',
+        };
+      }
+
+      const fromLocStatus = location.status;
+      const previousDuplicate = location.isDuplicate;
+      const previousSuspected = location.isSuspectedDuplicate;
+      const affectedUserId = String(location.ownerId ?? location.submittedBy);
+
+      location.status = LocationStatus.HIDDEN;
+      location.isDuplicate = true;
+      location.isSuspectedDuplicate = false;
+      await location.save();
+
+      await this.logModel.create({
+        actorId: new Types.ObjectId(adminId),
+        action: 'LOCATION_HIDE_DUPLICATE',
+        targetCollection: 'locations',
+        targetId: location._id,
+        reason: decisionReason,
+        diff: {
+          duplicateOfLocationId,
+          locationStatus: { from: fromLocStatus, to: LocationStatus.HIDDEN },
+          isDuplicate: { from: previousDuplicate, to: true },
+          isSuspectedDuplicate: { from: previousSuspected, to: false },
+        },
+      });
+
+      await this.notification.notify({
+        userId: affectedUserId,
+        type: 'LOCATION_DUPLICATE_HIDDEN',
+        title: 'Địa điểm bị ẩn vì trùng lặp',
+        body: `"${location.name}" đã bị xác nhận là địa điểm trùng lặp. Bạn có thể gửi kháng cáo nếu có bằng chứng địa điểm độc lập.`,
+        refCollection: 'locations',
+        refId: String(location._id),
+      });
+
+      return {
+        success: true,
+        message: 'Đã xác nhận trùng lặp và ẩn địa điểm',
+        location: {
+          id: location._id,
+          status: location.status,
+          isDuplicate: location.isDuplicate,
+        },
+      };
+    } catch (err) {
+      console.log(`confirm duplicate err: ${err}`);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Lỗi khi xác nhận địa điểm trùng lặp',
+      };
+    }
+  }
+
   private async decide(
     requestId: string,
     adminId: string,
