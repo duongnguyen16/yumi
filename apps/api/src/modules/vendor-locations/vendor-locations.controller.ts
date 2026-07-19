@@ -8,6 +8,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Request,
   UploadedFiles,
@@ -26,7 +27,8 @@ import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { VendorLocationsService } from './vendor-locations.service';
 import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
-import { CheckUserGuard } from 'src/common/guard/check-user.guard';
+// import { CheckUserGuard } from 'src/common/guard/check-user.guard';
+import { ReplyReviewDto } from './dto/reply-review.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -279,6 +281,67 @@ export class VendorLocationsController {
       }
       if (result.statusCode === 500) {
         throw new InternalServerErrorException(result.message);
+      }
+    }
+    return result;
+  }
+
+  @Post('reply')
+  @UseGuards(AuthGuard('jwt-at'))
+  async replyReview(
+    @Request() req: AuthenticatedRequest,
+    @Body('data')
+    data: ReplyReviewDto,
+  ) {
+    const { content, reviewId } = data;
+    const vendorId = req.user.userId;
+    const result = await this.vendorLocationsService.replyReview(
+      vendorId,
+      content,
+      reviewId,
+    );
+    if (result?.success === false) {
+      if (result?.statusCode === 404) {
+        throw new NotFoundException(result?.message);
+      }
+      if (result?.statusCode === 500) {
+        throw new InternalServerErrorException(result?.message);
+      }
+      if (result?.statusCode === 400) {
+        throw new BadRequestException(result?.message);
+      }
+      if (result?.statusCode === 403) {
+        throw new ForbiddenException(result?.message);
+      }
+    }
+    return result;
+  }
+
+  @Patch('reply/edit')
+  @UseGuards(AuthGuard('jwt-at'))
+  async editReply(
+    @Request() req: AuthenticatedRequest,
+    @Body('data') data: ReplyReviewDto,
+  ) {
+    const { content, reviewId } = data;
+    const vendorId = req.user.userId;
+    const result = await this.vendorLocationsService.editReply(
+      vendorId,
+      content,
+      reviewId,
+    );
+    if (result?.success === false) {
+      if (result?.statusCode === 404) {
+        throw new NotFoundException(result?.message);
+      }
+      if (result?.statusCode === 500) {
+        throw new InternalServerErrorException(result?.message);
+      }
+      if (result?.statusCode === 400) {
+        throw new BadRequestException(result?.message);
+      }
+      if (result?.statusCode === 403) {
+        throw new ForbiddenException(result?.message);
       }
     }
     return result;

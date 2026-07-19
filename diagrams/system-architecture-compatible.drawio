@@ -1,0 +1,256 @@
+<mxfile host="Electron" agent="Codex">
+  <diagram id="aU7TzS0m9kPqWDP301Arc2" name="System Architecture">
+    <mxGraphModel dx="2175" dy="1294" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1180" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c2" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontStyle=1;fontSize=26;fontColor=#1f2937;" value="Campus Local Guide - System Architecture" vertex="1">
+          <mxGeometry height="40" width="1820" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" parent="1" style="swimlane;html=1;whiteSpace=wrap;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" value="Users" vertex="1">
+          <mxGeometry height="700" width="190" x="40" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" parent="1" style="swimlane;html=1;whiteSpace=wrap;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" value="Client Layer" vertex="1">
+          <mxGeometry height="700" width="260" x="270" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" parent="1" style="swimlane;html=1;whiteSpace=wrap;startSize=32;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" value="Edge / Hosting" vertex="1">
+          <mxGeometry height="700" width="240" x="570" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c6" parent="1" style="swimlane;html=1;whiteSpace=wrap;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" value="Backend Layer - NestJS API" vertex="1">
+          <mxGeometry height="820" width="500" x="850" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c7" parent="1" style="swimlane;html=1;whiteSpace=wrap;startSize=32;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="Data and Storage" vertex="1">
+          <mxGeometry height="520" width="230" x="1390" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c8" parent="1" style="swimlane;html=1;whiteSpace=wrap;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" value="External Services" vertex="1">
+          <mxGeometry height="700" width="200" x="1660" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="c9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontStyle=1;" value="Customer" vertex="1">
+          <mxGeometry height="60" width="130" x="70" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="c10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontStyle=1;" value="Vendor" vertex="1">
+          <mxGeometry height="60" width="130" x="70" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="c11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontStyle=1;" value="Admin" vertex="1">
+          <mxGeometry height="60" width="130" x="70" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="c12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" value="Mobile App&#xa;Expo / React Native&#xa;Expo Router, Axios, SecureStore&#xa;MapLibre React Native" vertex="1">
+          <mxGeometry height="120" width="190" x="305" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="c13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" value="Admin Web App&#xa;Next.js 16 / React 19&#xa;MUI, Axios, jose" vertex="1">
+          <mxGeometry height="110" width="190" x="305" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="c14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" value="Vercel&#xa;Web hosting + SSR&#xa;Next.js runtime" vertex="1">
+          <mxGeometry height="100" width="170" x="605" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="c15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" value="API Boundary&#xa;REST JSON&#xa;CORS + Rate Limit" vertex="1">
+          <mxGeometry height="100" width="170" x="605" y="345" as="geometry" />
+        </mxCell>
+        <mxCell id="c16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" value="NestJS Application&#xa;Controllers + DTO Validation&#xa;Guards: JWT, Admin, Vendor&#xa;Throttler + Swagger" vertex="1">
+          <mxGeometry height="120" width="210" x="1000" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="c17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Auth Module&#xa;Passport JWT&#xa;bcryptjs&#xa;OTP + password reset" vertex="1">
+          <mxGeometry height="95" width="180" x="890" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="c18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Location and Contribution&#xa;Locations, Categories&#xa;Duplicate Detection&#xa;Location Geo Service" vertex="1">
+          <mxGeometry height="115" width="180" x="1130" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="c19" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Vendor and Ownership&#xa;Vendor Locations&#xa;Claims, Request Access&#xa;Appeals, Disputes" vertex="1">
+          <mxGeometry height="115" width="180" x="890" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="c20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Content Modules&#xa;Reviews, Reports&#xa;Products, Bookmarks&#xa;Edit Suggestions" vertex="1">
+          <mxGeometry height="115" width="180" x="1130" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="c21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Admin Modules&#xa;Dashboard, Users&#xa;Location Review&#xa;Claims, Reports, Audit Logs" vertex="1">
+          <mxGeometry height="115" width="180" x="890" y="655" as="geometry" />
+        </mxCell>
+        <mxCell id="c22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Notification Service&#xa;In-app notifications&#xa;NotificationPort" vertex="1">
+          <mxGeometry height="100" width="180" x="1130" y="655" as="geometry" />
+        </mxCell>
+        <mxCell id="c23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Images Service&#xa;Multer validation&#xa;Signed upload URL&#xa;Media cleanup" vertex="1">
+          <mxGeometry height="105" width="180" x="890" y="815" as="geometry" />
+        </mxCell>
+        <mxCell id="c24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Trust Engine&#xa;Trust score and level&#xa;NEW / TRUSTED / RESTRICTED / BANNED" vertex="1">
+          <mxGeometry height="105" width="180" x="1130" y="815" as="geometry" />
+        </mxCell>
+        <mxCell id="c25" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="MongoDB&#xa;Mongoose ODM&#xa;Users, Locations, Requests&#xa;Reviews, Reports, Notifications" vertex="1">
+          <mxGeometry height="120" width="160" x="1425" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="c26" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" value="Supabase Storage&#xa;Images bucket&#xa;Avatars, location media&#xa;Product images" vertex="1">
+          <mxGeometry height="120" width="160" x="1425" y="395" as="geometry" />
+        </mxCell>
+        <mxCell id="c27" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" value="Map Provider&#xa;MapLibre style API&#xa;Goong / map style URL&#xa;Google Maps directions" vertex="1">
+          <mxGeometry height="110" width="150" x="1685" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="c28" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" value="Email Service&#xa;Resend&#xa;Password reset code" vertex="1">
+          <mxGeometry height="90" width="150" x="1685" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="c29" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" value="SMS Service&#xa;eSMS.vn&#xa;Vendor OTP" vertex="1">
+          <mxGeometry height="90" width="150" x="1685" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="c30" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" value="Push Notification&#xa;Expo Push / FCM&#xa;Future channel" vertex="1">
+          <mxGeometry height="90" width="150" x="1685" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="c31" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;verticalAlign=top;fontStyle=1;" value="Legend" vertex="1">
+          <mxGeometry height="110" width="720" x="40" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="c32" parent="1" style="rounded=0;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="" vertex="1">
+          <mxGeometry height="16" width="30" x="60" y="885" as="geometry" />
+        </mxCell>
+        <mxCell id="c33" parent="1" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" value="Client applications" vertex="1">
+          <mxGeometry height="22" width="140" x="100" y="882" as="geometry" />
+        </mxCell>
+        <mxCell id="c34" parent="1" style="rounded=0;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" value="" vertex="1">
+          <mxGeometry height="16" width="30" x="260" y="885" as="geometry" />
+        </mxCell>
+        <mxCell id="c35" parent="1" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" value="Hosting / API boundary" vertex="1">
+          <mxGeometry height="22" width="160" x="300" y="882" as="geometry" />
+        </mxCell>
+        <mxCell id="c36" parent="1" style="rounded=0;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="" vertex="1">
+          <mxGeometry height="16" width="30" x="490" y="885" as="geometry" />
+        </mxCell>
+        <mxCell id="c37" parent="1" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" value="NestJS domain modules" vertex="1">
+          <mxGeometry height="22" width="180" x="530" y="882" as="geometry" />
+        </mxCell>
+        <mxCell id="c38" parent="1" style="rounded=0;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="" vertex="1">
+          <mxGeometry height="16" width="30" x="60" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c39" parent="1" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" value="Data / storage" vertex="1">
+          <mxGeometry height="22" width="140" x="100" y="917" as="geometry" />
+        </mxCell>
+        <mxCell id="c40" parent="1" style="rounded=0;html=1;fillColor=#f5f5f5;strokeColor=#666666;" value="" vertex="1">
+          <mxGeometry height="16" width="30" x="260" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c41" parent="1" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" value="External services" vertex="1">
+          <mxGeometry height="22" width="160" x="300" y="917" as="geometry" />
+        </mxCell>
+        <mxCell id="c42" parent="1" style="rounded=0;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="" vertex="1">
+          <mxGeometry height="16" width="30" x="490" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="c43" parent="1" style="text;html=1;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" value="Support services" vertex="1">
+          <mxGeometry height="22" width="180" x="530" y="917" as="geometry" />
+        </mxCell>
+        <mxCell id="c44" edge="1" parent="1" source="c9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.3;" target="c12" value="uses">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c45" edge="1" parent="1" source="c10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.7;" target="c12" value="uses">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c46" edge="1" parent="1" source="c11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="c13" value="manages">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c47" edge="1" parent="1" source="c13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="c14" value="SSR / static assets">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c48" edge="1" parent="1" source="c12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.35;" target="c15" value="REST API / Bearer JWT">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c49" edge="1" parent="1" source="c14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.65;" target="c15" value="REST API / admin">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c50" edge="1" parent="1" source="c15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="c16" value="routes requests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c51" edge="1" parent="1" source="c16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" target="c17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c52" edge="1" parent="1" source="c16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" target="c18" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c53" edge="1" parent="1" source="c17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;entryX=0.5;entryY=0;" target="c19" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c54" edge="1" parent="1" source="c18" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;entryX=0.5;entryY=0;" target="c20" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c55" edge="1" parent="1" source="c20" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="c22" value="creates notifications">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c56" edge="1" parent="1" source="c19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.3;" target="c22" value="ownership events">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c57" edge="1" parent="1" source="c21" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.7;" target="c22" value="review results">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c58" edge="1" parent="1" source="c18" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.75;entryX=1;entryY=0.5;" target="c23" value="uploads media">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="415" />
+              <mxPoint x="1370" y="767" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c59" edge="1" parent="1" source="c21" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="c24" value="adjusts score">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c60" edge="1" parent="1" source="c17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.4;entryX=0;entryY=0.2;" target="c25" value="users, tokens, reset codes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c61" edge="1" parent="1" source="c18" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.4;entryX=0;entryY=0.4;" target="c25" value="locations, categories, requests">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c62" edge="1" parent="1" source="c19" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.4;entryX=0;entryY=0.6;" target="c25" value="claims, access, disputes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c63" edge="1" parent="1" source="c20" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.4;entryX=0;entryY=0.8;" target="c25" value="reviews, reports, products">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c64" edge="1" parent="1" source="c21" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.9;" target="c25" value="audit logs and moderation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c65" edge="1" parent="1" source="c22" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.35;entryX=0;entryY=0.75;" target="c25" value="in-app notification records">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c66" edge="1" parent="1" source="c24" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.4;entryX=0;entryY=0.95;" target="c25" value="trust events">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="835" />
+              <mxPoint x="1370" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c67" edge="1" parent="1" source="c23" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="c26" value="signed URLs / uploads / public URLs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c68" edge="1" parent="1" source="c12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=1;exitY=0.8;entryX=0.5;entryY=1;" target="c26" value="direct upload with signed URL">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="535" y="286" />
+              <mxPoint x="535" y="980" />
+              <mxPoint x="1505" y="980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c69" edge="1" parent="1" source="c12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0;entryY=0.5;" target="c27" value="loads map style / geolocation UI">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="80" />
+              <mxPoint x="1640" y="80" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c70" edge="1" parent="1" source="c13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=1;exitY=0.3;entryX=0;entryY=0.65;" target="c27" value="admin map tools">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="535" y="600" />
+              <mxPoint x="535" y="80" />
+              <mxPoint x="1640" y="80" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c71" edge="1" parent="1" source="c17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.6;entryX=0;entryY=0.5;" target="c28" value="password reset email">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c72" edge="1" parent="1" source="c17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.75;entryX=0;entryY=0.5;" target="c29" value="vendor OTP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c73" edge="1" parent="1" source="c22" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=1;exitY=0.45;entryX=0;entryY=0.7;" target="c28" value="planned email channel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c74" edge="1" parent="1" source="c22" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;labelBackgroundColor=#ffffff;dashed=1;exitX=1;exitY=0.7;entryX=0;entryY=0.5;" target="c30" value="planned push channel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
