@@ -21,6 +21,9 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     if (typeof message === "string") {
       return message;
     }
+    if (error.message) {
+      return `${fallback} (${error.message})`;
+    }
   }
   return fallback;
 };

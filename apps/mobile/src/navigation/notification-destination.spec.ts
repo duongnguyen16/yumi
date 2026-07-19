@@ -10,6 +10,16 @@ describe("notification destination", () => {
     expect(getNotificationDestination({ refCollection, refId })).toBe(expected);
   });
 
+  it("opens duplicate-hidden notifications in the appeal form", () => {
+    expect(
+      getNotificationDestination({
+        type: "LOCATION_DUPLICATE_HIDDEN",
+        refCollection: "locations",
+        refId: "lo-duplicate",
+      }),
+    ).toBe("/appeals/new?type=DUPLICATE_HIDDEN&targetId=lo-duplicate");
+  });
+
   it("does not invent destinations for unsupported or incomplete references", () => {
     expect(getNotificationDestination({ refCollection: "reviews", refId: "review-1" })).toBeNull();
     expect(getNotificationDestination({ refCollection: "disputes" })).toBeNull();

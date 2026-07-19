@@ -24,7 +24,7 @@ import { radius, spacing } from "@/ui/tokens";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { Modal, Portal, RadioButton } from "react-native-paper";
 
 type SelectedReportImage = PendingContributionImage & { id: string };
@@ -133,9 +133,17 @@ export function LocationReportSheet({
   return (
     <Portal>
       <Modal dismissable={!submitting} onDismiss={dismiss} visible={visible}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ justifyContent: "flex-end" }}
+        >
         <BottomSheet style={{ marginHorizontal: spacing[4], maxHeight: "88%" }}>
           <AppText variant="title2">Báo cáo địa điểm</AppText>
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: spacing[3] }}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+          >
             <Stack gap={spacing[3]}>
               <RadioButton.Group
                 onValueChange={(value) =>
@@ -219,6 +227,7 @@ export function LocationReportSheet({
             />
           </Inline>
         </BottomSheet>
+        </KeyboardAvoidingView>
       </Modal>
       <NoticeSnackbar message={notice} onDismiss={() => setNotice("")} />
     </Portal>

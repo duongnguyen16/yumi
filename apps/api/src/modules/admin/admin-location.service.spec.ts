@@ -203,4 +203,50 @@ describe('Kiểm thử AdminLocationService', () => {
     expect(locModel.findById).not.toHaveBeenCalled();
     expect(request.save).not.toHaveBeenCalled();
   });
+
+  it('xac nhan dia diem trung lap, an khoi public va tao hook khang cao', async () => {
+    const { service, locModel, logModel, notification } = createService();
+    const location = {
+      _id: locationId,
+      name: 'Quan phu bi trung',
+      submittedBy: submitterId,
+      ownerId: undefined,
+      status: LocationStatus.PUBLISHED,
+      isDuplicate: false,
+      isSuspectedDuplicate: true,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.confirmDuplicateLocation(
+      String(locationId),
+      String(adminId),
+      'Trung voi dia diem da ton tai',
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      location: { status: LocationStatus.HIDDEN, isDuplicate: true },
+    });
+    expect(location).toMatchObject({
+      status: LocationStatus.HIDDEN,
+      isDuplicate: true,
+      isSuspectedDuplicate: false,
+    });
+    expect(logModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'LOCATION_HIDE_DUPLICATE',
+        targetCollection: 'locations',
+        targetId: locationId,
+      }),
+    );
+    expect(notification.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: String(submitterId),
+        type: 'LOCATION_DUPLICATE_HIDDEN',
+        refCollection: 'locations',
+        refId: String(locationId),
+      }),
+    );
+  });
 });
