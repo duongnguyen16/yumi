@@ -25,6 +25,11 @@ export interface VendorDashboardOverview {
   avgRating: number;
 }
 
+export type VendorReviewMutationResult = {
+  success: boolean;
+  message: string;
+};
+
 const getDashboardOverview = async () => {
   try {
     const response = await api.get('/vendor/dashboard/overview');
@@ -70,4 +75,44 @@ const getLocationStats = async (days?: number) => {
   }
 };
 
-export { getDashboardOverview, getLocationStats };
+const replyReview = async (
+  reviewId: string,
+  content: string,
+): Promise<VendorReviewMutationResult> => {
+  try {
+    const response = await api.post("/location/reply", {
+      data: { reviewId, content },
+    });
+    return {
+      success: response.data?.success !== false,
+      message: response.data?.message || "Đã gửi phản hồi.",
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      message: getVendorError(error, "Không thể gửi phản hồi lúc này."),
+    };
+  }
+};
+
+const editReviewReply = async (
+  reviewId: string,
+  content: string,
+): Promise<VendorReviewMutationResult> => {
+  try {
+    const response = await api.patch("/location/reply/edit", {
+      data: { reviewId, content },
+    });
+    return {
+      success: response.data?.success !== false,
+      message: response.data?.message || "Đã cập nhật phản hồi.",
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      message: getVendorError(error, "Không thể cập nhật phản hồi lúc này."),
+    };
+  }
+};
+
+export { editReviewReply, getDashboardOverview, getLocationStats, replyReview };

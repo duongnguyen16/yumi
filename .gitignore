@@ -1,9 +1,7 @@
 # Dependencies
 node_modules/
-.pnpm-store/
 
-# Lock files from other package managers (this project uses pnpm)
-package-lock.json
+# Lock files from other package managers (this project uses npm)
 yarn.lock
 
 # Build outputs
@@ -31,7 +29,6 @@ apps/api/.env
 # Logs
 *.log
 npm-debug.log*
-pnpm-debug.log*
 
 # OS
 .DS_Store
