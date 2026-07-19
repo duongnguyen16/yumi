@@ -1,3 +1,5 @@
-export function getReviewComposerKeyboardBehavior(): "height" {
-  return "height";
+export function getReviewComposerKeyboardBehavior(
+  platform = "android",
+): "padding" | "height" {
+  return platform === "ios" ? "padding" : "height";
 }

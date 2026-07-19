@@ -30,7 +30,7 @@
 
 ## 1. Global context (read once before coding)
 
-### 1.1 Repo layout (pnpm monorepo)
+### 1.1 Repo layout (npm workspaces monorepo)
 ```
 campus-local-guide/
 ├── api/         # NestJS (Flat MVC) — backend, REST, business logic

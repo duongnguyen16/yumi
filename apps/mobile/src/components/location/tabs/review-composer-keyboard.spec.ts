@@ -1,7 +1,11 @@
 import { getReviewComposerKeyboardBehavior } from "./review-composer-keyboard";
 
 describe("getReviewComposerKeyboardBehavior", () => {
-  it("uses one height-resize strategy instead of adding a keyboard offset", () => {
-    expect(getReviewComposerKeyboardBehavior()).toBe("height");
+  it("uses padding on iOS", () => {
+    expect(getReviewComposerKeyboardBehavior("ios")).toBe("padding");
+  });
+
+  it("uses height resizing on Android", () => {
+    expect(getReviewComposerKeyboardBehavior("android")).toBe("height");
   });
 });
