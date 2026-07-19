@@ -27,6 +27,7 @@ interface Props {
   readOnly?: boolean;
   onClose: () => void;
   onApprove: () => void;
+  onConfirmDuplicate: (reason: string, duplicateOfLocationId?: string) => void;
   onReject: (reason: string, duplicateOfLocationId?: string) => void;
 }
 
@@ -39,9 +40,11 @@ export function LocationRequestDetailDrawer({
   readOnly = false,
   onClose,
   onApprove,
+  onConfirmDuplicate,
   onReject,
 }: Props) {
   const [rejecting, setRejecting] = useState(startInRejectMode);
+  const [confirmingDuplicate, setConfirmingDuplicate] = useState(false);
   const [reason, setReason] = useState('');
   const [duplicateOfLocationId, setDuplicateOfLocationId] = useState('');
 
@@ -61,6 +64,7 @@ export function LocationRequestDetailDrawer({
 
   function close() {
     setRejecting(false);
+    setConfirmingDuplicate(false);
     setReason('');
     setDuplicateOfLocationId('');
     onClose();
@@ -68,6 +72,10 @@ export function LocationRequestDetailDrawer({
 
   function handleReject() {
     onReject(reason.trim(), duplicateOfLocationId.trim() || undefined);
+  }
+
+  function handleConfirmDuplicate() {
+    onConfirmDuplicate(reason.trim(), duplicateOfLocationId.trim() || undefined);
   }
 
   return (
@@ -81,7 +89,7 @@ export function LocationRequestDetailDrawer({
           <ActionButton variant="neutral" onClick={close} sx={{ flex: 1, minHeight: 46 }}>
             Đóng
           </ActionButton>
-        ) : !rejecting ? (
+        ) : !rejecting && !confirmingDuplicate ? (
           <>
             <ActionButton
               variant="neutral"
@@ -99,6 +107,16 @@ export function LocationRequestDetailDrawer({
             >
               Từ chối
             </ActionButton>
+            {flags?.suspectedDuplicate ? (
+              <ActionButton
+                variant="reject"
+                onClick={() => setConfirmingDuplicate(true)}
+                disabled={submitting}
+                sx={{ flex: 1.1, minHeight: 46 }}
+              >
+                Ẩn trùng
+              </ActionButton>
+            ) : null}
             <ActionButton
               variant="approve"
               onClick={onApprove}
@@ -106,6 +124,25 @@ export function LocationRequestDetailDrawer({
               sx={{ flex: 1.2, minHeight: 46 }}
             >
               {submitting ? 'Đang xử lý...' : 'Duyệt địa điểm'}
+            </ActionButton>
+          </>
+        ) : confirmingDuplicate ? (
+          <>
+            <ActionButton
+              variant="neutral"
+              onClick={() => setConfirmingDuplicate(false)}
+              disabled={submitting}
+              sx={{ flex: 1, minHeight: 46 }}
+            >
+              Quay lại
+            </ActionButton>
+            <ActionButton
+              variant="reject"
+              onClick={handleConfirmDuplicate}
+              disabled={submitting || reasonLength < 5}
+              sx={{ flex: 1.8, minHeight: 46 }}
+            >
+              {submitting ? 'Đang xử lý...' : 'Xác nhận trùng thật'}
             </ActionButton>
           </>
         ) : (
@@ -233,7 +270,7 @@ export function LocationRequestDetailDrawer({
           </Section>
         ) : null}
 
-        {!readOnly && rejecting ? (
+        {!readOnly && (rejecting || confirmingDuplicate) ? (
           <Box
             sx={{
               border: `1px solid ${tokens.color.redSoftBorder}`,
@@ -242,26 +279,28 @@ export function LocationRequestDetailDrawer({
             }}
           >
             <Typography sx={{ color: tokens.color.red, fontWeight: 700, fontSize: 17 }}>
-              Ghi rõ căn cứ từ chối
+              {confirmingDuplicate ? 'Ghi rõ căn cứ trùng lặp' : 'Ghi rõ căn cứ từ chối'}
             </Typography>
             <Typography sx={{ color: tokens.color.textSecondary, fontSize: 13, lineHeight: 1.5, mt: 0.5, mb: 2 }}>
-              Lý do sẽ được gửi cho người tạo phiếu và lưu trong lịch sử xét duyệt.
+              {confirmingDuplicate
+                ? 'Lý do sẽ được lưu và gửi thông báo kháng cáo cho người sở hữu địa điểm.'
+                : 'Lý do sẽ được gửi cho người tạo phiếu và lưu trong lịch sử xét duyệt.'}
             </Typography>
             <TextField
-              label="Lý do từ chối"
+              label={confirmingDuplicate ? 'Lý do xác nhận trùng lặp' : 'Lý do từ chối'}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               fullWidth
               multiline
               minRows={3}
-              placeholder="Nêu thông tin cần sửa hoặc căn cứ từ chối..."
+              placeholder={confirmingDuplicate ? 'Nêu căn cứ để ẩn địa điểm vì trùng lặp...' : 'Nêu thông tin cần sửa hoặc căn cứ từ chối...'}
               helperText={
                 reasonLength < 5
                   ? `Cần thêm ${5 - reasonLength} ký tự để xác nhận`
                   : 'Đã đủ độ dài tối thiểu.'
               }
               slotProps={{
-                htmlInput: { 'aria-label': 'Lý do từ chối địa điểm' },
+                htmlInput: { 'aria-label': confirmingDuplicate ? 'Lý do xác nhận trùng lặp' : 'Lý do từ chối địa điểm' },
                 formHelperText: {
                   sx: { color: reasonLength < 5 ? tokens.color.red : tokens.color.textMuted },
                 },

@@ -557,6 +557,18 @@ export async function rejectLocationRequest(
   return res.data;
 }
 
+export async function confirmDuplicateLocation(
+  id: string,
+  reason: string,
+  duplicateOfLocationId?: string,
+): Promise<LocationRequestActionResponse> {
+  const res = await api.patch<LocationRequestActionResponse>(
+    `/admin/locations/${id}/confirm-duplicate`,
+    { reason, ...(duplicateOfLocationId ? { duplicateOfLocationId } : {}) },
+  );
+  return res.data;
+}
+
 export interface DecisionEvidence {
   url: string;
   fileType: "IMAGE" | "VIDEO" | "DOCUMENT";

@@ -27,6 +27,7 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import {
   approveLocationRequest,
+  confirmDuplicateLocation,
   getLocationRequestQueue,
   rejectLocationRequest,
   type AdminLocationRequest,
@@ -175,6 +176,59 @@ export default function LocationRequestsPage() {
       await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmDuplicate(reason: string, duplicateOfLocationId?: string) {
+    if (!selected) return;
+    const locationId =
+      selected.locationId && typeof selected.locationId === 'object'
+        ? selected.locationId._id
+        : typeof selected.locationId === 'string'
+          ? selected.locationId
+          : null;
+    if (!locationId) {
+      setDrawerError('Không tìm thấy địa điểm để xác nhận trùng lặp');
+      return;
+    }
+    setSubmitting(true);
+    setDrawerError(null);
+    try {
+      await confirmDuplicateLocation(locationId, reason, duplicateOfLocationId);
+      setDrawerOpen(false);
+      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
+    } catch (err) {
+      setDrawerError(extractMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleQuickConfirmDuplicate(req: AdminLocationRequest) {
+    const locationId =
+      req.locationId && typeof req.locationId === 'object'
+        ? req.locationId._id
+        : typeof req.locationId === 'string'
+          ? req.locationId
+          : null;
+    if (!locationId) {
+      setError('Không tìm thấy địa điểm để xác nhận trùng lặp');
+      return;
+    }
+    const reason = window.prompt('Nhập lý do xác nhận địa điểm trùng lặp');
+    if (!reason || reason.trim().length < 5) return;
+    const duplicateOfLocationId =
+      window.prompt('ID địa điểm gốc nếu có, có thể bỏ trống')?.trim() ||
+      undefined;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await confirmDuplicateLocation(locationId, reason.trim(), duplicateOfLocationId);
+      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
+    } catch (err) {
+      setError(extractMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -381,6 +435,21 @@ export default function LocationRequestsPage() {
                               </Button>
                             </Tooltip>
                           ) : null}
+                          {view === 'queue' && flags?.suspectedDuplicate ? (
+                            <Tooltip title="Xác nhận trùng thật và ẩn địa điểm">
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                aria-label="Xác nhận trùng thật và ẩn địa điểm"
+                                disabled={submitting}
+                                onClick={() => void handleQuickConfirmDuplicate(req)}
+                                startIcon={<BlockOutlinedIcon fontSize="small" />}
+                                sx={quickActionSx(tokens.color.red, tokens.color.redSoftBg)}
+                              >
+                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Ẩn trùng</Box>
+                              </Button>
+                            </Tooltip>
+                          ) : null}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -413,6 +482,7 @@ export default function LocationRequestsPage() {
         readOnly={view === 'history'}
         onClose={closeDrawer}
         onApprove={handleApprove}
+        onConfirmDuplicate={handleConfirmDuplicate}
         onReject={handleReject}
       />
     </Box>
