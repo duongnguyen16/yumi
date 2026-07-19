@@ -59,7 +59,7 @@ Không nên sign-off production cho nhóm ownership trước khi xử lý ít nh
 | Mobile targeted workflow tests | **6/6 suite, 18/18 test đạt** |
 | Mobile full tests | **67/68 đạt**; một test fail ở `contribute-validation.spec.ts` về giờ mở cửa qua đêm, ngoài sáu luồng đang kiểm tra |
 
-Dependency tree hiện có của `apps/mobile` không tự chạy được do node_modules/pnpm cũ không nhất quán. Để phân biệt lỗi môi trường với lỗi source, typecheck và targeted tests đã được chạy trên bản sao tạm chỉ-đọc của source, nối với dependency tree sạch ở root. Không có source nào được thay đổi.
+Dependency tree hiện có của `apps/mobile` không tự chạy được do `node_modules` cũ không nhất quán. Để phân biệt lỗi môi trường với lỗi source, typecheck và targeted tests đã được chạy trên bản sao tạm chỉ-đọc của source, nối với dependency tree sạch ở root. Không có source nào được thay đổi.
 
 ### 3.3. API + MongoDB end-to-end
 

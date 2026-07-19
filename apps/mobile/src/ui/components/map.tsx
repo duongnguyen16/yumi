@@ -20,7 +20,7 @@ export function MapSearchDock({ value, notificationCount = 0, isSearchOpen, onCh
         {notificationCount > 0 ? <Badge size={18} style={{ backgroundColor: colors.accentPrimary, color: colors.textInverse, position: "absolute", right: -2, top: -2 }}>{notificationCount > 99 ? "99+" : notificationCount}</Badge> : null}
       </View>
       <View pointerEvents="none" style={{ alignItems: "center", flexDirection: "row", justifyContent: "center", position: "absolute", width: "100%" }}>
-        <Text selectable={false} style={{ color: colors.textPrimary, fontFamily: "serif", fontSize: 29, fontWeight: "700", letterSpacing: -1.4, lineHeight: 34 }}>Yu<Text style={{ color: colors.accentPrimary, fontStyle: "italic" }}>mi</Text></Text>
+        <Text selectable={false} style={{ color: colors.textPrimary, fontFamily: "serif", fontSize: 29, fontWeight: "700", letterSpacing: 0, lineHeight: 34 }}>Yu<Text style={{ color: colors.accentPrimary, fontStyle: "italic" }}>mi</Text></Text>
       </View>
       <PaperIconButton accessibilityLabel="Tìm kiếm địa điểm" containerColor={colors.surfaceBase} icon="magnify" iconColor={colors.textPrimary} mode="contained" onPress={onSearchOpen} size={22} style={{ borderRadius: radius.pill, boxShadow: elevation.floating, height: 48, margin: 0, width: 48 }} />
     </View>

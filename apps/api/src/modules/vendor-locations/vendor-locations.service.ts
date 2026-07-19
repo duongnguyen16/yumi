@@ -13,6 +13,7 @@ import { generateSystemCode } from 'src/common/func/generate-code';
 import {
   LocationSource,
   LocationStatus,
+  ReviewStatus,
   UserRole,
 } from 'src/common/schemas/common.enums';
 import { GeoPoint } from 'src/common/schemas/common.embedded';
@@ -39,6 +40,7 @@ import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { isUnderHold } from 'src/common/ownership/hold.util';
+import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 
 type ReviewRequiredData = {
   name?: string | null;
@@ -59,6 +61,7 @@ export class VendorLocationsService {
     @InjectModel(User.name)
     private userModel: Model<User>,
     @InjectModel(Otp.name) private otpModel: Model<OtpDocument>,
+    @InjectModel(Review.name) private reviewModel: Model<ReviewDocument>,
     private readonly imagesService: ImagesService,
     private readonly smsService: SmsService,
     private readonly locationGeoService: LocationGeoService,
@@ -631,6 +634,169 @@ export class VendorLocationsService {
       return {
         success: false,
         message: 'Xảy ra lỗi khi xác thực OTP',
+        statusCode: 500,
+      };
+    }
+  }
+
+  async replyReview(vendorId: string, content: string, reviewId: string) {
+    try {
+      const user = await this.userModel.findById(vendorId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 404,
+        };
+      }
+      const review = await this.reviewModel.findById(reviewId);
+
+      if (!review) {
+        return {
+          success: false,
+          message: 'Không tìm thấy đánh giá',
+          statusCode: 404,
+        };
+      }
+      if (review.status !== ReviewStatus.PUBLISHED) {
+        return {
+          success: false,
+          message: 'Đánh giá chưa được xuất bản',
+          statusCode: 400,
+        };
+      }
+      if (review.reply) {
+        return {
+          success: false,
+          message: 'Đánh giá đã có phản hồi',
+          statusCode: 400,
+        };
+      }
+      if (!review.locationId) {
+        return {
+          success: false,
+          message: 'Đánh giá không có địa điểm liên quan',
+          statusCode: 400,
+        };
+      }
+      const location = await this.locationModel.findById(review?.locationId);
+      if (!location) {
+        return {
+          success: false,
+          message: 'Không tìm thấy địa điểm liên quan đến đánh giá',
+          statusCode: 404,
+        };
+      }
+      if (!location?.ownerId) {
+        return {
+          success: false,
+          message: 'Bạn không có quyền trả lời đánh giá cho địa điểm này',
+          statusCode: 400,
+        };
+      }
+      if (!location.ownerId.equals(new Types.ObjectId(vendorId))) {
+        return {
+          success: false,
+          message: 'Bạn không có quyền trả lời đánh giá cho địa điểm này',
+          statusCode: 403,
+        };
+      }
+      review.reply = {
+        vendorId: new Types.ObjectId(vendorId),
+        content,
+      };
+      await review.save();
+      return {
+        success: true,
+        message: 'Trả lời đánh giá thành công',
+      };
+    } catch (error) {
+      console.error('Error in replyReview service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi trả lời đánh giá',
+        statusCode: 500,
+      };
+    }
+  }
+
+  async editReply(vendorId: string, content: string, reviewId: string) {
+    try {
+      const user = await this.userModel.findById(vendorId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'Không tìm thấy người dùng',
+          statusCode: 404,
+        };
+      }
+      const review = await this.reviewModel.findById(reviewId);
+
+      if (!review) {
+        return {
+          success: false,
+          message: 'Không tìm thấy đánh giá',
+          statusCode: 404,
+        };
+      }
+      if (review.status !== ReviewStatus.PUBLISHED) {
+        return {
+          success: false,
+          message: 'Đánh giá chưa được xuất bản',
+          statusCode: 400,
+        };
+      }
+      if (!review.reply) {
+        return {
+          success: false,
+          message: 'Đánh giá chưa có phản hồi',
+          statusCode: 400,
+        };
+      }
+      if (!review.locationId) {
+        return {
+          success: false,
+          message: 'Đánh giá không có địa điểm liên quan',
+          statusCode: 400,
+        };
+      }
+      const location = await this.locationModel.findById(review?.locationId);
+      if (!location) {
+        return {
+          success: false,
+          message: 'Không tìm thấy địa điểm liên quan đến đánh giá',
+          statusCode: 404,
+        };
+      }
+      if (!location?.ownerId) {
+        return {
+          success: false,
+          message: 'Bạn không có quyền phản hồi đánh giá cho địa điểm này',
+          statusCode: 400,
+        };
+      }
+      if (!location.ownerId.equals(new Types.ObjectId(vendorId))) {
+        return {
+          success: false,
+          message: 'Bạn không có quyền phản hồi đánh giá cho địa điểm này',
+          statusCode: 403,
+        };
+      }
+      await this.reviewModel.updateOne(
+        { _id: reviewId },
+        {
+          $set: { reply: { vendorId: new Types.ObjectId(vendorId), content } },
+        },
+      );
+      return {
+        success: true,
+        message: 'Cập nhật phản hồi thành công',
+      };
+    } catch (error) {
+      console.error('Error in editReply service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi cập nhật phản hồi',
         statusCode: 500,
       };
     }

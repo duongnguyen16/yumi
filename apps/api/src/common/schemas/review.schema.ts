@@ -3,7 +3,7 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { ReviewStatus } from './common.enums';
 import { ImageAsset, ImageAssetSchema } from './common.embedded';
 
-@Schema({ _id: false })
+@Schema({ _id: false, timestamps: true })
 export class ReviewReply {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   vendorId!: Types.ObjectId;
@@ -12,7 +12,7 @@ export class ReviewReply {
   content!: string;
 
   @Prop({ type: Date, default: Date.now })
-  createdAt!: Date;
+  createdAt?: Date;
 }
 export const ReviewReplySchema = SchemaFactory.createForClass(ReviewReply);
 
