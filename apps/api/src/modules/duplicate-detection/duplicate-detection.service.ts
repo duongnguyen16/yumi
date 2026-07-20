@@ -5,7 +5,7 @@ import { LocationStatus } from 'src/common/schemas/common.enums';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { LocationGeoService } from '../location-geo/location-geo.service';
 
-const DUPLICATE_DISTANCE_METERS = 500;
+const DUPLICATE_DISTANCE_METERS = 50;
 const DUPLICATE_SIMILARITY_THRESHOLD = 0.8;
 
 export type DuplicateLocationPreview = {
