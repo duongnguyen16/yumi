@@ -69,7 +69,7 @@ export const tokens = {
   },
   font: {
     sans: 'var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    mono: 'var(--font-mono), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace',
+    mono: 'var(--font-inter), Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   },
   motion: {
     hover: '180ms',

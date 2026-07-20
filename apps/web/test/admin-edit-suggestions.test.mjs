@@ -56,14 +56,14 @@ test('wires the Admin edit suggestion queue and review drawer', async () => {
   const [page, drawer, sidebar] = await Promise.all([
     readFile(
       new URL(
-        '../src/app/admin/(protected)/edit-suggestions/page.tsx',
+        '../src/app/(protected)/edit-suggestions/page.tsx',
         import.meta.url,
       ),
       'utf8',
     ),
     readFile(
       new URL(
-        '../src/app/admin/(protected)/edit-suggestions/components/EditSuggestionDetailDrawer.tsx',
+        '../src/app/(protected)/edit-suggestions/components/EditSuggestionDetailDrawer.tsx',
         import.meta.url,
       ),
       'utf8',
@@ -79,6 +79,6 @@ test('wires the Admin edit suggestion queue and review drawer', async () => {
   assert.match(page, /editSuggestionFieldLabel\(item\.fieldName\)/);
   assert.match(drawer, /editSuggestionValue\(suggestion\?\.oldValue\)/);
   assert.match(drawer, /editSuggestionValue\(suggestion\?\.newValue\)/);
-  assert.match(sidebar, /\/admin\/edit-suggestions/);
+  assert.match(sidebar, /\/edit-suggestions/);
   assert.match(sidebar, /Duyệt chỉnh sửa/);
 });
