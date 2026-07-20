@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Image, Keyboard, Share, TouchableWithoutFeedback, useWindowDimensions, View } from "react-native";
+import { Keyboard, Pressable, Share, TouchableWithoutFeedback, useWindowDimensions, View } from "react-native";
+import { Image } from "expo-image";
 import { Icon } from "react-native-paper";
 import * as Linking from "expo-linking";
 import { MaterialTabBar, Tabs } from "./collapsible-tabs";
@@ -8,22 +9,27 @@ import GeneralTab from "./tabs/GeneralTab";
 import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
+import { getReviewsByLocation, type LocationReview } from "@/service/reviewService";
 import { AppText, IconButton, Inline, Stack } from "@/ui/components";
 import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
 import { buildDirectionsUrl, getMapLocationPreview } from "@/common/map-location";
 import { userContext } from "@/contexts/userContext";
 import { checkBookmark, addBookmark, removeBookmark } from "@/service/bookmarkService";
+import { toAbsoluteUrl } from "@/service/url";
+import { ImagePreviewModal } from "./ImagePreviewModal";
 
 export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const { width } = useWindowDimensions();
   const location = data?.data;
-  const locationId = location?._id;
+  const locationId = location?._id ?? location?.id;
 
   const { user } = useContext(userContext);
   const canBookmark = !!user; // chỉ user đã đăng nhập mới dùng được
 
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [reviewImageUrls, setReviewImageUrls] = useState<string[]>([]);
 
   useEffect(() => {
     if (!locationId || !canBookmark) return;
@@ -45,11 +51,26 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
     setBookmarkLoading(false);
   };
 
-  const coverImage =
-    location?.imagesUrls?.find?.((image) => image?.isCover)?.url ||
-    location?.imagesUrls?.[0]?.url ||
-    location?.imageUrls?.[0] ||
-    null;
+  const imageUrls = mergeImageUrls(
+    getLocationImageUrls(location),
+    reviewImageUrls,
+  );
+  const coverImage = imageUrls[0] ?? null;
+
+  const refreshReviewImages = async () => {
+    if (!locationId) {
+      setReviewImageUrls([]);
+      return;
+    }
+
+    const response = await getReviewsByLocation(locationId);
+    if (response.success) {
+      setReviewImageUrls(getReviewImageUrls(response.reviews));
+      return;
+    }
+
+    console.log("[LocationDetail][review-images]", response.message);
+  };
 
   const handleShare = async () => {
     if (!locationId) return;
@@ -81,18 +102,37 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
     return () => clearTimeout(timer);
   }, [locationId]);
 
+  useEffect(() => {
+    void refreshReviewImages();
+  }, [locationId]);
+
   const renderHeader = () => {
     return (
       <View style={{ backgroundColor: colors.surfaceBase }}>
-        <Image
-          style={{ backgroundColor: colors.surfaceMedia, borderBottomLeftRadius: radius.large, borderBottomRightRadius: radius.large, height: 220, resizeMode: "cover", width: "100%" }}
-          alt={location?.name || "Location Image"}
-          source={{
-            uri:
-              coverImage ||
-              "https://placehold.co/800x450/F4EFE8/5F574F?text=No+image",
-          }}
-        />
+        <Pressable
+          accessibilityLabel="Xem ảnh địa điểm"
+          accessibilityRole={coverImage ? "imagebutton" : "image"}
+          disabled={!coverImage}
+          onPress={() => setPreviewIndex(0)}
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+        >
+          <Image
+            style={{
+              backgroundColor: colors.surfaceMedia,
+              borderBottomLeftRadius: radius.large,
+              borderBottomRightRadius: radius.large,
+              height: 220,
+              width: "100%",
+            }}
+            alt={location?.name || "Location Image"}
+            contentFit="cover"
+            source={{
+              uri:
+                coverImage ||
+                "https://placehold.co/800x450/F4EFE8/5F574F?text=No+image",
+            }}
+          />
+        </Pressable>
 
         <Stack style={{ padding: spacing[4] }}>
           <AppText variant="title1">{location?.name || "Chi tiết địa điểm"}</AppText>
@@ -161,16 +201,61 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
         </Tabs.Tab>
 
         <Tabs.Tab name="review" label="Đánh giá">
-          <ReviewTab locationData={location} initialRating={location?.rating} />
+          <ReviewTab
+            initialRating={location?.rating}
+            locationData={location}
+            onChanged={refreshReviewImages}
+          />
         </Tabs.Tab>
 
         <Tabs.Tab name="picture" label="Hình ảnh">
           <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <PictureTab />
+            <PictureTab
+              imageUrls={imageUrls}
+              locationName={location?.name}
+            />
           </Tabs.ScrollView>
         </Tabs.Tab>
       </Tabs.Container>
+        <ImagePreviewModal
+          images={imageUrls.map((url, index) => ({
+            description: `Ảnh ${index + 1}`,
+            title: location?.name || "Ảnh địa điểm",
+            url,
+          }))}
+          initialIndex={previewIndex ?? 0}
+          locationName={location?.name}
+          onDismiss={() => setPreviewIndex(null)}
+          visible={previewIndex !== null}
+        />
       </View>
     </TouchableWithoutFeedback>
+  );
+}
+
+function getLocationImageUrls(location: any) {
+  const detailedImages = [...(location?.imagesUrls ?? [])]
+    .sort((a, b) => Number(Boolean(b?.isCover)) - Number(Boolean(a?.isCover)))
+    .map((image) => image?.url);
+  return [
+    ...detailedImages,
+    ...(location?.imageUrls ?? []),
+    location?.imageUrl,
+  ]
+    .map((url) => toAbsoluteUrl(url))
+    .filter((url): url is string => Boolean(url));
+}
+
+function getReviewImageUrls(reviews: LocationReview[]) {
+  return reviews.flatMap((review) =>
+    (review.images ?? [])
+      .map((image) => toAbsoluteUrl(image.url))
+      .filter((url): url is string => Boolean(url)),
+  );
+}
+
+function mergeImageUrls(...groups: string[][]) {
+  return Array.from(
+    new Set(groups.flat().filter((url): url is string => Boolean(url))),
   );
 }

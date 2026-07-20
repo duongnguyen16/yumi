@@ -279,7 +279,7 @@ export class ReviewsService {
     const normalized = comment.trim();
     if (normalized.length < MIN_REVIEW_COMMENT_LENGTH) {
       throw new BadRequestException(
-        'Nội dung đánh giá phải có ít nhất 20 ký tự',
+        'Nội dung đánh giá phải có ít nhất 1 ký tự',
       );
     }
 

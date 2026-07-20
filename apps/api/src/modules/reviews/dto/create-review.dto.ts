@@ -26,7 +26,7 @@ export class CreateReviewDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(3)
+  @ArrayMaxSize(5)
   @IsUrl({}, { each: true })
   imageUrls?: string[];
 
