@@ -6,12 +6,15 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { VerboseRequestLoggerMiddleware } from './common/middleware/verbose-request-logger.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
+  const verboseRequestLogger = new VerboseRequestLoggerMiddleware(configService);
 
   app.use(helmet());
+  app.use(verboseRequestLogger.use.bind(verboseRequestLogger));
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

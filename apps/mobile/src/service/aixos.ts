@@ -8,6 +8,7 @@ import {
   saveRefreshTokens,
   setAccessToken,
 } from "./tokenStorage";
+import { logApiError, logApiInput, logApiOutput } from "./verbose-api-logger";
 
 const BASE_URL_ENV =
   process.env.EXPO_PUBLIC_BASE_URL ||
@@ -31,12 +32,17 @@ api.interceptors.request.use(async (config) => {
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  logApiInput(config);
   return config;
 });
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    logApiOutput(res);
+    return res;
+  },
   async (error) => {
+    logApiError(error);
     const originalRequest = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
@@ -63,7 +69,7 @@ api.interceptors.response.use(
         if (!refreshToken) {
           return Promise.reject(error);
         }
-        const res = await axios.post(`${BASE_URL}/auth/refresh`, {
+        const res = await api.post("/auth/refresh", {
           refreshToken,
         });
         if (res.data?.success) {

@@ -23,7 +23,7 @@ export default function ProtectedLayout({
 
   useEffect(() => {
     if (!canAccess) {
-      router.replace('/admin/login');
+      router.replace('/login');
     }
   }, [canAccess, router]);
 

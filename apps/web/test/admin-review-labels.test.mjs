@@ -79,10 +79,10 @@ test('returns only decisions allowed by the appeal type', () => {
 
 test('appeal surfaces use localized labels and accessible decision cards', async () => {
   const [page, drawer] = await Promise.all([
-    readFile(new URL('../src/app/admin/(protected)/appeals/page.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/app/(protected)/appeals/page.tsx', import.meta.url), 'utf8'),
     readFile(
       new URL(
-        '../src/app/admin/(protected)/appeals/components/AppealDetailDrawer.tsx',
+        '../src/app/(protected)/appeals/components/AppealDetailDrawer.tsx',
         import.meta.url,
       ),
       'utf8',
@@ -102,12 +102,12 @@ test('appeal surfaces use localized labels and accessible decision cards', async
 test('location review surfaces keep quick actions and localize visible data', async () => {
   const [page, drawer] = await Promise.all([
     readFile(
-      new URL('../src/app/admin/(protected)/location-requests/page.tsx', import.meta.url),
+      new URL('../src/app/(protected)/location-requests/page.tsx', import.meta.url),
       'utf8',
     ),
     readFile(
       new URL(
-        '../src/app/admin/(protected)/location-requests/components/LocationRequestDetailDrawer.tsx',
+        '../src/app/(protected)/location-requests/components/LocationRequestDetailDrawer.tsx',
         import.meta.url,
       ),
       'utf8',

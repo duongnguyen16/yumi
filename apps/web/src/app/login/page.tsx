@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
           refreshToken: res.refreshToken,
           user: res.user,
         });
-        router.push("/admin/categories");
+        router.push("/categories");
         return;
       }
       setError("Tài khoản không có quyền admin");
