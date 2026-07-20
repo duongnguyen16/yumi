@@ -17,6 +17,11 @@ const createProduct = async (locationId: string, payload: ProductPayload) => {
     const response = await api.post(
       `/products/location/${locationId}`,
       toFormData(payload),
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
     );
     return response.data;
   } catch (error) {
@@ -30,7 +35,15 @@ const createProduct = async (locationId: string, payload: ProductPayload) => {
 
 const updateProduct = async (productId: string, payload: ProductPayload) => {
   try {
-    const response = await api.patch(`/products/${productId}`, toFormData(payload));
+    const response = await api.patch(
+      `/products/${productId}`,
+      toFormData(payload),
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
     return response.data;
   } catch (error) {
     return {
