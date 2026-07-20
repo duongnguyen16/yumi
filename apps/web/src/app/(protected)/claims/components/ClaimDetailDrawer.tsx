@@ -55,6 +55,9 @@ export function ClaimDetailDrawer({
   const flags = claim?.flags;
   const proofs = claim?.evidenceFiles ?? [];
   const firstImage = proofs.find((file) => file.fileType === 'IMAGE');
+  const vendorName = vendor?.fullName ?? vendor?.email;
+  const textLength = text.trim().length;
+  const isEditing = !readOnly && mode !== 'default';
 
   function back() {
     setMode('default');
@@ -63,8 +66,68 @@ export function ClaimDetailDrawer({
 
   function submit() {
     const value = text.trim();
-    if (mode === 'reject') onReject(value);
-    if (mode === 'evidence') onRequestEvidence(value);
+    if (mode === 'reject') {
+      onReject(value);
+    } else if (mode === 'evidence') {
+      onRequestEvidence(value);
+    }
+  }
+
+  function renderFooter() {
+    if (readOnly) {
+      return (
+        <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>
+          Đóng
+        </ActionButton>
+      );
+    }
+
+    if (mode === 'default') {
+      return (
+        <>
+          <ActionButton
+            variant="reject"
+            disabled={saving}
+            onClick={() => setMode('reject')}
+            sx={{ flex: 1 }}
+          >
+            Từ chối
+          </ActionButton>
+          <ActionButton
+            variant="neutral"
+            disabled={saving}
+            onClick={() => setMode('evidence')}
+            sx={{ flex: 1.2 }}
+          >
+            Bổ sung
+          </ActionButton>
+          <ActionButton
+            variant="approve"
+            disabled={saving || !flags?.eligibleForApprove}
+            onClick={() => onApprove()}
+            sx={{ flex: 1 }}
+          >
+            {saving ? 'Đang xử lý' : 'Duyệt'}
+          </ActionButton>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <ActionButton variant="neutral" onClick={back} sx={{ flex: 1 }}>
+          Quay lại
+        </ActionButton>
+        <ActionButton
+          variant={mode === 'reject' ? 'reject' : 'approve'}
+          disabled={saving || textLength < 5}
+          onClick={submit}
+          sx={{ flex: 1.5 }}
+        >
+          {saving ? 'Đang gửi' : 'Xác nhận'}
+        </ActionButton>
+      </>
+    );
   }
 
   return (
@@ -82,57 +145,12 @@ export function ClaimDetailDrawer({
             sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <FactCheckOutlinedIcon sx={{ fontSize: 60, color: tokens.color.orange }} />
+          <FactCheckOutlinedIcon
+            sx={{ fontSize: 60, color: tokens.color.orange }}
+          />
         )
       }
-      footer={
-        readOnly ? (
-          <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>
-            Đóng
-          </ActionButton>
-        ) : mode === 'default' ? (
-          <>
-            <ActionButton
-              variant="reject"
-              disabled={saving}
-              onClick={() => setMode('reject')}
-              sx={{ flex: 1 }}
-            >
-              Từ chối
-            </ActionButton>
-            <ActionButton
-              variant="neutral"
-              disabled={saving}
-              onClick={() => setMode('evidence')}
-              sx={{ flex: 1.2 }}
-            >
-              Bổ sung
-            </ActionButton>
-            <ActionButton
-              variant="approve"
-              disabled={saving || !flags?.eligibleForApprove}
-              onClick={() => onApprove()}
-              sx={{ flex: 1 }}
-            >
-              {saving ? 'Đang xử lý' : 'Duyệt'}
-            </ActionButton>
-          </>
-        ) : (
-          <>
-            <ActionButton variant="neutral" onClick={back} sx={{ flex: 1 }}>
-              Quay lại
-            </ActionButton>
-            <ActionButton
-              variant={mode === 'reject' ? 'reject' : 'approve'}
-              disabled={saving || text.trim().length < 5}
-              onClick={submit}
-              sx={{ flex: 1.5 }}
-            >
-              {saving ? 'Đang gửi' : 'Xác nhận'}
-            </ActionButton>
-          </>
-        )
-      }
+      footer={renderFooter()}
     >
       <Stack spacing={2.5}>
         <Box>
@@ -162,14 +180,15 @@ export function ClaimDetailDrawer({
             </Stack>
             {!flags.eligibleForApprove && (
               <Alert severity="warning" sx={{ mt: 1.5 }}>
-                Hồ sơ chưa đủ điều kiện duyệt. Hãy yêu cầu vendor bổ sung bằng chứng.
+                Hồ sơ chưa đủ điều kiện duyệt. Hãy yêu cầu vendor bổ sung bằng
+                chứng.
               </Alert>
             )}
           </Box>
         )}
 
         <Box sx={{ border: `1px solid ${tokens.color.border}` }}>
-          <Meta label="Vendor" value={vendor?.fullName ?? vendor?.email ?? '—'} />
+          <Meta label="Vendor" value={vendorName ?? '—'} />
           <Divider />
           <Meta label="Email" value={vendor?.email ?? '—'} />
           <Divider />
@@ -198,7 +217,9 @@ export function ClaimDetailDrawer({
               label="Xử lý lúc"
               value={
                 claim?.adminDecision?.decidedAt
-                  ? new Date(claim.adminDecision.decidedAt).toLocaleString('vi-VN')
+                  ? new Date(claim.adminDecision.decidedAt).toLocaleString(
+                      'vi-VN',
+                    )
                   : '—'
               }
             />
@@ -223,12 +244,16 @@ export function ClaimDetailDrawer({
                   <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
                     {file.fileType} {index + 1}
                   </Typography>
-                  <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
+                  <Typography
+                    sx={{ color: tokens.color.textMuted, fontSize: 12 }}
+                  >
                     {file.geo?.coordinates
                       ? file.geo.coordinates.join(', ')
                       : 'Không có tọa độ'}
                   </Typography>
-                  <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
+                  <Typography
+                    sx={{ color: tokens.color.textMuted, fontSize: 12 }}
+                  >
                     {file.capturedAt
                       ? new Date(file.capturedAt).toLocaleString('vi-VN')
                       : 'Không có thời gian'}
@@ -265,7 +290,7 @@ export function ClaimDetailDrawer({
           </Link>
         )}
 
-        {!readOnly && mode !== 'default' && (
+        {isEditing && (
           <TextField
             autoFocus
             fullWidth

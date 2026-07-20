@@ -1,7 +1,9 @@
 import { userContext } from "@/contexts/userContext";
 import { getAuthenticatedDestination } from "@/navigation/authDestination";
 import { login } from "@/service/authService";
+import { getLoginFeedback } from "./login-feedback";
 import {
+  AppText,
   BottomActionBar,
   Button,
   NoticeSnackbar,
@@ -9,7 +11,7 @@ import {
   Stack,
   TextField,
 } from "@/ui/components";
-import { spacing } from "@/ui/tokens";
+import { colors, spacing } from "@/ui/tokens";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useContext, useState } from "react";
 import { ScrollView } from "react-native";
@@ -20,10 +22,9 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { passwordReset } = useLocalSearchParams<{ passwordReset?: string }>();
-  const [error, setError] = useState(
-    passwordReset === "success"
-      ? "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới."
-      : "",
+  const [error, setError] = useState("");
+  const [snackbarMessage, setSnackbarMessage] = useState(
+    () => getLoginFeedback(passwordReset).snackbarMessage,
   );
   const { setUser, setAccessToken } = useContext(userContext);
   const router = useRouter();
@@ -73,14 +74,25 @@ export default function LoginForm() {
           autoCapitalize="none"
           keyboardType="email-address"
           label="Email"
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            setError("");
+          }}
           value={email}
         />
         <PasswordField
           label="Mật khẩu"
-          onChangeText={setPassword}
+          onChangeText={(value) => {
+            setPassword(value);
+            setError("");
+          }}
           value={password}
         />
+        {error ? (
+          <AppText style={{ color: colors.accentRed }} variant="footnote">
+            {error}
+          </AppText>
+        ) : null}
         <Button
           label="Quên mật khẩu?"
           onPress={() => router.push("/auth/forgot-password")}
@@ -104,7 +116,10 @@ export default function LoginForm() {
           />
         </Stack>
       </BottomActionBar>
-      <NoticeSnackbar message={error} onDismiss={() => setError("")} />
+      <NoticeSnackbar
+        message={snackbarMessage}
+        onDismiss={() => setSnackbarMessage("")}
+      />
     </>
   );
 }

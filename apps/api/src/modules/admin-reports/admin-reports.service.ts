@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,6 +8,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ReportStatus } from '@wdp301/shared';
 import { Model, Types } from 'mongoose';
 import {
+  NOTIFICATION_PORT,
+  NotificationPort,
+} from 'src/common/contracts/notification.port';
+import {
+  NotificationType,
   ReviewStatus,
   TrustEventType,
 } from 'src/common/schemas/common.enums';
@@ -14,14 +20,8 @@ import {
   AuditLog,
   AuditLogDocument,
 } from 'src/common/schemas/audit-log.schema';
-import {
-  Report,
-  ReportDocument,
-} from 'src/common/schemas/report.schema';
-import {
-  Review,
-  ReviewDocument,
-} from 'src/common/schemas/review.schema';
+import { Report, ReportDocument } from 'src/common/schemas/report.schema';
+import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { DismissReportDto } from './dto/dismiss-report.dto';
 import { ResolveReportDto } from './dto/resolve-report.dto';
@@ -44,6 +44,8 @@ export class AdminReportsService {
     @InjectModel(AuditLog.name)
     private readonly auditLogModel: Model<AuditLogDocument>,
     private readonly trustEngineService: TrustEngineService,
+    @Inject(NOTIFICATION_PORT)
+    private readonly notification: NotificationPort,
   ) {}
 
   async listReports(page = 1, limit = PAGINATION_DEFAULT_LIMIT) {
@@ -71,9 +73,7 @@ export class AdminReportsService {
       evidenceFiles: r.evidenceFiles,
       route: r.route,
       status: r.status,
-      affectedVendorId: r.affectedVendorId
-        ? String(r.affectedVendorId)
-        : null,
+      affectedVendorId: r.affectedVendorId ? String(r.affectedVendorId) : null,
       resultReason: r.resultReason,
       resolvedAt: r.resolvedAt,
       createdAt: (r as any).createdAt,
@@ -122,7 +122,12 @@ export class AdminReportsService {
 
     // If a review should be removed
     if (dto.removeReviewId) {
-      await this.removeReview(report, adminObjectId, dto.removeReviewId, dto.resultReason);
+      await this.removeReview(
+        report,
+        adminObjectId,
+        dto.removeReviewId,
+        dto.resultReason,
+      );
     }
 
     // Mark report as RESOLVED
@@ -148,7 +153,10 @@ export class AdminReportsService {
       targetCollection: 'reports',
       targetId: report._id,
       reason: dto.resultReason,
-      diff: { previousStatus: ReportStatus.PENDING, newStatus: ReportStatus.RESOLVED },
+      diff: {
+        previousStatus: ReportStatus.PENDING,
+        newStatus: ReportStatus.RESOLVED,
+      },
     });
 
     return {
@@ -203,7 +211,10 @@ export class AdminReportsService {
       targetCollection: 'reports',
       targetId: report._id,
       reason: dto.resultReason,
-      diff: { previousStatus: ReportStatus.PENDING, newStatus: ReportStatus.DISMISSED },
+      diff: {
+        previousStatus: ReportStatus.PENDING,
+        newStatus: ReportStatus.DISMISSED,
+      },
     });
 
     return {
@@ -254,6 +265,17 @@ export class AdminReportsService {
         newStatus: ReviewStatus.REMOVED_BY_ADMIN,
         reportId: String(report._id),
       },
+    });
+
+    const userId = String(review.userId);
+    const refId = String(review._id);
+    await this.notification.notify({
+      userId,
+      type: NotificationType.REVIEW_REMOVED,
+      title: 'Đánh giá đã bị gỡ',
+      body: reason,
+      refCollection: 'reviews',
+      refId,
     });
   }
 

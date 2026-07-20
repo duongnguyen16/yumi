@@ -1,4 +1,5 @@
 import api from "./aixos";
+import { getNoticeMessage } from "@/ui/feedback";
 
 export type ClaimEvidence = {
   url: string;
@@ -15,23 +16,22 @@ type ClaimApiResponse = {
 };
 
 export type StartClaimResult =
-  | (ClaimApiResponse & { success: true; otpRequired: boolean; siteCode: string })
+  | (ClaimApiResponse & {
+      success: true;
+      otpRequired: boolean;
+      siteCode: string;
+    })
   | { success: false; message: string };
 
-const messageFromError = (error: unknown, fallback: string) => {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const response = error as { response?: { data?: { message?: string } } };
-    return response.response?.data?.message || fallback;
-  }
-  return error instanceof Error ? error.message : fallback;
-};
-
-export const startClaim = async (locationId: string): Promise<StartClaimResult> => {
+export const startClaim = async (
+  locationId: string,
+): Promise<StartClaimResult> => {
   try {
     const response = await api.post("/claims/start", { locationId });
     return response.data as StartClaimResult;
   } catch (error) {
-    return { success: false, message: messageFromError(error, "Không thể bắt đầu yêu cầu claim.") };
+    const message = getNoticeMessage(error, "Không thể bắt đầu yêu cầu claim.");
+    return { success: false, message };
   }
 };
 
@@ -40,7 +40,8 @@ export const verifyClaimOtp = async (locationId: string, otp: string) => {
     const response = await api.post("/claims/verify-otp", { locationId, otp });
     return response.data as ClaimApiResponse;
   } catch (error) {
-    return { success: false, message: messageFromError(error, "Xác minh OTP không thành công.") };
+    const message = getNoticeMessage(error, "Xác minh OTP không thành công.");
+    return { success: false, message };
   }
 };
 
@@ -54,6 +55,7 @@ export const submitClaim = async (payload: {
       claim?: { id: string; status: string };
     };
   } catch (error) {
-    return { success: false, message: messageFromError(error, "Không thể gửi yêu cầu claim.") };
+    const message = getNoticeMessage(error, "Không thể gửi yêu cầu claim.");
+    return { success: false, message };
   }
 };
