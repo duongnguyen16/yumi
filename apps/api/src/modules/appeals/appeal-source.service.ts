@@ -186,13 +186,14 @@ export class AppealSourceService {
       return this.fail(409, 'Tài khoản không thể kháng cáo');
     }
     const log = await this.audit('users', id, `update_user_status:${status}`);
-    if (!log) return this.fail(404, 'Không tìm thấy quyết định gốc');
+    const decidedAt = log ? this.createdAt(log) : item.updatedAt;
+    if (!decidedAt) return this.fail(404, 'Không tìm thấy quyết định gốc');
     return this.ok(
       'users',
       id,
-      this.createdAt(log),
-      log.actorId,
-      log.reason,
+      decidedAt,
+      log?.actorId,
+      log?.reason,
     );
   }
 

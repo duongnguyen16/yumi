@@ -9,7 +9,6 @@ import { AuditService } from 'src/common/services/audit.service';
 import { DisputeStatus } from 'src/common/schemas/common.enums';
 import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
-import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { DisputeOutcome, ResolveDisputeDTO } from './dto/resolve-dispute.dto';
@@ -58,27 +57,6 @@ export class DisputeService {
       return this.fail(403, 'Bạn không có quyền xem tranh chấp này');
     }
     return { success: true, dispute: item };
-  }
-
-  // add bằng chứng cho tranh chấp
-  async addEvidence(id: string, userId: string, dto: AddDisputeEvidenceDTO) {
-    try {
-      if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
-      const item = await this.disputeModel.findById(id).exec();
-      if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
-      if (item.status !== DisputeStatus.OPEN) {
-        return this.fail(409, 'Tranh chấp đã được xử lý');
-      }
-      const side = this.sideOf(item, userId);
-      if (!side) return this.fail(403, 'Bạn không thuộc tranh chấp này');
-      if (side === 'A') item.evidenceA.push(...dto.evidenceFiles);
-      if (side === 'B') item.evidenceB.push(...dto.evidenceFiles);
-      await item.save();
-      return { success: true, message: 'Đã bổ sung bằng chứng', dispute: item };
-    } catch (err) {
-      this.logger.error('Không thể bổ sung bằng chứng', err);
-      return this.fail(500, 'Lỗi khi bổ sung bằng chứng');
-    }
   }
 
   // list tranh chấp cho admin

@@ -1,6 +1,7 @@
 import Timeline from "@/components/workflow/Timeline";
 import WorkflowDetailScreen from "@/components/workflow/WorkflowDetailScreen";
 import { getWorkflowStatus } from "@/components/workflow/status";
+import { returnAfterSuccess } from "@/navigation/return-after-success";
 import { userContext } from "@/contexts/userContext";
 import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
@@ -103,11 +104,7 @@ export default function AccessDetailScreen() {
       return;
     }
 
-    const refreshed = await getAccess(id);
-    if (refreshed.success) {
-      setItem(refreshed.request || item);
-    }
-    setMessage(response.message || "Yêu cầu đã được xử lý.");
+    returnAfterSuccess(router);
   };
 
   const takeProof = async () => {
@@ -172,11 +169,7 @@ export default function AccessDetailScreen() {
         return;
       }
 
-      const refreshed = await getAccess(id);
-      if (refreshed.success) {
-        setItem(refreshed.request || item);
-      }
-      setMessage(response.message || "Quyền quản lý đã được cập nhật.");
+      returnAfterSuccess(router);
     } catch (error) {
       setMessage(getNoticeMessage(error, "Không thể tải bằng chứng."));
     } finally {

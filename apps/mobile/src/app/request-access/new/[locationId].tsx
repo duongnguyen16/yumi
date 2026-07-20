@@ -11,6 +11,7 @@ import {
   TextArea,
 } from "@/ui/components";
 import { colors } from "@/ui/tokens";
+import { returnAfterSuccess } from "@/navigation/return-after-success";
 import {
   Stack as RouterStack,
   useLocalSearchParams,
@@ -30,7 +31,6 @@ export default function NewAccessScreen() {
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const submit = async () => {
     if (!locationId) return;
@@ -43,19 +43,11 @@ export default function NewAccessScreen() {
       return;
     }
 
-    setSubmitted(true);
-    setMessage("Yêu cầu đã gửi. Chủ địa điểm có 3 ngày để phản hồi.");
+    returnAfterSuccess(router);
   };
 
   const locationName = name || "Địa điểm này";
   const supportingText = `${locationName} đang có chủ. Chủ hiện tại có 3 ngày để đồng ý hoặc từ chối.`;
-  const noticeAction = submitted
-    ? {
-        label: "Xem",
-        onPress: () => router.replace("/request-access" as never),
-      }
-    : undefined;
-
   return (
     <Page>
       <RouterStack.Screen options={{ headerShown: false }} />
@@ -86,11 +78,7 @@ export default function NewAccessScreen() {
           width="full"
         />
       </BottomActionBar>
-      <NoticeSnackbar
-        action={noticeAction}
-        message={message}
-        onDismiss={() => setMessage("")}
-      />
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );
 }

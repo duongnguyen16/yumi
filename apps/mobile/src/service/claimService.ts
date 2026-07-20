@@ -48,6 +48,7 @@ export const verifyClaimOtp = async (locationId: string, otp: string) => {
 export const submitClaim = async (payload: {
   locationId: string;
   evidenceFiles: ClaimEvidence[];
+  licenseUrl?: string;
 }) => {
   try {
     const response = await api.post("/claims/submit", payload);

@@ -8,6 +8,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -433,6 +434,16 @@ export default function AppealsPage() {
         onClose={() => setSelected(null)}
         onResolve={(decision, reason) => void run(decision, reason)}
       />
+      <Snackbar
+        open={!!drawerError}
+        autoHideDuration={5000}
+        onClose={() => setDrawerError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setDrawerError(null)}>
+          {drawerError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

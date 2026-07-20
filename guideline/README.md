@@ -20,6 +20,124 @@
 
 ---
 
+## File index theo task
+
+### WDP-19 — Admin duyệt địa điểm
+
+API:
+
+* `modules/admin/admin-location.controller.ts`
+* `modules/admin/admin-location.service.ts`
+* `modules/admin/admin-location.service.spec.ts`
+* `modules/admin/admin.module.ts`
+* `modules/admin/dto/list-pending-requests.dto.ts`
+* `modules/admin/dto/reject-request.dto.ts`
+* `common/contracts/notification.port.ts`
+* `common/schemas/location-request.ts`
+
+WEB:
+
+* `apps/web/src/app/admin/(protected)/location-requests/page.tsx`
+* `apps/web/src/app/admin/(protected)/location-requests/components/LocationRequestDetailDrawer.tsx`
+
+---
+
+### WDP-27 — Claim địa điểm
+
+API:
+
+* `modules/claims/claim.controller.ts`
+* `modules/claims/claim.service.ts`
+* `modules/claims/claim.module.ts`
+* `modules/claims/dto/start-claim.dto.ts`
+* `modules/claims/dto/verify-claim-otp.dto.ts`
+* `modules/claims/dto/submit-claim.dto.ts`
+* `common/schemas/claim-verification-session.schema.ts`
+
+MOBILE:
+
+* `apps/mobile/src/app/claim/[locationId].tsx`
+
+---
+
+### WDP-28 — Admin xét claim
+
+API:
+
+* `modules/admin-claims/admin-claim.controller.ts`
+* `modules/admin-claims/admin-claim.service.ts`
+* `modules/admin-claims/admin-claim.module.ts`
+* `modules/admin-claims/dto/list-pending-claims.dto.ts`
+* `modules/admin-claims/dto/reject-claim.dto.ts`
+* `modules/admin-claims/dto/request-evidence.dto.ts`
+
+WEB:
+
+* `apps/web/src/app/admin/(protected)/claims/page.tsx`
+
+---
+
+### WDP-30 — Request-access, chuyển quyền và hold
+
+API:
+
+* `modules/request-access/request-access.controller.ts`
+* `modules/request-access/request-access.service.ts`
+* `modules/request-access/request-access.module.ts`
+* `modules/request-access/request-access.service.spec.ts`
+* `common/ownership/hold.util.ts`
+* `common/ownership/hold.util.spec.ts`
+
+MOBILE:
+
+* `apps/mobile/src/service/requestAccessService.ts`
+* `apps/mobile/src/app/request-access/new/[locationId].tsx`
+* `apps/mobile/src/app/request-access/index.tsx`
+* `apps/mobile/src/app/request-access/[id].tsx`
+
+---
+
+### WDP-31 — Phân xử tranh chấp sở hữu
+
+API:
+
+* `modules/disputes/dispute.controller.ts`
+* `modules/disputes/dispute.service.ts`
+* `modules/disputes/dispute.module.ts`
+* `modules/admin-disputes/admin-dispute.controller.ts`
+* `modules/admin-disputes/admin-dispute.service.ts`
+
+WEB:
+
+* `apps/web/src/app/admin/(protected)/disputes/page.tsx`
+
+MOBILE:
+
+* `apps/mobile/src/app/disputes/[id].tsx`
+
+---
+
+### WDP-32 — Kháng cáo
+
+API:
+
+* `modules/appeals/appeal.controller.ts`
+* `modules/appeals/appeal.service.ts`
+* `modules/appeals/appeal.module.ts`
+* `modules/admin-appeals/admin-appeal.controller.ts`
+* `modules/admin-appeals/admin-appeal.service.ts`
+
+WEB:
+
+* `apps/web/src/app/admin/(protected)/appeals/page.tsx`
+
+MOBILE:
+
+* `apps/mobile/src/app/appeals/new.tsx`
+* `apps/mobile/src/app/request-access/[id].tsx` (nút kháng cáo)
+
+---
+
 ## 📖 Thuật ngữ & bối cảnh — đọc 1 lần (thay cho SPECS/WDP)
 
 Hệ thống là **Campus Local Guide**: bản đồ chia sẻ địa điểm quanh trường; customer đóng góp địa điểm/review, vendor "claim" (nhận sở hữu) địa điểm của mình, admin kiểm duyệt và phân xử.

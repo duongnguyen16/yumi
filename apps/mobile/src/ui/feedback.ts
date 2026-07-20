@@ -18,6 +18,12 @@ export function getNoticeMessage(value: unknown, fallback: string) {
     if (message) return message;
   }
 
+  if (typeof value === "object" && value !== null) {
+    const failure = value as ApiFailure;
+    const responseMessage = formatMessage(failure.response?.data?.message);
+    if (responseMessage) return responseMessage;
+  }
+
   if (value instanceof Error) {
     const message = value.message.trim();
     if (message) return message;
@@ -25,9 +31,6 @@ export function getNoticeMessage(value: unknown, fallback: string) {
 
   if (typeof value === "object" && value !== null) {
     const failure = value as ApiFailure;
-    const responseMessage = formatMessage(failure.response?.data?.message);
-    if (responseMessage) return responseMessage;
-
     const directMessage = formatMessage(failure.message);
     if (directMessage) return directMessage;
   }
