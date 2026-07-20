@@ -12,6 +12,11 @@ import {
   type ReviewSummary,
   updateReview,
 } from "@/service/reviewService";
+import {
+  uploadContributionImage,
+  type PendingContributionImage,
+} from "@/service/contributePlaceService";
+import { toAbsoluteUrl } from "@/service/url";
 import { editReviewReply, replyReview } from "@/service/vendorService";
 import {
   AppText,
@@ -22,11 +27,14 @@ import {
   IconButton,
   Inline,
   LoadingState,
+  MediaPicker,
   NoticeSnackbar,
   Stack,
   TextArea,
 } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import React, {
   useCallback,
@@ -54,6 +62,14 @@ import {
   normalizeEntityId,
   validateReviewReply,
 } from "./review-reply-model";
+import { ImagePreviewModal } from "../ImagePreviewModal";
+
+const MAX_REVIEW_IMAGES = 5;
+
+type ReviewImageDraft = PendingContributionImage & {
+  id: string;
+  remoteUrl?: string;
+};
 
 type ReviewTabProps = {
   embedded?: boolean;
@@ -63,12 +79,14 @@ type ReviewTabProps = {
     ownerId?: string | { _id?: string; id?: string } | null;
   };
   initialRating?: Partial<ReviewSummary> | null;
+  onChanged?: () => void | Promise<void>;
 };
 
 export default function ReviewTab({
   embedded = false,
   locationData,
   initialRating,
+  onChanged,
 }: ReviewTabProps) {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<ReviewSummary>({
@@ -79,6 +97,7 @@ export default function ReviewTab({
   const [errorMessage, setErrorMessage] = useState("");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [imageDrafts, setImageDrafts] = useState<ReviewImageDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
@@ -142,9 +161,12 @@ export default function ReviewTab({
     setSubmitting(true);
     try {
       if (editingReviewId) {
+        if (imageDrafts.length) setNotice("Đang tải ảnh đánh giá...");
+        const imageUrls = await uploadReviewImages(imageDrafts);
         const response = await updateReview(editingReviewId, {
           rating,
           comment: comment.trim(),
+          imageUrls,
         });
         if (!response.success) {
           setNotice(response.message);
@@ -154,6 +176,7 @@ export default function ReviewTab({
         setComposerVisible(false);
         setNotice("Đã cập nhật đánh giá.");
         await loadReviews({ showLoading: false });
+        await onChanged?.();
         return;
       }
       const permission = await Location.requestForegroundPermissionsAsync();
@@ -164,10 +187,13 @@ export default function ReviewTab({
       const currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+      if (imageDrafts.length) setNotice("Đang tải ảnh đánh giá...");
+      const imageUrls = await uploadReviewImages(imageDrafts);
       const response = await createReview({
         locationId,
         rating,
         comment: comment.trim(),
+        imageUrls,
         deviceLatitude: currentLocation.coords.latitude,
         deviceLongitude: currentLocation.coords.longitude,
         accuracyMeters: currentLocation.coords.accuracy ?? undefined,
@@ -180,6 +206,10 @@ export default function ReviewTab({
       setComposerVisible(false);
       setNotice("Đã gửi đánh giá.");
       await loadReviews({ showLoading: false });
+      await onChanged?.();
+    } catch (error) {
+      console.log("Error submitting review:", error);
+      setNotice(getReviewSubmitErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -189,13 +219,68 @@ export default function ReviewTab({
     setEditingReviewId(null);
     setRating(5);
     setComment("");
+    setImageDrafts([]);
   };
 
   const startEdit = (review: LocationReview) => {
     setEditingReviewId(review.id);
     setRating(review.rating);
     setComment(review.comment);
+    setImageDrafts(
+      getReviewImageUrls(review).map((url, index) => ({
+        id: url || `review-image-${index}`,
+        uri: toAbsoluteUrl(url) ?? url,
+        fileName: `review-image-${index + 1}.jpg`,
+        mimeType: "image/jpeg",
+        fileSize: 1024,
+        remoteUrl: url,
+      })),
+    );
     setComposerVisible(true);
+  };
+
+  const pickReviewImages = async () => {
+    if (imageDrafts.length >= MAX_REVIEW_IMAGES) {
+      setNotice("Bạn chỉ được chọn tối đa 5 ảnh cho một đánh giá.");
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== "granted") {
+      setNotice("Bạn cần cấp quyền thư viện ảnh để thêm ảnh đánh giá.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_REVIEW_IMAGES - imageDrafts.length,
+      quality: 0.8,
+      exif: true,
+    });
+
+    if (result.canceled) return;
+
+    const selectedImages = result.assets.map((asset, index) => ({
+      id: `review-${Date.now()}-${index}`,
+      uri: asset.uri,
+      fileName: asset.fileName ?? `review-${Date.now()}-${index}.jpg`,
+      mimeType: asset.mimeType ?? "image/jpeg",
+      fileSize: asset.fileSize ?? 1024,
+      capturedAt:
+        asset.exif?.DateTimeOriginal ||
+        asset.exif?.DateTimeDigitized ||
+        asset.exif?.DateTime ||
+        undefined,
+    }));
+
+    setImageDrafts((current) =>
+      [...current, ...selectedImages].slice(0, MAX_REVIEW_IMAGES),
+    );
+  };
+
+  const removeReviewImage = (id: string) => {
+    setImageDrafts((current) => current.filter((item) => item.id !== id));
   };
 
   const confirmDeleteReview = async (reviewId: string) => {
@@ -210,6 +295,7 @@ export default function ReviewTab({
       if (editingReviewId === reviewId) resetForm();
       setNotice("Đã xóa đánh giá.");
       await loadReviews({ showLoading: false });
+      await onChanged?.();
     } finally {
       setDeletingReviewId(null);
     }
@@ -374,12 +460,15 @@ export default function ReviewTab({
     <ReviewComposer
       comment={comment}
       editing={Boolean(editingReviewId)}
+      imageDrafts={imageDrafts}
       onChangeComment={setComment}
       onChangeRating={setRating}
       onDismiss={() => {
         setComposerVisible(false);
         resetForm();
       }}
+      onPickImages={pickReviewImages}
+      onRemoveImage={removeReviewImage}
       onSubmit={handleSubmitReview}
       rating={rating}
       submitting={submitting}
@@ -473,7 +562,17 @@ function ReviewCard({
   deleting: boolean;
 }) {
   const hasReply = Boolean(review.reply?.content);
+  const imageUrls = getReviewImageUrls(review)
+    .map((url) => toAbsoluteUrl(url))
+    .filter((url): url is string => Boolean(url));
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const previewImages = imageUrls.map((url, index) => ({
+    description: `Ảnh đánh giá ${index + 1}`,
+    title: review.user?.fullName || "Ảnh đánh giá",
+    url,
+  }));
   return (
+    <>
     <Pressable
       accessibilityHint={canReply ? "Mở hộp thoại phản hồi đánh giá" : undefined}
       accessibilityRole={canReply ? "button" : undefined}
@@ -524,16 +623,56 @@ function ReviewCard({
               <Chip icon="check" label="Đã trả lời" />
             ) : null}
           </Inline>
-          <AppText
-            numberOfLines={locationReviewCommentLines}
-            style={{ color: colors.textSecondary, opacity: deleting ? 0.5 : 1 }}
-            variant="body"
-          >
-            {review.comment}
-          </AppText>
+          <Stack gap={spacing[2]}>
+            <AppText
+              numberOfLines={imageUrls.length ? 2 : locationReviewCommentLines}
+              style={{ color: colors.textSecondary, opacity: deleting ? 0.5 : 1 }}
+              variant="body"
+            >
+              {review.comment}
+            </AppText>
+            {imageUrls.length ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <Inline gap={spacing[2]}>
+                  {imageUrls.map((url, index) => (
+                    <Pressable
+                      accessibilityLabel="Xem ảnh trong đánh giá"
+                      accessibilityRole="imagebutton"
+                      key={url}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        setPreviewIndex(index);
+                      }}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.82 : 1 })}
+                    >
+                    <Image
+                      alt="Ảnh trong đánh giá"
+                      contentFit="cover"
+                      source={{ uri: url }}
+                      style={{
+                        backgroundColor: colors.surfaceMedia,
+                        borderRadius: radius.medium,
+                        height: 44,
+                        width: 44,
+                      }}
+                    />
+                    </Pressable>
+                  ))}
+                </Inline>
+              </ScrollView>
+            ) : null}
+          </Stack>
         </Stack>
       </Surface>
     </Pressable>
+    <ImagePreviewModal
+      images={previewImages}
+      initialIndex={previewIndex ?? 0}
+      locationName="Đánh giá"
+      onDismiss={() => setPreviewIndex(null)}
+      visible={previewIndex !== null}
+    />
+    </>
   );
 }
 
@@ -542,20 +681,26 @@ function ReviewComposer({
   editing,
   rating,
   comment,
+  imageDrafts,
   submitting,
   onDismiss,
   onChangeRating,
   onChangeComment,
+  onPickImages,
+  onRemoveImage,
   onSubmit,
 }: {
   visible: boolean;
   editing: boolean;
   rating: number;
   comment: string;
+  imageDrafts: ReviewImageDraft[];
   submitting: boolean;
   onDismiss: () => void;
   onChangeRating: (rating: number) => void;
   onChangeComment: (comment: string) => void;
+  onPickImages: () => void;
+  onRemoveImage: (id: string) => void;
   onSubmit: () => void;
 }) {
   const dismissComposer = () => {
@@ -596,6 +741,20 @@ function ReviewComposer({
             placeholder="Chia sẻ trải nghiệm của bạn"
             value={comment}
           />
+          <MediaPicker
+            addLabel="Thêm ảnh đánh giá"
+            items={imageDrafts.map((item) => ({
+              id: item.id,
+              name: item.fileName,
+              uri: item.uri,
+              metadata: item.remoteUrl ? "Ảnh đã lưu" : "Ảnh mới",
+            }))}
+            maxCount={MAX_REVIEW_IMAGES}
+            onAdd={onPickImages}
+            onRemove={onRemoveImage}
+            supportingText="Ảnh sẽ được tải lên trước khi gửi đánh giá."
+            title="Ảnh đánh giá"
+          />
           <Button
             disabled={submitting}
             icon={editing ? "content-save" : "send"}
@@ -608,6 +767,42 @@ function ReviewComposer({
       </KeyboardAvoidingView>
     </Portal>
   );
+}
+
+async function uploadReviewImages(imageDrafts: ReviewImageDraft[]) {
+  const urls: string[] = [];
+  for (const image of imageDrafts) {
+    if (image.remoteUrl) {
+      urls.push(image.remoteUrl);
+      continue;
+    }
+    const uploadedUrl = await uploadContributionImage(image);
+    console.log("Review image uploaded:", uploadedUrl);
+    urls.push(uploadedUrl);
+  }
+  return urls;
+}
+
+function getReviewSubmitErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  const maybeAxiosError = error as {
+    response?: { data?: { message?: unknown } };
+  };
+  const apiMessage = maybeAxiosError.response?.data?.message;
+  if (typeof apiMessage === "string" && apiMessage.trim()) {
+    return apiMessage;
+  }
+  if (Array.isArray(apiMessage)) {
+    const text = apiMessage
+      .filter((item): item is string => typeof item === "string")
+      .join("\n");
+    if (text.trim()) return text;
+  }
+
+  return "Không thể gửi đánh giá lúc này.";
 }
 
 function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
@@ -674,6 +869,33 @@ function getId(value: unknown) {
     return item._id ?? item.id ?? "";
   }
   return "";
+}
+
+function getReviewImageUrls(review: LocationReview) {
+  const source = review as LocationReview & {
+    imageUrls?: unknown[];
+    imagesUrls?: unknown[];
+  };
+  const candidates = [
+    ...(Array.isArray(source.images) ? source.images : []),
+    ...(Array.isArray(source.imageUrls) ? source.imageUrls : []),
+    ...(Array.isArray(source.imagesUrls) ? source.imagesUrls : []),
+  ];
+
+  const urls = candidates
+    .map((image) => {
+      if (typeof image === "string") return image;
+      if (!image || typeof image !== "object") return "";
+      const value = image as { url?: unknown; publicUrl?: unknown };
+      return typeof value.url === "string"
+        ? value.url
+        : typeof value.publicUrl === "string"
+          ? value.publicUrl
+          : "";
+    })
+    .filter((url) => Boolean(url.trim()));
+
+  return Array.from(new Set(urls));
 }
 
 function formatRelativeDate(value?: string) {

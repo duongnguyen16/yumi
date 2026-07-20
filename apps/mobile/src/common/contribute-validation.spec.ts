@@ -22,7 +22,7 @@ describe("contribute place validation", () => {
         selectedCategoryId: "cat-1",
         openingHours: "07:00-21:00",
       }).message,
-    ).toBe("Mô tả phải có ít nhất 3 ký tự.");
+    ).toBe("Mô tả phải có ít nhất 10 ký tự.");
 
     expect(
       validateContributionBasics({
