@@ -1,4 +1,3 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import api from "./aixos";
 
 export type ContributionCategory = {
@@ -13,10 +12,6 @@ export type ContributionCategory = {
 
 export type DraftAnalysisResult = {
   success: boolean;
-  aiSuggestedTags?: Array<{
-    id: string;
-    name: string;
-  }>;
   duplicateWarning: boolean;
   similarLocations: Array<{
     id: string;
@@ -70,33 +65,6 @@ const appendEvidenceFile = (
     name: file.fileName,
     type: file.mimeType,
   } as unknown as Blob);
-};
-
-let supabaseClient: SupabaseClient | null = null;
-
-const getSupabaseClient = () => {
-  if (supabaseClient) {
-    return supabaseClient;
-  }
-
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  const supabasePublishableKey =
-    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!supabaseUrl || !supabasePublishableKey) {
-    throw new Error(
-      "Thiếu EXPO_PUBLIC_SUPABASE_URL hoặc EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY trong apps/mobile/.env",
-    );
-  }
-
-  supabaseClient = createClient(supabaseUrl, supabasePublishableKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  return supabaseClient;
 };
 
 const fileUriToArrayBuffer = async (uri: string) => {
@@ -167,21 +135,34 @@ export const uploadContributionImage = async (
     bucket: string;
     path: string;
     token: string;
+    signedUrl: string;
     publicUrl: string;
   };
 
   const fileBuffer = await fileUriToArrayBuffer(image.uri);
-  const { error } = await getSupabaseClient()
-    .storage.from(upload.bucket)
-    .uploadToSignedUrl(upload.path, upload.token, fileBuffer, {
-      contentType: image.mimeType,
-      upsert: false,
-    });
+  const uploadResult = await fetch(upload.signedUrl, {
+    body: fileBuffer,
+    headers: {
+      "cache-control": "max-age=3600",
+      "content-type": image.mimeType,
+      "x-upsert": "false",
+    },
+    method: "PUT",
+  });
 
-  if (error) {
-    throw new Error(error.message);
+  if (!uploadResult.ok) {
+    const errorText = await uploadResult.text().catch(() => "");
+    console.log("Supabase image upload failed:", {
+      body: errorText,
+      status: uploadResult.status,
+      statusText: uploadResult.statusText,
+    });
+    throw new Error(
+      errorText || `Không thể tải ảnh lên Supabase (${uploadResult.status})`,
+    );
   }
 
+  console.log("Supabase image upload completed:", upload.publicUrl);
   return upload.publicUrl;
 };
 
