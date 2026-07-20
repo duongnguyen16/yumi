@@ -101,7 +101,10 @@ export function VendorReviewReplyDialog({
             </Inline>
 
             <ScrollView
-              contentContainerStyle={{ gap: spacing[3], paddingTop: spacing[2] }}
+              contentContainerStyle={{
+                gap: spacing[3],
+                paddingTop: spacing[2],
+              }}
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
