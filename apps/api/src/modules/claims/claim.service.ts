@@ -232,12 +232,11 @@ export class ClaimService {
       }
 
       // ảnh phải có vị trí và thời điểm chụp, và phải có ảnh cho thấy mã siteCode
-      const hasGeoPhoto = dto.evidenceFiles.some(
-        (file) =>
-          file.fileType === 'IMAGE' &&
-          file.geo?.coordinates.length === 2 &&
-          Boolean(file.capturedAt),
-      );
+      const hasGeoPhoto = dto.evidenceFiles.some((file) => {
+        if (file.fileType !== 'IMAGE') return false;
+        if (file.geo?.coordinates.length !== 2) return false;
+        return Boolean(file.capturedAt);
+      });
       if (!hasGeoPhoto) {
         return this.failure(
           400,
@@ -367,12 +366,9 @@ export class ClaimService {
   }
 
   private isDuplicateKeyError(error: unknown): error is { code: number } {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 11000
-    );
+    if (!error || typeof error !== 'object') return false;
+    if (!('code' in error)) return false;
+    return error.code === 11000;
   }
 
   private logError(context: string, error: unknown) {

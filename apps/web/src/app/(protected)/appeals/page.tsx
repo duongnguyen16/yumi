@@ -72,20 +72,43 @@ const stickyActionCellSx: SxProps<Theme> = {
 };
 
 function message(err: unknown) {
-  const data = err as { response?: { data?: { message?: string | string[] } }; message?: string };
+  const data = err as {
+    response?: { data?: { message?: string | string[] } };
+    message?: string;
+  };
   const value = data.response?.data?.message;
-  return Array.isArray(value) ? value.join(', ') : value ?? data.message ?? 'Đã xảy ra lỗi';
+  if (Array.isArray(value)) return value.join(', ');
+  if (value) return value;
+  return data.message ?? 'Đã xảy ra lỗi';
 }
 
 function deadlineContext(deadline: string, status: string): string {
   if (status !== 'PENDING') return 'Đã xử lý';
 
   const end = dayjs(deadline);
-  if (dayjs().isAfter(end)) return 'Quá hạn xử lý';
+  const now = dayjs();
+  if (now.isAfter(end)) return 'Quá hạn xử lý';
 
-  const hours = Math.max(1, end.diff(dayjs(), 'hour'));
+  const remainingHours = end.diff(now, 'hour');
+  const hours = Math.max(1, remainingHours);
   if (hours < 24) return `Còn ${hours} giờ`;
   return `Còn ${Math.ceil(hours / 24)} ngày`;
+}
+
+function getPageAfterRemoval(itemCount: number, currentPage: number) {
+  if (itemCount === 1 && currentPage > 1) {
+    return currentPage - 1;
+  }
+  return currentPage;
+}
+
+function getAppellantLabel(
+  user: { fullName?: string; email?: string } | null,
+  fallback: string,
+) {
+  if (!user) return fallback;
+  const label = user.fullName ?? user.email;
+  return label ?? fallback;
 }
 
 function statusChipSx(status: string) {
@@ -122,19 +145,22 @@ export default function AppealsPage() {
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const load = useCallback(async (nextPage: number, nextView: AdminRequestView) => {
-    try {
-      const data = await getAppealQueue(nextPage, PAGE_SIZE, nextView);
-      setItems(data.items);
-      setTotal(data.total);
-      setPage(data.page);
-      setError(null);
-    } catch (err) {
-      setError(message(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (nextPage: number, nextView: AdminRequestView) => {
+      try {
+        const data = await getAppealQueue(nextPage, PAGE_SIZE, nextView);
+        setItems(data.items);
+        setTotal(data.total);
+        setPage(data.page);
+        setError(null);
+      } catch (err) {
+        setError(message(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let active = true;
@@ -176,7 +202,8 @@ export default function AppealsPage() {
       const result = await resolveAppeal(selected._id, decision, reason);
       setNotice(result.message);
       setSelected(null);
-      await load(items.length === 1 && page > 1 ? page - 1 : page, view);
+      const nextPage = getPageAfterRemoval(items.length, page);
+      await load(nextPage, view);
     } catch (err) {
       setDrawerError(message(err));
     } finally {
@@ -188,7 +215,11 @@ export default function AppealsPage() {
     <Box sx={{ p: { xs: 2, md: 3 }, flex: 1, minWidth: 0 }}>
       <Topbar
         title="Kháng cáo"
-        subtitle={view === 'queue' ? `${total} hồ sơ đang chờ` : `${total} hồ sơ trong lịch sử`}
+        subtitle={
+          view === 'queue'
+            ? `${total} hồ sơ đang chờ`
+            : `${total} hồ sơ trong lịch sử`
+        }
         actions={
           <ActionButton
             variant="neutral"
@@ -212,7 +243,11 @@ export default function AppealsPage() {
         }}
       />
       {notice ? (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+        <Alert
+          severity="success"
+          sx={{ mb: 2 }}
+          onClose={() => setNotice(null)}
+        >
           {notice}
         </Alert>
       ) : null}
@@ -236,7 +271,9 @@ export default function AppealsPage() {
                   <TableCell sx={headSx}>Nội dung</TableCell>
                   <TableCell sx={headSx}>Hạn xử lý</TableCell>
                   <TableCell sx={headSx}>Trạng thái</TableCell>
-                  <TableCell sx={stickyActionHeadSx} align="right">Hành động</TableCell>
+                  <TableCell sx={stickyActionHeadSx} align="right">
+                    Hành động
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -245,22 +282,45 @@ export default function AppealsPage() {
                     <TableCell colSpan={6} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon />}
-                        title={view === 'queue' ? 'Không có kháng cáo' : 'Chưa có lịch sử kháng cáo'}
-                        subtitle={view === 'queue' ? 'Hàng đợi hiện đang trống.' : 'Chưa có kháng cáo nào đã xử lý.'}
+                        title={
+                          view === 'queue'
+                            ? 'Không có kháng cáo'
+                            : 'Chưa có lịch sử kháng cáo'
+                        }
+                        subtitle={
+                          view === 'queue'
+                            ? 'Hàng đợi hiện đang trống.'
+                            : 'Chưa có kháng cáo nào đã xử lý.'
+                        }
                       />
                     </TableCell>
                   </TableRow>
                 ) : null}
                 {items.map((item) => {
-                  const user = typeof item.appellantId === 'object' ? item.appellantId : null;
-                  const deadlineState = deadlineContext(item.appealDeadline, item.status);
+                  const user =
+                    typeof item.appellantId === 'object'
+                      ? item.appellantId
+                      : null;
+                  const deadlineState = deadlineContext(
+                    item.appealDeadline,
+                    item.status,
+                  );
                   const overdue = deadlineState === 'Quá hạn xử lý';
+                  const userLabel = getAppellantLabel(user, 'Không rõ');
+                  const userAriaLabel = getAppellantLabel(
+                    user,
+                    'người kháng cáo',
+                  );
 
                   return (
                     <TableRow
                       key={item._id}
                       hover
-                      sx={{ '&:hover': { bgcolor: `${tokens.color.rowHover} !important` } }}
+                      sx={{
+                        '&:hover': {
+                          bgcolor: `${tokens.color.rowHover} !important`,
+                        },
+                      }}
                     >
                       <TableCell sx={{ py: 2, minWidth: 220 }}>
                         <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
@@ -269,10 +329,12 @@ export default function AppealsPage() {
                       </TableCell>
                       <TableCell sx={{ minWidth: 180 }}>
                         <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
-                          {user?.fullName ?? user?.email ?? 'Không rõ'}
+                          {userLabel}
                         </Typography>
                         {user?.fullName && user.email ? (
-                          <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
+                          <Typography
+                            sx={{ color: tokens.color.textMuted, fontSize: 12 }}
+                          >
                             {user.email}
                           </Typography>
                         ) : null}
@@ -294,12 +356,16 @@ export default function AppealsPage() {
                       </TableCell>
                       <TableCell sx={{ minWidth: 150 }}>
                         <Typography sx={{ fontSize: 13, whiteSpace: 'nowrap' }}>
-                          {dayjs(item.appealDeadline).format('DD/MM/YYYY HH:mm')}
+                          {dayjs(item.appealDeadline).format(
+                            'DD/MM/YYYY HH:mm',
+                          )}
                         </Typography>
                         <Typography
                           sx={{
                             mt: 0.25,
-                            color: overdue ? tokens.color.red : tokens.color.textMuted,
+                            color: overdue
+                              ? tokens.color.red
+                              : tokens.color.textMuted,
                             fontSize: 12,
                             fontWeight: overdue ? 700 : 500,
                           }}
@@ -318,8 +384,10 @@ export default function AppealsPage() {
                         <Button
                           variant="outlined"
                           size="small"
-                          startIcon={<VisibilityOutlinedIcon fontSize="small" />}
-                          aria-label={`Xem hồ sơ của ${user?.fullName ?? user?.email ?? 'người kháng cáo'}`}
+                          startIcon={
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          }
+                          aria-label={`Xem hồ sơ của ${userAriaLabel}`}
                           onClick={() => void show(item._id)}
                           sx={{
                             minHeight: 44,
@@ -327,7 +395,10 @@ export default function AppealsPage() {
                             borderColor: tokens.color.border,
                             color: tokens.color.textPrimary,
                             whiteSpace: 'nowrap',
-                            '&:hover': { borderColor: tokens.color.orange, bgcolor: tokens.color.orangeSoft },
+                            '&:hover': {
+                              borderColor: tokens.color.orange,
+                              bgcolor: tokens.color.orangeSoft,
+                            },
                           }}
                         >
                           Xem hồ sơ

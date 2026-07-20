@@ -21,32 +21,68 @@ export default function AppealDetailScreen() {
 
   useEffect(() => {
     let active = true;
-    if (id) getAppeal(id).then((response) => {
-      if (!active) return;
-      setItem(response.appeal || null);
-      setDisputeId(response.disputeId || null);
-      setMessage(response.success ? "" : response.message || "Không thể lấy kháng cáo.");
-      setLoading(false);
-    });
-    return () => { active = false; };
+    if (id) {
+      getAppeal(id).then((response) => {
+        if (!active) return;
+
+        setItem(response.appeal || null);
+        setDisputeId(response.disputeId || null);
+        if (response.success) {
+          setMessage("");
+        } else {
+          setMessage(response.message || "Không thể lấy kháng cáo.");
+        }
+        setLoading(false);
+      });
+    }
+
+    return () => {
+      active = false;
+    };
   }, [id]);
+
+  const action = disputeId
+    ? {
+        label: "Mở hồ sơ tranh chấp",
+        onPress: () => router.push(`/disputes/${disputeId}` as never),
+      }
+    : undefined;
+  const status = getWorkflowStatus(item?.status);
+  const timelineItems = [
+    {
+      title: "Đã gửi kháng cáo",
+      detail: item?.argument,
+      active: true,
+    },
+    {
+      title: status.label,
+      detail: "Trạng thái xử lý hiện tại",
+    },
+  ];
+  const deadline = item?.appealDeadline
+    ? new Date(item.appealDeadline).toLocaleString("vi-VN")
+    : "—";
 
   return (
     <WorkflowDetailScreen
-      action={disputeId ? { label: "Mở hồ sơ tranh chấp", onPress: () => router.push(`/disputes/${disputeId}` as never) } : undefined}
+      action={action}
       loading={loading}
       message={message}
       navigationTitle="Chi tiết kháng cáo"
       onBack={() => router.back()}
       onMessageDismiss={() => setMessage("")}
-      status={getWorkflowStatus(item?.status)}
+      status={status}
       supportingText={item?.argument}
       title={item?.type ?? "Kháng cáo"}
     >
-      <Timeline items={[{ title: "Đã gửi kháng cáo", detail: item?.argument, active: true }, { title: getWorkflowStatus(item?.status).label, detail: "Trạng thái xử lý hiện tại" }]} />
+      <Timeline items={timelineItems} />
       <GroupedList>
-        <ListRow label="Quyết định gốc" showChevron={false} supportingText={item?.originalDecisionReason || "Không có lý do."} />
-        <ListRow label="Hạn kháng cáo" showChevron={false} value={item?.appealDeadline ? new Date(item.appealDeadline).toLocaleString("vi-VN") : "—"} />
+        <ListRow
+          label="Quyết định gốc"
+          showChevron={false}
+          supportingText={item?.originalDecisionReason || "Không có lý do."}
+        />
+        <ListRow label="Hạn kháng cáo" showChevron={false} value={deadline} />
       </GroupedList>
     </WorkflowDetailScreen>
   );

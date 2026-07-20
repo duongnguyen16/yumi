@@ -30,7 +30,8 @@ export class DisputeService {
 
   // list disputes của user
   async listMine(userId: string) {
-    if (!Types.ObjectId.isValid(userId)) return this.fail(400, 'ID không hợp lệ');
+    if (!Types.ObjectId.isValid(userId))
+      return this.fail(400, 'ID không hợp lệ');
     const id = new Types.ObjectId(userId);
     const items = await this.disputeModel
       .find({ $or: [{ vendorAId: id }, { vendorBId: id }] })
@@ -91,13 +92,14 @@ export class DisputeService {
       DisputeStatus.RESOLVED_TRANSFER,
       DisputeStatus.RESOLVED_REVOKE,
     ];
-    const filter = query.status
-      ? { status: query.status }
-      : {
-          status: isHistory
-            ? { $in: historyStatuses }
-            : DisputeStatus.OPEN,
-        };
+    let statusFilter: DisputeStatus | { $in: DisputeStatus[] } =
+      DisputeStatus.OPEN;
+    if (query.status) {
+      statusFilter = query.status;
+    } else if (isHistory) {
+      statusFilter = { $in: historyStatuses };
+    }
+    const filter = { status: statusFilter };
     const sort: Record<string, 1 | -1> = isHistory
       ? {
           'adminDecision.decidedAt': -1 as const,
@@ -154,7 +156,7 @@ export class DisputeService {
 
       let newOwner: Types.ObjectId | undefined = item.vendorAId;
       let status = DisputeStatus.RESOLVED_KEEP;
-      
+
       if (dto.outcome === DisputeOutcome.TRANSFER) {
         newOwner = item.vendorBId;
         status = DisputeStatus.RESOLVED_TRANSFER;
@@ -226,7 +228,11 @@ export class DisputeService {
   }
 
   private participantId(participant: unknown) {
-    if (participant && typeof participant === 'object' && '_id' in participant) {
+    if (!participant || typeof participant !== 'object') {
+      return String(participant);
+    }
+
+    if ('_id' in participant) {
       return String((participant as { _id: unknown })._id);
     }
     return String(participant);

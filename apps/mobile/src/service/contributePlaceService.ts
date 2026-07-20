@@ -117,16 +117,32 @@ export const validateContributionPosition = async (payload: {
   };
 };
 
-export const uploadContributionImage = async (
+type ImageUploadRoutes = {
+  validate: string;
+  uploadUrl: string;
+};
+
+const contributionImageRoutes: ImageUploadRoutes = {
+  validate: "/images/validate",
+  uploadUrl: "/images/upload-url",
+};
+
+const appealImageRoutes: ImageUploadRoutes = {
+  validate: "/images/appeal/validate",
+  uploadUrl: "/images/appeal/upload-url",
+};
+
+const uploadImage = async (
   image: PendingContributionImage,
+  routes: ImageUploadRoutes,
 ) => {
-  await api.post("/images/validate", {
+  await api.post(routes.validate, {
     fileName: image.fileName,
     mimeType: image.mimeType,
     fileSize: image.fileSize,
   });
 
-  const uploadResponse = await api.post("/images/upload-url", {
+  const uploadResponse = await api.post(routes.uploadUrl, {
     fileName: image.fileName,
     mimeType: image.mimeType,
   });
@@ -164,6 +180,14 @@ export const uploadContributionImage = async (
 
   console.log("Supabase image upload completed:", upload.publicUrl);
   return upload.publicUrl;
+};
+
+export const uploadContributionImage = (image: PendingContributionImage) => {
+  return uploadImage(image, contributionImageRoutes);
+};
+
+export const uploadAppealImage = (image: PendingContributionImage) => {
+  return uploadImage(image, appealImageRoutes);
 };
 
 export const submitCustomerContribution = async (

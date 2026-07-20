@@ -1,9 +1,10 @@
 import { userContext } from "@/contexts/userContext";
 import { invokeExploreLocationAction } from "@/navigation/exploreTabAction";
 import { getMainTabs, SHOW_TABS_HEADER } from "@/navigation/mainTabs";
+import { shouldSelectTab } from "@/navigation/tab-selection";
 import { getTabSnackbarBottomOffset } from "@/navigation/tab-content-inset";
 import { BottomTabBar, NoticeSnackbarInsetProvider } from "@/ui/components";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import React, { useContext } from "react";
 import { StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,14 +13,13 @@ const routeNames = ["home", "mine", "manage", "activity", "profile"] as const;
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { user } = useContext(userContext);
   const tabs = getMainTabs(typeof user?.role === "string" ? user.role : null);
 
   return (
     <NoticeSnackbarInsetProvider bottomOffset={getTabSnackbarBottomOffset(insets.bottom)}>
       <Tabs
-        tabBar={({ state, descriptors }) => {
+        tabBar={({ state, descriptors, navigation }) => {
           const route = state.routes[state.index];
           const activeTabStyle = StyleSheet.flatten(
             descriptors[route.key]?.options.tabBarStyle,
@@ -43,8 +43,8 @@ export default function TabsLayout() {
               items={tabs.map((tab) => ({ icon: tab.icon, label: tab.title }))}
               onSelect={(label) => {
                 const tab = tabs.find((item) => item.title === label);
-                if (tab && tab.name !== route.name) {
-                  router.replace(tab.href);
+                if (tab && shouldSelectTab(route.name, tab.name)) {
+                  navigation.navigate(tab.name);
                 }
               }}
               selected={selected}

@@ -35,3 +35,27 @@ export class ImagesController {
     return this.imagesService.createUploadUrl(userId, dto);
   }
 }
+
+@Controller('images/appeal')
+@UseGuards(AuthGuard('jwt-appeal-access'))
+export class AppealImagesController {
+  constructor(private readonly imagesService: ImagesService) {}
+
+  @Post('validate')
+  validateImage(@Body() dto: ValidateImageDto) {
+    return this.imagesService.validateImage(dto);
+  }
+
+  @Post('upload-url')
+  createUploadUrl(
+    @Req() req: Request & { user?: { userId?: string } },
+    @Body() dto: CreateUploadUrlDto,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('Không tìm thấy thông tin xác thực');
+    }
+
+    return this.imagesService.createUploadUrl(userId, dto);
+  }
+}

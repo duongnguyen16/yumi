@@ -8,7 +8,9 @@ export function isUnderHold(
   loc: Pick<Location, 'holdExpiresAt'>,
   now = new Date(),
 ) {
-  return Boolean(loc.holdExpiresAt && now < loc.holdExpiresAt);
+  if (!loc.holdExpiresAt) return false;
+  return now < loc.holdExpiresAt;
+
 }
 
 export function assertNotUnderHold(

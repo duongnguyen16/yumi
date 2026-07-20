@@ -13,6 +13,7 @@ export class AtStrategy extends PassportStrategy(Strategy, 'jwt-at') {
     });
   }
   validate(payload: JwtPayLoad) {
+    // khi mà payload có scope là appeal thì không cho phép truy cập vào các route khác ngoài /appeals
     if (payload.scope === 'appeal') {
       throw new UnauthorizedException();
     }

@@ -146,11 +146,9 @@ export class RequestAccessService {
     }
   }
 
-
   // list request access của owner hoặc requester
   async listMine(userId: string, side: 'owner' | 'requester') {
     try {
-
       // validate userId
       if (!Types.ObjectId.isValid(userId)) {
         return this.fail(400, 'ID người dùng không hợp lệ');
@@ -222,10 +220,9 @@ export class RequestAccessService {
 
       // nếu reject thì set status = REJECTED, nếu grant thì set status = GRANTED và chuyển quyền sở hữu
       const now = new Date();
-      req.respondedAt = now;
-
-      // từ chối 
+      // từ chối
       if (dto.action === RespondAction.REJECT) {
+        req.respondedAt = now;
         req.status = RequestAccessStatus.REJECTED;
         req.responseReason = dto.reason?.trim();
         await req.save();
@@ -267,12 +264,14 @@ export class RequestAccessService {
 
       // đồng ý
       const oldOwner = String(loc.ownerId);
-      loc.ownerId = req.requesterId;
-      loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
-      await loc.save();
-      req.status = RequestAccessStatus.GRANTED;
-      await req.save();
-      await this.notifyTransfer(loc, req, oldOwner, false);
+      await this.transferOwnership(
+        loc,
+        req,
+        oldOwner,
+        now,
+        RequestAccessStatus.GRANTED,
+        false,
+      );
       await this.writeLog(
         ownerId,
         'REQUEST_ACCESS_GRANT',
@@ -312,20 +311,19 @@ export class RequestAccessService {
         return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
       }
 
-      // bắt đầu check đổi chủ 
+      // bắt đầu check đổi chủ
       const now = new Date();
       const oldOwner = String(loc.ownerId);
-      loc.ownerId = req.requesterId;
-      loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
-      await loc.save();
-
       req.evidenceFiles = dto.evidenceFiles;
       req.otpVerified = true;
-      req.respondedAt = now;
-      req.status = RequestAccessStatus.AUTO_GRANTED;
-
-      await req.save();
-      await this.notifyTransfer(loc, req, oldOwner, true);
+      await this.transferOwnership(
+        loc,
+        req,
+        oldOwner,
+        now,
+        RequestAccessStatus.AUTO_GRANTED,
+        true,
+      );
       await this.writeLog(
         userId,
         'REQUEST_ACCESS_AUTO_GRANT',
@@ -346,7 +344,6 @@ export class RequestAccessService {
 
   // check xem có tồn tại request access pending không, nếu có thì trả về req, nếu không thì trả về fail
   private async loadPendingRequest(id: string) {
-  
     if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
     const req = await this.reqModel.findById(id).exec();
     if (!req) return this.fail(404, 'Không tìm thấy yêu cầu');
@@ -383,6 +380,24 @@ export class RequestAccessService {
     ]);
   }
 
+  private async transferOwnership(
+    loc: LocationDocument,
+    req: RequestAccessDocument,
+    oldOwner: string,
+    now: Date,
+    status: RequestAccessStatus.GRANTED | RequestAccessStatus.AUTO_GRANTED,
+    auto: boolean,
+  ) {
+    loc.ownerId = req.requesterId;
+    loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
+    await loc.save();
+
+    req.respondedAt = now;
+    req.status = status;
+    await req.save();
+    await this.notifyTransfer(loc, req, oldOwner, auto);
+  }
+
   private async writeLog(
     actorId: string,
     action: string,
@@ -401,12 +416,11 @@ export class RequestAccessService {
   }
 
   private hasOnSiteProof(files: VerifyTakeoverDTO['evidenceFiles']) {
-    return files.some(
-      (file) =>
-        file.fileType === 'IMAGE' &&
-        file.geo?.coordinates.length === 2 &&
-        Boolean(file.capturedAt),
-    );
+    return files.some((file) => {
+      if (file.fileType !== 'IMAGE') return false;
+      if (file.geo?.coordinates.length !== 2) return false;
+      return Boolean(file.capturedAt);
+    });
   }
 
   // chuyển đổi request access sang view model
@@ -430,9 +444,13 @@ export class RequestAccessService {
       this.idOf(data.currentOwnerId) === userId
     );
   }
-   // 
+  //
   private idOf(value: unknown) {
-    if (value && typeof value === 'object' && '_id' in value) {
+    if (!value || typeof value !== 'object') {
+      return String(value);
+    }
+
+    if ('_id' in value) {
       return String(value._id);
     }
     return String(value);
@@ -456,12 +474,9 @@ export class RequestAccessService {
   }
 
   private isDuplicate(err: unknown) {
-    return (
-      typeof err === 'object' &&
-      err !== null &&
-      'code' in err &&
-      (err as { code?: number }).code === 11000
-    );
+    if (!err || typeof err !== 'object') return false;
+    if (!('code' in err)) return false;
+    return err.code === 11000;
   }
 
   private fail(statusCode: number, message: string) {
