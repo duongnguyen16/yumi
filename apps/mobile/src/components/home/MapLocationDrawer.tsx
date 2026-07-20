@@ -8,6 +8,7 @@ import {
   type MapLocationPreview,
 } from "@/common/map-location";
 import ProductSection from "@/components/location/ProductSection";
+import { ImagePreviewModal } from "@/components/location/ImagePreviewModal";
 import { LocationReportSheet } from "@/components/location/LocationReportSheet";
 import GeneralTab, {
   LocationManagementActions,
@@ -343,9 +344,23 @@ function Overview({
   imageUrls: string[];
   onRefresh: () => Promise<void>;
 }) {
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const previewImages = imageUrls.map((url, index) => ({
+    description: `Ảnh ${index + 1}`,
+    title: current.name,
+    url,
+  }));
+
   return (
+    <>
     <Stack gap={spacing[4]}>
       {imageUrls[0] ? (
+        <Pressable
+          accessibilityLabel="Xem ảnh địa điểm"
+          accessibilityRole="imagebutton"
+          onPress={() => setPreviewIndex(0)}
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+        >
         <Image
           alt={`Ảnh ${current.name}`}
           contentFit="cover"
@@ -357,6 +372,7 @@ function Overview({
             width: "100%",
           }}
         />
+        </Pressable>
       ) : null}
       <GeneralTab
         data={current}
@@ -366,6 +382,14 @@ function Overview({
         showProducts={false}
       />
     </Stack>
+    <ImagePreviewModal
+      images={previewImages}
+      initialIndex={previewIndex ?? 0}
+      locationName={current.name}
+      onDismiss={() => setPreviewIndex(null)}
+      visible={previewIndex !== null}
+    />
+    </>
   );
 }
 
