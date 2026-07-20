@@ -9,12 +9,9 @@ import {
 import {
   getDisputeOutcome,
   getDisputeSide,
-  type DisputeSide,
 } from "@/components/workflow/dispute-presentation";
 import { getWorkflowStatus } from "@/components/workflow/status";
-import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
-  addDisputeEvidence,
   getDispute,
   type DisputeItem,
 } from "@/service/disputeService";
@@ -31,23 +28,13 @@ import {
   PageContent,
   Stack,
 } from "@/ui/components";
-import { getNoticeMessage } from "@/ui/feedback";
-import { colors, radius } from "@/ui/tokens";
-import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
+import { colors } from "@/ui/tokens";
 import {
   Stack as RouterStack,
   useLocalSearchParams,
   useRouter,
 } from "expo-router";
 import { useCallback, useContext, useEffect, useState } from "react";
-
-type Proof = {
-  uri: string;
-  fileName: string;
-  mimeType: string;
-  fileSize: number;
-};
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -70,25 +57,12 @@ function getReferenceId(value: string | { _id?: string } | undefined) {
   return value?._id || "";
 }
 
-function getEvidenceMessage(status: string | undefined, side: DisputeSide) {
-  if (status !== "OPEN") {
-    return "Hồ sơ đã đóng nên không thể bổ sung bằng chứng mới.";
-  }
-
-  if (side === "OWNER_AT_OPEN") {
-    return "Bằng chứng bạn gửi sẽ được thêm vào hồ sơ của chủ tại thời điểm mở tranh chấp.";
-  }
-
-  return "Bằng chứng bạn gửi sẽ được thêm vào hồ sơ của người yêu cầu quyền quản lý.";
-}
-
 export default function DisputeDetailScreen() {
   const { id: rawId } = useLocalSearchParams<{ id?: string }>();
   const id = param(rawId);
   const router = useRouter();
   const { user } = useContext(userContext);
   const [item, setItem] = useState<DisputeItem | null>(null);
-  const [proof, setProof] = useState<Proof | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -111,53 +85,6 @@ export default function DisputeDetailScreen() {
     void Promise.resolve().then(load);
   }, [load]);
 
-  const pick = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setMessage("Cần quyền camera để chụp bằng chứng.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
-    const file = result.assets[0];
-    if (!file) return;
-
-    const fallbackName = `dispute-${Date.now()}.jpg`;
-    setProof({
-      uri: file.uri,
-      fileName: file.fileName || fallbackName,
-      mimeType: file.mimeType || "image/jpeg",
-      fileSize: file.fileSize || 0,
-    });
-  };
-
-  const submit = async () => {
-    if (!id || !proof) return;
-    setLoading(true);
-    try {
-      const url = await uploadContributionImage(proof);
-      const capturedAt = new Date().toISOString();
-      const evidence = { url, fileType: "IMAGE" as const, capturedAt };
-      const response = await addDisputeEvidence(id, [evidence]);
-      if (!response.success) {
-        setMessage(response.message || "Không thể thêm bằng chứng.");
-        return;
-      }
-
-      setProof(null);
-      await load();
-      setMessage("Đã gửi bằng chứng vào hồ sơ tranh chấp của bạn.");
-    } catch (error) {
-      setMessage(getNoticeMessage(error, "Không thể tải bằng chứng."));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const location =
     typeof item?.locationId === "object" ? item.locationId : null;
   const vendorA = typeof item?.vendorAId === "object" ? item.vendorAId : null;
@@ -178,9 +105,6 @@ export default function DisputeDetailScreen() {
     side === "OWNER_AT_OPEN"
       ? "Bạn là chủ khi tranh chấp được mở"
       : "Bạn là người yêu cầu quyền quản lý";
-  const evidenceMessage = side
-    ? getEvidenceMessage(item?.status, side)
-    : undefined;
   const canAppealRevocation = canAppealOwnershipRevoke(item?.status, side);
   const revokeAppealDestination =
     canAppealRevocation && id
@@ -190,7 +114,7 @@ export default function DisputeDetailScreen() {
     {
       title: "Đã mở tranh chấp",
       detail:
-        "Hai bên có thể theo dõi và bổ sung bằng chứng khi hồ sơ đang mở.",
+        "Admin đang xem xét bằng chứng đã nộp trong hồ sơ.",
       timestamp: openedAt,
       active: item?.status === "OPEN",
     },
@@ -244,9 +168,6 @@ export default function DisputeDetailScreen() {
         <Card>
           <Stack>
             <Badge label={sideLabel} tone="info" />
-            <AppText style={{ color: colors.textSecondary }} variant="subhead">
-              {evidenceMessage}
-            </AppText>
           </Stack>
         </Card>
       ) : null}
@@ -305,38 +226,6 @@ export default function DisputeDetailScreen() {
         </Card>
       ) : null}
 
-      {item?.status === "OPEN" ? (
-        <Card>
-          <Stack>
-            <AppText variant="headline">Bổ sung bằng chứng</AppText>
-            {proof ? (
-              <Image
-                alt="Bằng chứng tranh chấp"
-                source={{ uri: proof.uri }}
-                style={{
-                  borderRadius: radius.large,
-                  height: 220,
-                  width: "100%",
-                }}
-              />
-            ) : null}
-            <Button
-              icon="camera-outline"
-              label={proof ? "Chụp lại" : "Chụp bằng chứng"}
-              onPress={pick}
-              variant="secondary"
-              width="full"
-            />
-            <Button
-              disabled={!proof || loading}
-              label="Gửi bằng chứng"
-              loading={loading}
-              onPress={submit}
-              width="full"
-            />
-          </Stack>
-        </Card>
-      ) : null}
     </WorkflowDetailScreen>
   );
 }

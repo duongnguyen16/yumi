@@ -28,7 +28,6 @@ import {
   approveClaim,
   getClaimQueue,
   rejectClaim,
-  requestClaimEvidence,
   type AdminClaim,
   type AdminRequestView,
 } from '@/lib/admin-api';
@@ -455,9 +454,6 @@ export default function ClaimsPage() {
         }
         onReject={(reason) =>
           selected && run(() => rejectClaim(selected._id, reason))
-        }
-        onRequestEvidence={(message) =>
-          selected && run(() => requestClaimEvidence(selected._id, message))
         }
       />
     </Box>

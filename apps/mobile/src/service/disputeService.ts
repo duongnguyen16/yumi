@@ -39,16 +39,3 @@ export async function getDispute(id: string) {
     return { success: false, message };
   }
 }
-
-export async function addDisputeEvidence(
-  id: string,
-  evidenceFiles: AccessEvidence[],
-) {
-  try {
-    const res = await api.post(`/disputes/${id}/evidence`, { evidenceFiles });
-    return res.data as Result;
-  } catch (err) {
-    const message = getNoticeMessage(err, "Không thể thêm bằng chứng.");
-    return { success: false, message };
-  }
-}

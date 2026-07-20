@@ -220,33 +220,6 @@ export class AdminClaimService {
     }
   }
 
-  async requestEvidence(id: string, adminId: string, message: string) {
-    try {
-      const data = await this.load(id);
-      if (!data.success) return data;
-      const { claim, loc } = data;
-      const text = message.trim();
-
-      await this.notifyVendor(claim, {
-        type: 'CLAIM_NEEDS_MORE_EVIDENCE',
-        title: 'Cần bổ sung bằng chứng',
-        body: `Claim cho "${loc.name}" cần bổ sung: ${text}`,
-      });
-      await this.writeLog(adminId, 'CLAIM_REQUEST_EVIDENCE', claim._id, text, {
-        claimStatus: ClaimRequestStatus.PENDING,
-      });
-
-      return {
-        success: true,
-        message: 'Đã gửi yêu cầu bổ sung bằng chứng',
-        claim: { id: claim._id, status: claim.status },
-      };
-    } catch (err) {
-      this.logger.error('Không thể yêu cầu thêm bằng chứng', err);
-      return this.fail(500, 'Lỗi khi yêu cầu bổ sung bằng chứng');
-    }
-  }
-
   // chuyển hướng sang request access
   private async redirectToAccess(
     claim: ClaimRequestDocument,

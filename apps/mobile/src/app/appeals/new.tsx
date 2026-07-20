@@ -16,6 +16,7 @@ import {
   TextArea,
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
+import { returnAfterSuccess } from "@/navigation/return-after-success";
 import { radius } from "@/ui/tokens";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -96,7 +97,7 @@ export default function NewAppealScreen() {
         return;
       }
 
-      router.replace(`/appeals/${response.appeal.id}` as never);
+      returnAfterSuccess(router);
     } catch (error) {
       setMessage(getNoticeMessage(error, "Không thể tải bằng chứng."));
     } finally {

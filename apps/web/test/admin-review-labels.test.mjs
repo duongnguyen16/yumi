@@ -92,6 +92,8 @@ test('appeal surfaces use localized labels and accessible decision cards', async
   assert.match(page, /appealTypeLabel\(item\.type\)/);
   assert.match(page, /appealStatusLabel\(item\.status\)/);
   assert.match(page, /position: 'sticky'/);
+  assert.match(page, /<Snackbar/);
+  assert.match(page, /open=\{!!drawerError\}/);
   assert.doesNotMatch(page, />\{item\.type\}</);
   assert.match(drawer, /appealDecisionOptions\(item\?\.type\)/);
   assert.match(drawer, /aria-pressed=/);

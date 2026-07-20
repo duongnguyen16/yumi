@@ -76,7 +76,7 @@ const locationFieldLabels: Record<string, string> = {
 const disputeOption: AppealDecisionOption = {
   value: 'ACCEPTED_TO_DISPUTE',
   label: 'Chuyển sang tranh chấp',
-  description: 'Mở hồ sơ tranh chấp để hai bên tiếp tục bổ sung bằng chứng.',
+  description: 'Mở hồ sơ tranh chấp để Admin xem bằng chứng đã nộp.',
   tone: 'positive',
 };
 

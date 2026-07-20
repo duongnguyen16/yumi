@@ -9,7 +9,7 @@ export type VendorManagementTab = {
 export const vendorManagementTabs: readonly VendorManagementTab[] = [
   {
     key: "locations",
-    label: "Địa điểm của bạn",
+    label: "Địa điểm",
     icon: "storefront-outline",
   },
   { key: "suggestions", label: "Đề xuất", icon: "inbox-outline" },
