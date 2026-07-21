@@ -143,7 +143,8 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
                 <IconButton
                   icon={isBookmarked ? "bookmark" : "bookmark-outline"}
                   label={isBookmarked ? "Bỏ lưu" : "Lưu vào yêu thích"}
-                  onPress={bookmarkLoading ? undefined : handleToggleBookmark}
+                  onPress={handleToggleBookmark}
+                  disabled={bookmarkLoading}
                 />
               )}
               <IconButton icon="navigation-variant-outline" label="Chỉ đường tôi đến đó" onPress={handleDirections} />
@@ -158,65 +159,65 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
   return (
     <TouchableWithoutFeedback accessible={false} onPress={Keyboard.dismiss}>
       <View style={{ flex: 1 }}>
-      <Tabs.Container
-        renderHeader={renderHeader}
-        revealHeaderOnScroll
-        lazy
-        renderTabBar={(props) => (
-          <MaterialTabBar
-            {...props}
-            activeColor={colors.accentPrimary}
-            inactiveColor={colors.textSecondary}
-            contentContainerStyle={{
-              alignItems: "center",
-            }}
-            indicatorStyle={{
-              backgroundColor: colors.accentPrimary,
-            }}
-            scrollEnabled={false}
-            style={{
-              backgroundColor: colors.surfaceBase,
-              height: 48,
-            }}
-            tabStyle={{
-              width: width / 3,
-            }}
-            labelStyle={{
-              fontFamily: fontFamily.semibold,
-              width: width / 3,
-              textAlign: "center",
-              margin: 0,
-            }}
-          />
-        )}
-      >
-        <Tabs.Tab name="general" label="Tổng quan">
-          <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <GeneralTab
-              data={location}
-              productData={productData}
-              onRefresh={onRefresh}
+        <Tabs.Container
+          renderHeader={renderHeader}
+          revealHeaderOnScroll
+          lazy
+          renderTabBar={(props) => (
+            <MaterialTabBar
+              {...props}
+              activeColor={colors.accentPrimary}
+              inactiveColor={colors.textSecondary}
+              contentContainerStyle={{
+                alignItems: "center",
+              }}
+              indicatorStyle={{
+                backgroundColor: colors.accentPrimary,
+              }}
+              scrollEnabled={false}
+              style={{
+                backgroundColor: colors.surfaceBase,
+                height: 48,
+              }}
+              tabStyle={{
+                width: width / 3,
+              }}
+              labelStyle={{
+                fontFamily: fontFamily.semibold,
+                width: width / 3,
+                textAlign: "center",
+                margin: 0,
+              }}
             />
-          </Tabs.ScrollView>
-        </Tabs.Tab>
+          )}
+        >
+          <Tabs.Tab name="general" label="Tổng quan">
+            <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+              <GeneralTab
+                data={location}
+                productData={productData}
+                onRefresh={onRefresh}
+              />
+            </Tabs.ScrollView>
+          </Tabs.Tab>
 
-        <Tabs.Tab name="review" label="Đánh giá">
-          <ReviewTab
-            initialRating={location?.rating}
-            locationData={location}
-            onChanged={refreshReviewImages}
-          />
-        </Tabs.Tab>
-
-        <Tabs.Tab name="picture" label="Hình ảnh">
-          <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <PictureTab
-              imageUrls={imageUrls}
-              locationName={location?.name}
+          <Tabs.Tab name="review" label="Đánh giá">
+            <ReviewTab
+              initialRating={location?.rating}
+              locationData={location}
+              onChanged={refreshReviewImages}
             />
-          </Tabs.ScrollView>
-        </Tabs.Tab>
-      </Tabs.Container>
+          </Tabs.Tab>
+
+          <Tabs.Tab name="picture" label="Hình ảnh">
+            <Tabs.ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+              <PictureTab
+                imageUrls={imageUrls}
+                locationName={location?.name}
+              />
+            </Tabs.ScrollView>
+          </Tabs.Tab>
+        </Tabs.Container>
         <ImagePreviewModal
           images={imageUrls.map((url, index) => ({
             description: `Ảnh ${index + 1}`,
