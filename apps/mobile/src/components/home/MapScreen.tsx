@@ -53,7 +53,6 @@ import {
   EXPLORE_NEARBY_ZOOM,
 } from "./explore-presentation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppText } from "@/ui/components";
 
 const MAP_API =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -153,9 +152,9 @@ export default function MapScreen() {
             ].some((value) => id.includes(value));
           return shouldHide
             ? {
-              ...layer,
-              layout: { ...(layer.layout ?? {}), visibility: "none" },
-            }
+                ...layer,
+                layout: { ...(layer.layout ?? {}), visibility: "none" },
+              }
             : layer;
         });
         setMapStyle(styleJson as StyleSpecification);
@@ -478,40 +477,6 @@ export default function MapScreen() {
               onDismiss={() => setSelectedLocation(null)}
             />
           ) : null}
-          {/* Nút Top Trending — ẩn khi đang mở location drawer */}
-          {!selectedLocation && (
-            <TouchableOpacity
-              onPress={() => router.push("/trending" as never)}
-              style={{
-                alignItems: "center",
-                backgroundColor: colors.accentPrimary,
-                borderRadius: 20,
-                bottom: 80,
-                elevation: 4,
-                flexDirection: "row",
-                gap: spacing[1],
-                paddingHorizontal: spacing[3],
-                paddingVertical: spacing[2],
-                position: "absolute",
-                right: spacing[4],
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                zIndex: 10,
-              }}
-            >
-              <AppText
-                style={{
-                  color: colors.textInverse,
-                  fontSize: 13,
-                  fontWeight: "600",
-                }}
-              >
-                🔥 Top Trending
-              </AppText>
-            </TouchableOpacity>
-          )}
         </View>
       )}
     </MapCanvas>
