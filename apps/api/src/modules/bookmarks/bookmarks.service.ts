@@ -59,34 +59,31 @@ export class BookmarksService {
   }
 
   async listBookmarks(userId: string, page: number, limit: number) {
-  const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-  const bookmarks = await this.bookmarkModel
-    .find({ userId: new Types.ObjectId(userId) })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .populate({
-      path: 'locationId',
-      select: 'name address imagesUrls status categoryId',
-      match: { status: LocationStatus.PUBLISHED },
-      populate: {
-        path: 'categoryId',
-        select: 'name',
-      },
-    })
-    .lean();
+    const [bookmarks, total] = await Promise.all([
+      this.bookmarkModel
+        .find({ userId: new Types.ObjectId(userId) })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: 'locationId',
+          select: 'name address imagesUrls rating category status',
+          match: { status: LocationStatus.PUBLISHED }, // chỉ hiện địa điểm đang hoạt động
+        })
+        .lean(),
+      this.bookmarkModel.countDocuments({ userId: new Types.ObjectId(userId) }),
+    ]);
 
-  // Lọc bookmark trỏ đến location bị ẩn/xóa (populate trả về null)
-  const data = bookmarks
-    .filter((b) => b.locationId !== null)
-    .map((b) => ({
-      bookmarkId: b._id,
-      location: b.locationId,
-    }));
+    // Lọc ra những bookmark mà location đã bị ẩn/xóa (populate trả về null)
+    const data = bookmarks
+      .filter((b) => b.locationId !== null)
+      .map((b) => ({
+        bookmarkId: b._id,
+        location: b.locationId,
+      }));
 
-  // Dùng data.length sau khi filter thay vì countDocuments
-  // để total phản ánh đúng số địa điểm thực sự hiển thị được
-  return { success: true, data, total: data.length, page, limit };
-}
+    return { success: true, data, total, page, limit };
+  }
 }
