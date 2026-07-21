@@ -25,7 +25,7 @@ export class LocationService {
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(LocationView.name)
     private locationViewModel: Model<LocationViewDocument>,
-  ) {}
+  ) { }
 
   async getAllLocations() {
     try {
@@ -224,6 +224,81 @@ export class LocationService {
         statusCode: 500,
       };
     }
+  }
+
+  async getTrendingLocations(
+    categoryId: string,
+    sortBy: 'viewCount' | 'reviewCount' | 'rating',
+  ) {
+    const LIMIT = 20;
+    // rating lưu ở Review collection, không phải Location — cần $lookup
+    const sortField = sortBy === 'rating' ? 'avgRating' : sortBy;
+
+    const locations = await this.locationModel.aggregate([
+      {
+        $match: {
+          status: LocationStatus.PUBLISHED,
+          categoryId: new Types.ObjectId(categoryId),
+        },
+      },
+      // Tính reviewCount và avgRating từ collection reviews
+      {
+        $lookup: {
+          from: 'reviews',
+          let: { locationId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$locationId', '$$locationId'] },
+                status: ReviewStatus.PUBLISHED,
+              },
+            },
+          ],
+          as: 'reviews',
+        },
+      },
+      {
+        $addFields: {
+          reviewCount: { $size: '$reviews' },
+          avgRating: {
+            $cond: {
+              if: { $gt: [{ $size: '$reviews' }, 0] },
+              then: { $round: [{ $avg: '$reviews.rating' }, 1] },
+              else: 0,
+            },
+          },
+        },
+      },
+      { $sort: { [sortField]: -1 } },
+      { $limit: LIMIT },
+      // Lấy tên category để hiển thị
+      {
+        $lookup: {
+          from: 'categories',
+          localField: 'categoryId',
+          foreignField: '_id',
+          as: 'categoryData',
+        },
+      },
+      {
+        $unwind: {
+          path: '$categoryData',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Bỏ mảng reviews khỏi kết quả (quá nặng, không cần thiết)
+      { $project: { reviews: 0 } },
+    ]);
+
+    return {
+      success: true,
+      sortBy,
+      total: locations.length,
+      locations: locations.map((loc, index) => ({
+        ...loc,
+        rank: index + 1,
+      })),
+    };
   }
 }
 

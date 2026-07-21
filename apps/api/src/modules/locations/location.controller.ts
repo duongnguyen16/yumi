@@ -14,6 +14,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { SearchDto } from './dto/search.dto';
 import { LocationService } from './location.service';
+import { TrendingDto } from './dto/trending.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -23,7 +24,7 @@ interface AuthenticatedRequest extends Request {
 
 @Controller('location')
 export class LocationController {
-  constructor(private readonly locationService: LocationService) {}
+  constructor(private readonly locationService: LocationService) { }
 
   @Get()
   async getAllLocations() {
@@ -68,6 +69,20 @@ export class LocationController {
         'Xảy ra lỗi khi tìm kiếm địa điểm',
       );
     }
+  }
+
+  @Get('trending')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @UseGuards(AuthGuard('jwt-at'))
+  async getTrendingLocations(@Query() query: TrendingDto) {
+    const result = await this.locationService.getTrendingLocations(
+      query.categoryId,
+      query.sortBy,
+    );
+    if (!result.success) {
+      throw new InternalServerErrorException('Xảy ra lỗi khi lấy top trending');
+    }
+    return result;
   }
 
   @Get(':id')

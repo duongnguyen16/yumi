@@ -20,6 +20,7 @@ const VENDOR_TABS: MainTab[] = [
   { name: "home", title: "Khám phá", icon: "compass-outline", href: "/(tabs)/home" },
   { name: "manage", title: "Quản lý", icon: "storefront-outline", href: "/(tabs)/manage" },
   { name: "profile", title: "Tài khoản", icon: "account-outline", href: "/(tabs)/profile" },
+  { name: "mine", title: "Đã lưu", icon: "bookmark-outline", href: "/(tabs)/mine" },
 ];
 
 export function getMainTabs(role?: string | null) {
