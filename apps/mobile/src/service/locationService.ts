@@ -175,6 +175,37 @@ const verifyUpdatePhoneOtp = async (locationId: string, otp: string) => {
   }
 };
 
+export type TrendingLocation = {
+  _id: string;
+  name: string;
+  address: string;
+  imagesUrls?: { url: string; isCover?: boolean }[];
+  viewCount: number;
+  reviewCount: number;
+  avgRating: number;
+  rank: number;
+  categoryData?: { _id: string; name: string };
+};
+
+const getTrendingLocations = async (
+  categoryId: string,
+  sortBy: 'viewCount' | 'reviewCount' | 'rating',
+) => {
+  try {
+    const response = await api.get('/location/trending', {
+      params: { categoryId, sortBy },
+    });
+    return response.data as {
+      success: boolean;
+      locations: TrendingLocation[];
+      total: number;
+    };
+  } catch (error) {
+    console.log('Error fetching trending locations:', error);
+    return { success: false, locations: [], total: 0 };
+  }
+};
+
 export {
   getCurrentLocation,
   checkPermission,
@@ -186,4 +217,5 @@ export {
   sentUpdatePhoneOtp,
   verifyUpdatePhoneOtp,
   getSystemCode,
+  getTrendingLocations,
 };
