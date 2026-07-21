@@ -45,7 +45,7 @@ import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60000, limit: 60 }],
+      throttlers: [{ ttl: 5000, limit: 10 }],
     }),
     AuthModule,
     SchemaModule,
@@ -77,4 +77,4 @@ import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
-export class AppModule { }
+export class AppModule {}
