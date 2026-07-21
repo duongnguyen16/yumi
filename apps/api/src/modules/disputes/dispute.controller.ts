@@ -9,7 +9,6 @@ import {
   NotFoundException,
   Param,
   Patch,
-  Post,
   Query,
   Request as NestRequest,
   UseGuards,
@@ -19,7 +18,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AdminGuard } from 'src/common/guard/admin.guard';
 import { DisputeService } from './dispute.service';
-import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { ResolveDisputeDTO } from './dto/resolve-dispute.dto';
 
@@ -61,15 +59,6 @@ export class DisputeController {
     return handle(await this.service.getForUser(id, req.user.userId));
   }
 
-   // add bằng chứng
-  @Post(':id/evidence')
-  async evidence(
-    @Param('id') id: string,
-    @Body() dto: AddDisputeEvidenceDTO,
-    @NestRequest() req: UserRequest,
-  ) {
-    return handle(await this.service.addEvidence(id, req.user.userId, dto));
-  }
 }
 
 @ApiTags('admin-disputes')

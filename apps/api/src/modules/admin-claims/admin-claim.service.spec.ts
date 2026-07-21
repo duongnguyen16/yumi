@@ -251,23 +251,4 @@ describe('Kiểm thử AdminClaimService', () => {
     expect(trust.recordEvent).not.toHaveBeenCalled();
   });
 
-  it('yêu cầu thêm bằng chứng và giữ claim ở trạng thái chờ duyệt', async () => {
-    const { service, claimModel, locModel, notification, logModel } =
-      createService();
-    const req = claim();
-    claimModel.findById.mockReturnValue(query(req));
-    locModel.findById.mockReturnValue(query(location()));
-
-    const result = await service.requestEvidence(
-      String(claimId),
-      String(adminId),
-      'Chụp lại biển hiệu rõ hơn',
-    );
-
-    expect(result.success).toBe(true);
-    expect(req.status).toBe(ClaimRequestStatus.PENDING);
-    expect(req.save).not.toHaveBeenCalled();
-    expect(notification.notify).toHaveBeenCalledTimes(1);
-    expect(logModel.create).toHaveBeenCalledTimes(1);
-  });
 });

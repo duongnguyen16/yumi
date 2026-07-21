@@ -11,13 +11,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { DetailDrawer } from '@/components/admin/DetailDrawer';
 import type { AdminClaim } from '@/lib/admin-api';
 import { tokens } from '@/theme/admin-tokens';
 
-type Mode = 'default' | 'reject' | 'evidence';
+type Mode = 'default' | 'reject';
 
 interface Props {
   open: boolean;
@@ -28,7 +28,6 @@ interface Props {
   onClose: () => void;
   onApprove: (reason?: string) => void;
   onReject: (reason: string) => void;
-  onRequestEvidence: (message: string) => void;
 }
 
 export function ClaimDetailDrawer({
@@ -40,7 +39,6 @@ export function ClaimDetailDrawer({
   onClose,
   onApprove,
   onReject,
-  onRequestEvidence,
 }: Props) {
   const [mode, setMode] = useState<Mode>('default');
   const [text, setText] = useState('');
@@ -53,8 +51,23 @@ export function ClaimDetailDrawer({
       ? claim.vendorId
       : null;
   const flags = claim?.flags;
-  const proofs = claim?.evidenceFiles ?? [];
-  const firstImage = proofs.find((file) => file.fileType === 'IMAGE');
+  const proofs = [
+    ...(claim?.evidenceFiles ?? []).map((file) => ({ ...file, label: null })),
+    ...(claim?.licenseUrl
+      ? [
+          {
+            url: claim.licenseUrl,
+            fileType: 'DOCUMENT' as const,
+            label: 'Giấy phép kinh doanh',
+            geo: undefined,
+            capturedAt: undefined,
+          },
+        ]
+      : []),
+  ];
+  const vendorName = vendor?.fullName ?? vendor?.email;
+  const textLength = text.trim().length;
+  const isEditing = !readOnly && mode !== 'default';
 
   function back() {
     setMode('default');
@@ -63,8 +76,58 @@ export function ClaimDetailDrawer({
 
   function submit() {
     const value = text.trim();
-    if (mode === 'reject') onReject(value);
-    if (mode === 'evidence') onRequestEvidence(value);
+    if (mode === 'reject') {
+      onReject(value);
+    }
+  }
+
+  function renderFooter() {
+    if (readOnly) {
+      return (
+        <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>
+          Đóng
+        </ActionButton>
+      );
+    }
+
+    if (mode === 'default') {
+      return (
+        <>
+          <ActionButton
+            variant="reject"
+            disabled={saving}
+            onClick={() => setMode('reject')}
+            sx={{ flex: 1 }}
+          >
+            Từ chối
+          </ActionButton>
+          <ActionButton
+            variant="approve"
+            disabled={saving || !flags?.eligibleForApprove}
+            onClick={() => onApprove()}
+            sx={{ flex: 1 }}
+          >
+            {saving ? 'Đang xử lý' : 'Duyệt'}
+          </ActionButton>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <ActionButton variant="neutral" onClick={back} sx={{ flex: 1 }}>
+          Quay lại
+        </ActionButton>
+        <ActionButton
+          variant="reject"
+          disabled={saving || textLength < 5}
+          onClick={submit}
+          sx={{ flex: 1.5 }}
+        >
+          {saving ? 'Đang gửi' : 'Xác nhận'}
+        </ActionButton>
+      </>
+    );
   }
 
   return (
@@ -73,66 +136,7 @@ export function ClaimDetailDrawer({
       onClose={onClose}
       title="Hồ sơ Claim"
       width={460}
-      preview={
-        firstImage ? (
-          <Box
-            component="img"
-            src={firstImage.url}
-            alt="Bằng chứng tại địa điểm"
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <FactCheckOutlinedIcon sx={{ fontSize: 60, color: tokens.color.orange }} />
-        )
-      }
-      footer={
-        readOnly ? (
-          <ActionButton variant="neutral" onClick={onClose} sx={{ flex: 1 }}>
-            Đóng
-          </ActionButton>
-        ) : mode === 'default' ? (
-          <>
-            <ActionButton
-              variant="reject"
-              disabled={saving}
-              onClick={() => setMode('reject')}
-              sx={{ flex: 1 }}
-            >
-              Từ chối
-            </ActionButton>
-            <ActionButton
-              variant="neutral"
-              disabled={saving}
-              onClick={() => setMode('evidence')}
-              sx={{ flex: 1.2 }}
-            >
-              Bổ sung
-            </ActionButton>
-            <ActionButton
-              variant="approve"
-              disabled={saving || !flags?.eligibleForApprove}
-              onClick={() => onApprove()}
-              sx={{ flex: 1 }}
-            >
-              {saving ? 'Đang xử lý' : 'Duyệt'}
-            </ActionButton>
-          </>
-        ) : (
-          <>
-            <ActionButton variant="neutral" onClick={back} sx={{ flex: 1 }}>
-              Quay lại
-            </ActionButton>
-            <ActionButton
-              variant={mode === 'reject' ? 'reject' : 'approve'}
-              disabled={saving || text.trim().length < 5}
-              onClick={submit}
-              sx={{ flex: 1.5 }}
-            >
-              {saving ? 'Đang gửi' : 'Xác nhận'}
-            </ActionButton>
-          </>
-        )
-      }
+      footer={renderFooter()}
     >
       <Stack spacing={2.5}>
         <Box>
@@ -147,7 +151,7 @@ export function ClaimDetailDrawer({
 
         {flags && (
           <Box>
-            <Typography variant="overline">Độ sẵn sàng</Typography>
+            <Typography variant="overline">Yếu tố xác minh</Typography>
             <Stack
               direction="row"
               sx={{ flexWrap: 'wrap', gap: 0.75, mt: 0.75 }}
@@ -162,14 +166,14 @@ export function ClaimDetailDrawer({
             </Stack>
             {!flags.eligibleForApprove && (
               <Alert severity="warning" sx={{ mt: 1.5 }}>
-                Hồ sơ chưa đủ điều kiện duyệt. Hãy yêu cầu vendor bổ sung bằng chứng.
+                Hồ sơ chưa đủ điều kiện duyệt.
               </Alert>
             )}
           </Box>
         )}
 
         <Box sx={{ border: `1px solid ${tokens.color.border}` }}>
-          <Meta label="Vendor" value={vendor?.fullName ?? vendor?.email ?? '—'} />
+          <Meta label="Vendor" value={vendorName ?? '—'} />
           <Divider />
           <Meta label="Email" value={vendor?.email ?? '—'} />
           <Divider />
@@ -198,7 +202,9 @@ export function ClaimDetailDrawer({
               label="Xử lý lúc"
               value={
                 claim?.adminDecision?.decidedAt
-                  ? new Date(claim.adminDecision.decidedAt).toLocaleString('vi-VN')
+                  ? new Date(claim.adminDecision.decidedAt).toLocaleString(
+                    'vi-VN',
+                  )
                   : '—'
               }
             />
@@ -207,42 +213,86 @@ export function ClaimDetailDrawer({
 
         <Box>
           <Typography variant="overline">Bằng chứng</Typography>
-          <Stack spacing={1} sx={{ mt: 0.75 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              gap: 1,
+              mt: 0.75,
+            }}
+          >
             {proofs.map((file, index) => (
               <Box
                 key={`${file.url}-${index}`}
                 sx={{
                   border: `1px solid ${tokens.color.border}`,
-                  p: 1.5,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 2,
+                  minWidth: 0,
                 }}
               >
-                <Box sx={{ minWidth: 0 }}>
+                {file.fileType === 'IMAGE' && (
+                  <Link
+                    href={file.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    sx={{ display: 'block', lineHeight: 0 }}
+                  >
+                    <Box
+                      component="img"
+                      src={file.url}
+                      alt={`Bằng chứng ${index + 1}`}
+                      sx={{
+                        width: '100%',
+                        aspectRatio: '4 / 3',
+                        display: 'block',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </Link>
+                )}
+                {file.label && (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      aspectRatio: '4 / 3',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: tokens.color.preview,
+                    }}
+                  >
+                    <DescriptionOutlinedIcon
+                      sx={{ fontSize: 56, color: tokens.color.textMuted }}
+                    />
+                  </Box>
+                )}
+                <Box sx={{ p: 1.5 }}>
                   <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-                    {file.fileType} {index + 1}
+                    {file.label ?? `${file.fileType} ${index + 1}`}
                   </Typography>
-                  <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
-                    {file.geo?.coordinates
-                      ? file.geo.coordinates.join(', ')
-                      : 'Không có tọa độ'}
-                  </Typography>
-                  <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
-                    {file.capturedAt
-                      ? new Date(file.capturedAt).toLocaleString('vi-VN')
-                      : 'Không có thời gian'}
-                  </Typography>
+                  {file.geo?.coordinates && (
+                    <Typography
+                      sx={{ color: tokens.color.textMuted, fontSize: 12 }}
+                    >
+                      {file.geo.coordinates.join(', ')}
+                    </Typography>
+                  )}
+                  {file.capturedAt && (
+                    <Typography
+                      sx={{ color: tokens.color.textMuted, fontSize: 12 }}
+                    >
+                      {new Date(file.capturedAt).toLocaleString('vi-VN')}
+                    </Typography>
+                  )}
+                  <Link
+                    href={file.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    underline="hover"
+                    sx={{ display: 'inline-block', fontSize: 12, mt: 0.75 }}
+                  >
+                    Mở file
+                  </Link>
                 </Box>
-                <Link
-                  href={file.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  underline="hover"
-                  sx={{ fontSize: 12, flexShrink: 0 }}
-                >
-                  Mở file
-                </Link>
               </Box>
             ))}
             {proofs.length === 0 && (
@@ -250,22 +300,10 @@ export function ClaimDetailDrawer({
                 Chưa có bằng chứng.
               </Typography>
             )}
-          </Stack>
+          </Box>
         </Box>
 
-        {claim?.licenseUrl && (
-          <Link
-            href={claim.licenseUrl}
-            target="_blank"
-            rel="noreferrer"
-            underline="hover"
-            sx={{ fontSize: 13, fontWeight: 700 }}
-          >
-            Mở giấy phép kinh doanh
-          </Link>
-        )}
-
-        {!readOnly && mode !== 'default' && (
+        {isEditing && (
           <TextField
             autoFocus
             fullWidth

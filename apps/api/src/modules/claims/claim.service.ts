@@ -66,24 +66,23 @@ export class ClaimService {
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
+      // kiểm tra tính khả thi? tk có phải vendor ko, tk có bị banned k
+
       const eligibilityFailure = await this.getEligibilityFailure(vendorId);
       if (eligibilityFailure) return eligibilityFailure;
 
-      // lấy location
+      // xử lý location
       const location = await this.locationModel
         .findById(locationId)
         .lean()
         .exec();
 
-      // k có location
       if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
 
-      // location chưa publíh
       if (location.status !== LocationStatus.PUBLISHED) {
         return this.failure(409, 'Chỉ có thể claim địa điểm đã được công khai');
       }
 
-      // đã có ng sở hữu
       if (location.ownerId) {
         return this.failure(
           409,
@@ -91,7 +90,6 @@ export class ClaimService {
         );
       }
 
-      // đã có ng yêu cầu trc r
       if (await this.hasPendingSlot(locationId)) {
         return this.failure(
           409,
@@ -100,8 +98,8 @@ export class ClaimService {
       }
 
       // lấy số điện thoại
-      const phone = this.resolveListingPhone(location);
-
+      const phone = location.phone?.trim() || undefined;
+      
       // có sdt thì yêu cầu otp
       const otpRequired = Boolean(phone);
       const otp = otpRequired ? this.generateOtp() : undefined;
@@ -111,7 +109,6 @@ export class ClaimService {
       // gửi mã
       if (otp && phone) await this.sms.sendOtp(phone, otp);
 
-      // lưu session, cái này được gọi là thêm k ?
       await this.sessionModel.findOneAndUpdate(
         {
           vendorId: new Types.ObjectId(vendorId),
@@ -153,6 +150,7 @@ export class ClaimService {
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
+      
       const eligibilityFailure = await this.getEligibilityFailure(vendorId);
       if (eligibilityFailure) return eligibilityFailure;
       const session = await this.sessionModel
@@ -232,12 +230,11 @@ export class ClaimService {
       }
 
       // ảnh phải có vị trí và thời điểm chụp, và phải có ảnh cho thấy mã siteCode
-      const hasGeoPhoto = dto.evidenceFiles.some(
-        (file) =>
-          file.fileType === 'IMAGE' &&
-          file.geo?.coordinates.length === 2 &&
-          Boolean(file.capturedAt),
-      );
+      const hasGeoPhoto = dto.evidenceFiles.some((file) => {
+        if (file.fileType !== 'IMAGE') return false;
+        if (file.geo?.coordinates.length !== 2) return false;
+        return Boolean(file.capturedAt);
+      });
       if (!hasGeoPhoto) {
         return this.failure(
           400,
@@ -322,12 +319,11 @@ export class ClaimService {
         status: RequestAccessStatus.PENDING,
       }),
     ]);
-    return Boolean(claim || requestAccess);
+
+    if (claim || requestAccess) return true;
+    return false;
   }
 
-  private resolveListingPhone(location: { phone?: string }) {
-    return location.phone?.trim() || undefined;
-  }
 
   private async getEligibilityFailure(vendorId: string) {
     const user = await this.userModel.findById(vendorId).lean().exec();
@@ -367,12 +363,9 @@ export class ClaimService {
   }
 
   private isDuplicateKeyError(error: unknown): error is { code: number } {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 11000
-    );
+    if (!error || typeof error !== 'object') return false;
+    if (!('code' in error)) return false;
+    return error.code === 11000;
   }
 
   private logError(context: string, error: unknown) {

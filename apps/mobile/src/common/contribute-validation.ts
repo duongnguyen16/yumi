@@ -28,7 +28,10 @@ export function validateContributionBasics({
   const nameResult = validatePlaceName(name);
   if (!nameResult.isValid) return nameResult;
 
-  const descriptionResult = validateDescription(description);
+  const descriptionResult = validateDescription(description, {
+    maxLength: 500,
+    minLength: 10,
+  });
   if (!descriptionResult.isValid) return descriptionResult;
 
   const categoryResult = validateCategoryId(selectedCategoryId);

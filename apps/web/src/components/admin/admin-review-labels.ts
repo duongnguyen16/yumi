@@ -10,12 +10,8 @@ export interface AppealDecisionOption {
 const appealTypeLabels: Record<string, string> = {
   REQUEST_ACCESS_REJECTED: 'Từ chối yêu cầu quyền truy cập',
   LOCATION_REJECTED: 'Từ chối địa điểm',
-  CLAIM_REJECTED: 'Từ chối yêu cầu sở hữu',
-  DUPLICATE_HIDDEN: 'Ẩn địa điểm trùng lặp',
   OWNERSHIP_REVOKED: 'Thu hồi quyền sở hữu',
-  REVIEW_REMOVED: 'Gỡ đánh giá',
   USER_BANNED: 'Khóa tài khoản',
-  USER_WARNED: 'Cảnh cáo tài khoản',
 };
 
 const appealStatusLabels: Record<string, string> = {
@@ -76,7 +72,7 @@ const locationFieldLabels: Record<string, string> = {
 const disputeOption: AppealDecisionOption = {
   value: 'ACCEPTED_TO_DISPUTE',
   label: 'Chuyển sang tranh chấp',
-  description: 'Mở hồ sơ tranh chấp để hai bên tiếp tục bổ sung bằng chứng.',
+  description: 'Mở hồ sơ tranh chấp để Admin xem bằng chứng đã nộp.',
   tone: 'positive',
 };
 

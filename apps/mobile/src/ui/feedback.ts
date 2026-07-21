@@ -3,14 +3,37 @@ type ApiFailure = {
   response?: { data?: { message?: string | string[] } };
 };
 
-const formatMessage = (message: string | string[] | undefined) => Array.isArray(message) ? message.filter(Boolean).join(". ") : message?.trim();
+function formatMessage(message: string | string[] | undefined) {
+  if (Array.isArray(message)) {
+    const messages = message.filter(Boolean);
+    return messages.join(". ");
+  }
+
+  return message?.trim();
+}
 
 export function getNoticeMessage(value: unknown, fallback: string) {
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (value instanceof Error && value.message.trim()) return value.message.trim();
+  if (typeof value === "string") {
+    const message = value.trim();
+    if (message) return message;
+  }
+
   if (typeof value === "object" && value !== null) {
     const failure = value as ApiFailure;
-    return formatMessage(failure.response?.data?.message) || formatMessage(failure.message) || fallback;
+    const responseMessage = formatMessage(failure.response?.data?.message);
+    if (responseMessage) return responseMessage;
   }
+
+  if (value instanceof Error) {
+    const message = value.message.trim();
+    if (message) return message;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const failure = value as ApiFailure;
+    const directMessage = formatMessage(failure.message);
+    if (directMessage) return directMessage;
+  }
+
   return fallback;
 }

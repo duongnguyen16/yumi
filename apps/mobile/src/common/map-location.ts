@@ -26,7 +26,7 @@ export const locationSheetSections = [
   "reviews",
 ] as const;
 export const locationProductsExpandedByDefault = true;
-export const locationReviewCardHeight = 168;
+export const locationReviewCardHeight = 216;
 export const locationReviewCommentLines = 3;
 
 type RecordValue = Record<string, unknown>;

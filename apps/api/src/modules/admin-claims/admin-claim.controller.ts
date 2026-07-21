@@ -21,7 +21,6 @@ import { AdminClaimService } from './admin-claim.service';
 import { ApproveClaimDTO } from './dto/approve-claim.dto';
 import { ListClaimsDTO } from './dto/list-claims.dto';
 import { RejectClaimDTO } from './dto/reject-claim.dto';
-import { RequestEvidenceDTO } from './dto/request-evidence.dto';
 
 interface AdminRequest extends Request {
   user: { userId: string };
@@ -68,19 +67,6 @@ export class AdminClaimController {
   ) {
     return this.handle(
       await this.service.reject(id, req.user.userId, body.reason),
-    );
-  }
-
-  // thêm bằng chứng đi
-
-  @Patch(':id/request-evidence')
-  async requestEvidence(
-    @Param('id') id: string,
-    @Body() body: RequestEvidenceDTO,
-    @NestRequest() req: AdminRequest,
-  ) {
-    return this.handle(
-      await this.service.requestEvidence(id, req.user.userId, body.message),
     );
   }
 

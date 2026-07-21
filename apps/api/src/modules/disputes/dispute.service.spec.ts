@@ -67,21 +67,6 @@ describe('Kiểm thử DisputeService', () => {
     };
   }
 
-  it('cho phép mỗi bên tham gia bổ sung bằng chứng cho phía của mình', async () => {
-    const { service, disputeModel } = setup();
-    const item = dispute();
-    disputeModel.findById.mockReturnValue(query(item));
-    const file = { url: 'https://example.com/a.jpg', fileType: 'IMAGE' as const };
-
-    const result = await service.addEvidence(String(disputeId), String(vendorA), {
-      evidenceFiles: [file],
-    });
-
-    expect(result.success).toBe(true);
-    expect(item.evidenceA).toEqual([file]);
-    expect(item.evidenceB).toEqual([]);
-  });
-
   it('chặn người ngoài xem tranh chấp', async () => {
     const { service, disputeModel } = setup();
     disputeModel.findById.mockReturnValue(query(dispute()));

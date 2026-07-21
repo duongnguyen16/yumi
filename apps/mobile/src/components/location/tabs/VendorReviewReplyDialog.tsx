@@ -15,10 +15,12 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   View,
 } from "react-native";
 import { Avatar, Icon, Menu, Modal, Portal, Surface } from "react-native-paper";
+import { ImagePreviewModal } from "../ImagePreviewModal";
 import { getReviewComposerKeyboardBehavior } from "./review-composer-keyboard";
 import {
   getReviewReplyDialogMode,
@@ -51,6 +53,7 @@ export function VendorReviewReplyDialog({
   onSubmit,
 }: VendorReviewReplyDialogProps) {
   const [menuVisible, setMenuVisible] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const hasReply = Boolean(review?.reply?.content);
   const mode = getReviewReplyDialogMode(hasReply, editing);
   const visibility = getReviewReplyDialogVisibility(mode);
@@ -60,9 +63,14 @@ export function VendorReviewReplyDialog({
   const reviewerName = review.user?.fullName?.trim() || "Người dùng";
   const avatarUrl = toAbsoluteUrl(review.user?.avatarUrl);
   const avatarInitial = reviewerName.slice(0, 1).toUpperCase();
-  const imageUrls = (review.images ?? [])
-    .map((image) => toAbsoluteUrl(image.url))
+  const imageUrls = getReviewImageUrls(review)
+    .map((url) => toAbsoluteUrl(url))
     .filter((url): url is string => Boolean(url));
+  const previewImages = imageUrls.map((url, index) => ({
+    description: `Ảnh đánh giá ${index + 1}`,
+    title: reviewerName,
+    url,
+  }));
 
   const dismiss = () => {
     if (saving) return;
@@ -159,11 +167,17 @@ export function VendorReviewReplyDialog({
               {imageUrls.length ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <Inline>
-                    {imageUrls.map((url) => (
+                    {imageUrls.map((url, index) => (
+                      <Pressable
+                        accessibilityLabel="Xem ảnh trong đánh giá"
+                        accessibilityRole="imagebutton"
+                        key={url}
+                        onPress={() => setPreviewIndex(index)}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.82 : 1 })}
+                      >
                       <Image
                         alt="Ảnh trong đánh giá"
                         contentFit="cover"
-                        key={url}
                         source={{ uri: url }}
                         style={{
                           backgroundColor: colors.surfaceMedia,
@@ -172,6 +186,7 @@ export function VendorReviewReplyDialog({
                           width: 88,
                         }}
                       />
+                      </Pressable>
                     ))}
                   </Inline>
                 </ScrollView>
@@ -269,8 +284,42 @@ export function VendorReviewReplyDialog({
           </Surface>
         </Modal>
       </KeyboardAvoidingView>
+      <ImagePreviewModal
+        images={previewImages}
+        initialIndex={previewIndex ?? 0}
+        locationName="Đánh giá"
+        onDismiss={() => setPreviewIndex(null)}
+        visible={previewIndex !== null}
+      />
     </Portal>
   );
+}
+
+function getReviewImageUrls(review: LocationReview) {
+  const source = review as LocationReview & {
+    imageUrls?: unknown[];
+    imagesUrls?: unknown[];
+  };
+  const candidates = [
+    ...(Array.isArray(source.images) ? source.images : []),
+    ...(Array.isArray(source.imageUrls) ? source.imageUrls : []),
+    ...(Array.isArray(source.imagesUrls) ? source.imagesUrls : []),
+  ];
+
+  const urls = candidates
+    .map((image) => {
+      if (typeof image === "string") return image;
+      if (!image || typeof image !== "object") return "";
+      const value = image as { url?: unknown; publicUrl?: unknown };
+      return typeof value.url === "string"
+        ? value.url
+        : typeof value.publicUrl === "string"
+          ? value.publicUrl
+          : "";
+    })
+    .filter((url) => Boolean(url.trim()));
+
+  return Array.from(new Set(urls));
 }
 
 function formatRelativeDate(value?: string) {
