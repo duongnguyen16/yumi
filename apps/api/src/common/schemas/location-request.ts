@@ -21,6 +21,7 @@ export enum LocationRequestStatus {
 
 @Schema({ timestamps: true, collection: 'location_requests' })
 export class LocationRequest {
+
   @Prop({
     type: String,
     enum: LocationRequestType,
@@ -63,7 +64,7 @@ export class LocationRequest {
   oldData?: Record<string, unknown> | null;
 
   @Prop({
-    type: MongooseSchema.Types.Mixed,
+  type: MongooseSchema.Types.Mixed,
     required: true,
   })
   newData!: Record<string, unknown>;

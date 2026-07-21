@@ -48,12 +48,39 @@ import { LocationRequestDetailDrawer } from './components/LocationRequestDetailD
 const PAGE_SIZE = 30;
 
 function extractMessage(err: unknown): string {
-  const e = err as { response?: { data?: { message?: string } }; message?: string };
-  return e?.response?.data?.message ?? e?.message ?? 'Đã xảy ra lỗi';
+  const e = err as {
+    response?: { data?: { message?: string } };
+    message?: string;
+  };
+  const responseMessage = e.response?.data?.message;
+  if (responseMessage) return responseMessage;
+  return e.message ?? 'Đã xảy ra lỗi';
 }
 
 function formatTime(value?: string): string {
-  return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—';
+  if (!value) return '—';
+  return dayjs(value).format('DD/MM/YYYY HH:mm');
+}
+
+function getPageAfterRemoval(itemCount: number, currentPage: number) {
+  if (itemCount === 1 && currentPage > 1) {
+    return currentPage - 1;
+  }
+  return currentPage;
+}
+
+function getLocationId(value: AdminLocationRequest['locationId']) {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') return value._id;
+  return null;
+}
+
+function getSubmitterLabel(
+  submitter: { fullName?: string; email?: string } | null,
+) {
+  if (!submitter) return '—';
+  const label = submitter.fullName ?? submitter.email;
+  return label ?? '—';
 }
 
 const headSx = {
@@ -98,19 +125,22 @@ export default function LocationRequestsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const fetchQueue = useCallback(async (p: number, nextView: AdminRequestView) => {
-    try {
-      const data = await getLocationRequestQueue(p, PAGE_SIZE, nextView);
-      setItems(data.items);
-      setTotal(data.total);
-      setPage(data.page);
-      setError(null);
-    } catch (err) {
-      setError(extractMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchQueue = useCallback(
+    async (p: number, nextView: AdminRequestView) => {
+      try {
+        const data = await getLocationRequestQueue(p, PAGE_SIZE, nextView);
+        setItems(data.items);
+        setTotal(data.total);
+        setPage(data.page);
+        setError(null);
+      } catch (err) {
+        setError(extractMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let active = true;
@@ -158,7 +188,8 @@ export default function LocationRequestsPage() {
     try {
       await approveLocationRequest(selected._id);
       setDrawerOpen(false);
-      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
+      const nextPage = getPageAfterRemoval(items.length, page);
+      await fetchQueue(nextPage, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -173,7 +204,8 @@ export default function LocationRequestsPage() {
     try {
       await rejectLocationRequest(selected._id, reason, duplicateOfLocationId);
       setDrawerOpen(false);
-      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
+      const nextPage = getPageAfterRemoval(items.length, page);
+      await fetchQueue(nextPage, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -181,14 +213,12 @@ export default function LocationRequestsPage() {
     }
   }
 
-  async function handleConfirmDuplicate(reason: string, duplicateOfLocationId?: string) {
+  async function handleConfirmDuplicate(
+    reason: string,
+    duplicateOfLocationId?: string,
+  ) {
     if (!selected) return;
-    const locationId =
-      selected.locationId && typeof selected.locationId === 'object'
-        ? selected.locationId._id
-        : typeof selected.locationId === 'string'
-          ? selected.locationId
-          : null;
+    const locationId = getLocationId(selected.locationId);
     if (!locationId) {
       setDrawerError('Không tìm thấy địa điểm để xác nhận trùng lặp');
       return;
@@ -198,7 +228,8 @@ export default function LocationRequestsPage() {
     try {
       await confirmDuplicateLocation(locationId, reason, duplicateOfLocationId);
       setDrawerOpen(false);
-      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
+      const nextPage = getPageAfterRemoval(items.length, page);
+      await fetchQueue(nextPage, view);
     } catch (err) {
       setDrawerError(extractMessage(err));
     } finally {
@@ -207,26 +238,27 @@ export default function LocationRequestsPage() {
   }
 
   async function handleQuickConfirmDuplicate(req: AdminLocationRequest) {
-    const locationId =
-      req.locationId && typeof req.locationId === 'object'
-        ? req.locationId._id
-        : typeof req.locationId === 'string'
-          ? req.locationId
-          : null;
+    const locationId = getLocationId(req.locationId);
     if (!locationId) {
       setError('Không tìm thấy địa điểm để xác nhận trùng lặp');
       return;
     }
     const reason = window.prompt('Nhập lý do xác nhận địa điểm trùng lặp');
     if (!reason || reason.trim().length < 5) return;
-    const duplicateOfLocationId =
-      window.prompt('ID địa điểm gốc nếu có, có thể bỏ trống')?.trim() ||
-      undefined;
+    const duplicateInput = window.prompt(
+      'ID địa điểm gốc nếu có, có thể bỏ trống',
+    );
+    const duplicateOfLocationId = duplicateInput?.trim() || undefined;
     setSubmitting(true);
     setError(null);
     try {
-      await confirmDuplicateLocation(locationId, reason.trim(), duplicateOfLocationId);
-      await fetchQueue(items.length === 1 && page > 1 ? page - 1 : page, view);
+      await confirmDuplicateLocation(
+        locationId,
+        reason.trim(),
+        duplicateOfLocationId,
+      );
+      const nextPage = getPageAfterRemoval(items.length, page);
+      await fetchQueue(nextPage, view);
     } catch (err) {
       setError(extractMessage(err));
     } finally {
@@ -246,7 +278,11 @@ export default function LocationRequestsPage() {
     >
       <Topbar
         title="Duyệt địa điểm"
-        subtitle={view === 'queue' ? `${total} phiếu chờ xử lý` : `${total} phiếu trong lịch sử`}
+        subtitle={
+          view === 'queue'
+            ? `${total} phiếu chờ xử lý`
+            : `${total} phiếu trong lịch sử`
+        }
         actions={
           <ActionButton
             variant="neutral"
@@ -280,7 +316,11 @@ export default function LocationRequestsPage() {
         </Box>
       ) : (
         <AdminCard
-          sx={{ flex: 1, borderRadius: 0, animation: 'admin-fade-in 320ms ease both' }}
+          sx={{
+            flex: 1,
+            borderRadius: 0,
+            animation: 'admin-fade-in 320ms ease both',
+          }}
         >
           <Box sx={{ overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 1080 }}>
@@ -303,8 +343,16 @@ export default function LocationRequestsPage() {
                     <TableCell colSpan={7} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
-                        title={view === 'queue' ? 'Không có phiếu chờ duyệt' : 'Chưa có lịch sử duyệt'}
-                        subtitle={view === 'queue' ? 'Hàng đợi trống.' : 'Chưa có phiếu nào đã xử lý.'}
+                        title={
+                          view === 'queue'
+                            ? 'Không có phiếu chờ duyệt'
+                            : 'Chưa có lịch sử duyệt'
+                        }
+                        subtitle={
+                          view === 'queue'
+                            ? 'Hàng đợi trống.'
+                            : 'Chưa có phiếu nào đã xử lý.'
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -319,11 +367,14 @@ export default function LocationRequestsPage() {
                     req.submittedBy && typeof req.submittedBy === 'object'
                       ? req.submittedBy
                       : null;
-                  const name =
-                    typeof req.newData?.name === 'string'
-                      ? req.newData.name
-                      : loc?.name ?? '—';
+                  let name = loc?.name ?? '—';
+                  if (typeof req.newData?.name === 'string') {
+                    name = req.newData.name;
+                  }
                   const flags = req.flags;
+                  const submitterLabel = getSubmitterLabel(submitter);
+                  const hasNoFlags =
+                    !flags?.suspectedDuplicate && !flags?.farPin;
 
                   return (
                     <TableRow
@@ -331,11 +382,17 @@ export default function LocationRequestsPage() {
                       sx={{
                         animation: 'admin-fade-in 240ms ease both',
                         animationDelay: `${Math.min(idx, 12) * 28}ms`,
-                        '&:hover': { bgcolor: `${tokens.color.rowHover} !important` },
+                        '&:hover': {
+                          bgcolor: `${tokens.color.rowHover} !important`,
+                        },
                       }}
                     >
                       <TableCell sx={{ py: 2.25, minWidth: 220 }}>
-                        <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          sx={{ alignItems: 'center' }}
+                        >
                           <Box
                             sx={{
                               width: 36,
@@ -352,37 +409,84 @@ export default function LocationRequestsPage() {
                             <LocationOnOutlinedIcon sx={{ fontSize: 20 }} />
                           </Box>
                           <Typography
-                            sx={{ fontWeight: 700, fontSize: 15, color: tokens.color.textPrimary }}
+                            sx={{
+                              fontWeight: 700,
+                              fontSize: 15,
+                              color: tokens.color.textPrimary,
+                            }}
                           >
                             {name}
                           </Typography>
                         </Stack>
                       </TableCell>
                       <TableCell sx={{ minWidth: 150 }}>
-                        <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
-                          {submitter?.fullName ?? submitter?.email ?? '—'}
+                        <Typography
+                          sx={{
+                            fontSize: 14,
+                            color: tokens.color.textSecondary,
+                          }}
+                        >
+                          {submitterLabel}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ minWidth: 150 }}>
-                        <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary }}>
+                        <Typography
+                          sx={{
+                            fontSize: 14,
+                            color: tokens.color.textSecondary,
+                          }}
+                        >
                           {locationRequestTypeLabel(req.type)}
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ minWidth: 120 }}>
-                        <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          sx={{ flexWrap: 'wrap', gap: 0.5 }}
+                        >
                           {flags?.suspectedDuplicate && (
-                            <Chip label="Nghi trùng" size="small" sx={flagChipSx(tokens.color.red, tokens.color.redSoftBg, tokens.color.redSoftBorder)} />
+                            <Chip
+                              label="Nghi trùng"
+                              size="small"
+                              sx={flagChipSx(
+                                tokens.color.red,
+                                tokens.color.redSoftBg,
+                                tokens.color.redSoftBorder,
+                              )}
+                            />
                           )}
                           {flags?.farPin && (
-                            <Chip label="Pin xa" size="small" sx={flagChipSx(tokens.color.pendingText, tokens.color.pendingBg, tokens.color.border)} />
+                            <Chip
+                              label="Pin xa"
+                              size="small"
+                              sx={flagChipSx(
+                                tokens.color.pendingText,
+                                tokens.color.pendingBg,
+                                tokens.color.border,
+                              )}
+                            />
                           )}
-                          {!flags?.suspectedDuplicate && !flags?.farPin && (
-                            <Typography sx={{ color: tokens.color.textMuted, fontSize: 14 }}>—</Typography>
+                          {hasNoFlags && (
+                            <Typography
+                              sx={{
+                                color: tokens.color.textMuted,
+                                fontSize: 14,
+                              }}
+                            >
+                              —
+                            </Typography>
                           )}
                         </Stack>
                       </TableCell>
                       <TableCell>
-                        <Typography sx={{ fontSize: 14, color: tokens.color.textSecondary, whiteSpace: 'nowrap' }}>
+                        <Typography
+                          sx={{
+                            fontSize: 14,
+                            color: tokens.color.textSecondary,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {formatTime(req.createdAt)}
                         </Typography>
                       </TableCell>
@@ -394,17 +498,28 @@ export default function LocationRequestsPage() {
                         />
                       </TableCell>
                       <TableCell align="right" sx={stickyActionCellSx}>
-                        <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          sx={{ justifyContent: 'flex-end' }}
+                        >
                           <Tooltip title="Xem chi tiết">
                             <Button
                               size="small"
                               variant="outlined"
                               aria-label="Xem chi tiết địa điểm"
                               onClick={() => openDetail(req)}
-                              startIcon={<VisibilityOutlinedIcon fontSize="small" />}
+                              startIcon={
+                                <VisibilityOutlinedIcon fontSize="small" />
+                              }
                               sx={quickActionSx(tokens.color.textSecondary)}
                             >
-                              <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Xem</Box>
+                              <Box
+                                component="span"
+                                sx={{ display: { xs: 'none', lg: 'inline' } }}
+                              >
+                                Xem
+                              </Box>
                             </Button>
                           </Tooltip>
                           {view === 'queue' ? (
@@ -414,10 +529,20 @@ export default function LocationRequestsPage() {
                                 variant="outlined"
                                 aria-label="Duyệt địa điểm"
                                 onClick={() => openDetail(req)}
-                                startIcon={<CheckOutlinedIcon fontSize="small" />}
-                                sx={quickActionSx(tokens.color.green, 'rgba(46,125,50,0.08)')}
+                                startIcon={
+                                  <CheckOutlinedIcon fontSize="small" />
+                                }
+                                sx={quickActionSx(
+                                  tokens.color.green,
+                                  'rgba(46,125,50,0.08)',
+                                )}
                               >
-                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Duyệt</Box>
+                                <Box
+                                  component="span"
+                                  sx={{ display: { xs: 'none', lg: 'inline' } }}
+                                >
+                                  Duyệt
+                                </Box>
                               </Button>
                             </Tooltip>
                           ) : null}
@@ -428,10 +553,20 @@ export default function LocationRequestsPage() {
                                 variant="outlined"
                                 aria-label="Từ chối địa điểm"
                                 onClick={() => openDetail(req, true)}
-                                startIcon={<BlockOutlinedIcon fontSize="small" />}
-                                sx={quickActionSx(tokens.color.red, tokens.color.redSoftBg)}
+                                startIcon={
+                                  <BlockOutlinedIcon fontSize="small" />
+                                }
+                                sx={quickActionSx(
+                                  tokens.color.red,
+                                  tokens.color.redSoftBg,
+                                )}
                               >
-                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Từ chối</Box>
+                                <Box
+                                  component="span"
+                                  sx={{ display: { xs: 'none', lg: 'inline' } }}
+                                >
+                                  Từ chối
+                                </Box>
                               </Button>
                             </Tooltip>
                           ) : null}
@@ -442,11 +577,23 @@ export default function LocationRequestsPage() {
                                 variant="outlined"
                                 aria-label="Xác nhận trùng thật và ẩn địa điểm"
                                 disabled={submitting}
-                                onClick={() => void handleQuickConfirmDuplicate(req)}
-                                startIcon={<BlockOutlinedIcon fontSize="small" />}
-                                sx={quickActionSx(tokens.color.red, tokens.color.redSoftBg)}
+                                onClick={() =>
+                                  void handleQuickConfirmDuplicate(req)
+                                }
+                                startIcon={
+                                  <BlockOutlinedIcon fontSize="small" />
+                                }
+                                sx={quickActionSx(
+                                  tokens.color.red,
+                                  tokens.color.redSoftBg,
+                                )}
                               >
-                                <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>Ẩn trùng</Box>
+                                <Box
+                                  component="span"
+                                  sx={{ display: { xs: 'none', lg: 'inline' } }}
+                                >
+                                  Ẩn trùng
+                                </Box>
                               </Button>
                             </Tooltip>
                           ) : null}

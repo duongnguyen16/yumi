@@ -9,7 +9,6 @@ import { AuditService } from 'src/common/services/audit.service';
 import { DisputeStatus } from 'src/common/schemas/common.enums';
 import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
-import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { DisputeOutcome, ResolveDisputeDTO } from './dto/resolve-dispute.dto';
@@ -30,7 +29,8 @@ export class DisputeService {
 
   // list disputes của user
   async listMine(userId: string) {
-    if (!Types.ObjectId.isValid(userId)) return this.fail(400, 'ID không hợp lệ');
+    if (!Types.ObjectId.isValid(userId))
+      return this.fail(400, 'ID không hợp lệ');
     const id = new Types.ObjectId(userId);
     const items = await this.disputeModel
       .find({ $or: [{ vendorAId: id }, { vendorBId: id }] })
@@ -59,27 +59,6 @@ export class DisputeService {
     return { success: true, dispute: item };
   }
 
-  // add bằng chứng cho tranh chấp
-  async addEvidence(id: string, userId: string, dto: AddDisputeEvidenceDTO) {
-    try {
-      if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
-      const item = await this.disputeModel.findById(id).exec();
-      if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
-      if (item.status !== DisputeStatus.OPEN) {
-        return this.fail(409, 'Tranh chấp đã được xử lý');
-      }
-      const side = this.sideOf(item, userId);
-      if (!side) return this.fail(403, 'Bạn không thuộc tranh chấp này');
-      if (side === 'A') item.evidenceA.push(...dto.evidenceFiles);
-      if (side === 'B') item.evidenceB.push(...dto.evidenceFiles);
-      await item.save();
-      return { success: true, message: 'Đã bổ sung bằng chứng', dispute: item };
-    } catch (err) {
-      this.logger.error('Không thể bổ sung bằng chứng', err);
-      return this.fail(500, 'Lỗi khi bổ sung bằng chứng');
-    }
-  }
-
   // list tranh chấp cho admin
   async getQueue(query: ListDisputesDTO) {
     const page = query.page ?? 1;
@@ -91,13 +70,14 @@ export class DisputeService {
       DisputeStatus.RESOLVED_TRANSFER,
       DisputeStatus.RESOLVED_REVOKE,
     ];
-    const filter = query.status
-      ? { status: query.status }
-      : {
-          status: isHistory
-            ? { $in: historyStatuses }
-            : DisputeStatus.OPEN,
-        };
+    let statusFilter: DisputeStatus | { $in: DisputeStatus[] } =
+      DisputeStatus.OPEN;
+    if (query.status) {
+      statusFilter = query.status;
+    } else if (isHistory) {
+      statusFilter = { $in: historyStatuses };
+    }
+    const filter = { status: statusFilter };
     const sort: Record<string, 1 | -1> = isHistory
       ? {
           'adminDecision.decidedAt': -1 as const,
@@ -154,7 +134,7 @@ export class DisputeService {
 
       let newOwner: Types.ObjectId | undefined = item.vendorAId;
       let status = DisputeStatus.RESOLVED_KEEP;
-      
+
       if (dto.outcome === DisputeOutcome.TRANSFER) {
         newOwner = item.vendorBId;
         status = DisputeStatus.RESOLVED_TRANSFER;
@@ -226,7 +206,11 @@ export class DisputeService {
   }
 
   private participantId(participant: unknown) {
-    if (participant && typeof participant === 'object' && '_id' in participant) {
+    if (!participant || typeof participant !== 'object') {
+      return String(participant);
+    }
+
+    if ('_id' in participant) {
       return String((participant as { _id: unknown })._id);
     }
     return String(participant);

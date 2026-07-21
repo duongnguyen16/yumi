@@ -28,7 +28,6 @@ import {
   approveClaim,
   getClaimQueue,
   rejectClaim,
-  requestClaimEvidence,
   type AdminClaim,
   type AdminRequestView,
 } from '@/lib/admin-api';
@@ -61,11 +60,32 @@ function getMessage(err: unknown) {
   };
   const message = data.response?.data?.message;
   if (Array.isArray(message)) return message.join(', ');
-  return message ?? data.message ?? 'Đã xảy ra lỗi';
+  if (message) return message;
+  return data.message ?? 'Đã xảy ra lỗi';
 }
 
 function getTime(value?: string) {
-  return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—';
+  if (!value) return '—';
+  return dayjs(value).format('DD/MM/YYYY HH:mm');
+}
+
+function getPageAfterRemoval(itemCount: number, currentPage: number) {
+  if (itemCount === 1 && currentPage > 1) {
+    return currentPage - 1;
+  }
+  return currentPage;
+}
+
+function getVendorLabel(vendor: { fullName?: string; email?: string } | null) {
+  if (!vendor) return '—';
+  const label = vendor.fullName ?? vendor.email;
+  return label ?? '—';
+}
+
+function getVerificationLabel(flags: AdminClaim['flags']) {
+  if (flags.otpVerified) return 'OTP hợp lệ';
+  if (flags.needsAdminScrutiny) return 'No-phone';
+  return 'Chưa xác minh';
 }
 
 export default function ClaimsPage() {
@@ -81,24 +101,46 @@ export default function ClaimsPage() {
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
 
-  const load = useCallback(async (nextPage: number, nextView: AdminRequestView) => {
-    try {
-      const data = await getClaimQueue(nextPage, PAGE_SIZE, nextView);
-      setItems(data.items);
-      setTotal(data.total);
-      setPage(data.page);
-      setError(null);
-    } catch (err) {
-      setError(getMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (nextPage: number, nextView: AdminRequestView) => {
+      try {
+        const data = await getClaimQueue(nextPage, PAGE_SIZE, nextView);
+        setItems(data.items);
+        setTotal(data.total);
+        setPage(data.page);
+        setError(null);
+      } catch (err) {
+        setError(getMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    setLoading(true);
-    void load(1, view);
-  }, [load, view]);
+    let active = true;
+
+    async function loadInitialPage() {
+      try {
+        const data = await getClaimQueue(1, PAGE_SIZE, view);
+        if (!active) return;
+        setItems(data.items);
+        setTotal(data.total);
+        setPage(data.page);
+        setError(null);
+      } catch (err) {
+        if (active) setError(getMessage(err));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void loadInitialPage();
+    return () => {
+      active = false;
+    };
+  }, [view]);
 
   function show(claim: AdminClaim) {
     setSelected(claim);
@@ -121,7 +163,8 @@ export default function ClaimsPage() {
       setNotice(result.message);
       setOpen(false);
       setSelected(null);
-      await load(items.length === 1 && page > 1 ? page - 1 : page, view);
+      const nextPage = getPageAfterRemoval(items.length, page);
+      await load(nextPage, view);
     } catch (err) {
       setDrawerError(getMessage(err));
     } finally {
@@ -141,7 +184,11 @@ export default function ClaimsPage() {
     >
       <Topbar
         title="Duyệt Claim"
-        subtitle={view === 'queue' ? `${total} yêu cầu đang chờ` : `${total} yêu cầu trong lịch sử`}
+        subtitle={
+          view === 'queue'
+            ? `${total} yêu cầu đang chờ`
+            : `${total} yêu cầu trong lịch sử`
+        }
         actions={
           <ActionButton
             variant="neutral"
@@ -157,13 +204,18 @@ export default function ClaimsPage() {
         value={view}
         onChange={(nextView) => {
           close();
+          setLoading(true);
           setPage(1);
           setView(nextView);
         }}
       />
 
       {notice && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+        <Alert
+          severity="success"
+          sx={{ mb: 2 }}
+          onClose={() => setNotice(null)}
+        >
           {notice}
         </Alert>
       )}
@@ -200,8 +252,16 @@ export default function ClaimsPage() {
                     <TableCell colSpan={7} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
-                        title={view === 'queue' ? 'Không có claim chờ duyệt' : 'Chưa có lịch sử claim'}
-                        subtitle={view === 'queue' ? 'Hàng đợi hiện đang trống.' : 'Chưa có claim nào đã xử lý.'}
+                        title={
+                          view === 'queue'
+                            ? 'Không có claim chờ duyệt'
+                            : 'Chưa có lịch sử claim'
+                        }
+                        subtitle={
+                          view === 'queue'
+                            ? 'Hàng đợi hiện đang trống.'
+                            : 'Chưa có claim nào đã xử lý.'
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -216,6 +276,8 @@ export default function ClaimsPage() {
                       ? claim.vendorId
                       : null;
                   const flags = claim.flags;
+                  const vendorLabel = getVendorLabel(vendor);
+                  const verificationLabel = getVerificationLabel(flags);
 
                   return (
                     <TableRow
@@ -250,7 +312,10 @@ export default function ClaimsPage() {
                               {loc?.name ?? 'Không rõ địa điểm'}
                             </Typography>
                             <Typography
-                              sx={{ color: tokens.color.textMuted, fontSize: 12 }}
+                              sx={{
+                                color: tokens.color.textMuted,
+                                fontSize: 12,
+                              }}
                             >
                               {loc?.address ?? 'Chưa có địa chỉ'}
                             </Typography>
@@ -259,7 +324,7 @@ export default function ClaimsPage() {
                       </TableCell>
                       <TableCell>
                         <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                          {vendor?.fullName ?? vendor?.email ?? '—'}
+                          {vendorLabel}
                         </Typography>
                         <Typography
                           sx={{ color: tokens.color.textMuted, fontSize: 12 }}
@@ -270,13 +335,7 @@ export default function ClaimsPage() {
                       <TableCell>
                         <Chip
                           size="small"
-                          label={
-                            flags.otpVerified
-                              ? 'OTP hợp lệ'
-                              : flags.needsAdminScrutiny
-                                ? 'No-phone'
-                                : 'Chưa xác minh'
-                          }
+                          label={verificationLabel}
                           sx={flagSx(
                             flags.otpVerified || flags.needsAdminScrutiny,
                           )}
@@ -290,7 +349,9 @@ export default function ClaimsPage() {
                         >
                           <Chip
                             size="small"
-                            label={flags.hasOnSiteProof ? 'Ảnh tại chỗ' : 'Thiếu ảnh'}
+                            label={
+                              flags.hasOnSiteProof ? 'Ảnh tại chỗ' : 'Thiếu ảnh'
+                            }
                             sx={flagSx(flags.hasOnSiteProof)}
                           />
                           <Chip
@@ -299,19 +360,30 @@ export default function ClaimsPage() {
                             sx={flagSx(flags.hasSiteCode)}
                           />
                           {flags.hasLicense && (
-                            <Chip size="small" label="Giấy phép" sx={flagSx(true)} />
+                            <Chip
+                              size="small"
+                              label="Giấy phép"
+                              sx={flagSx(true)}
+                            />
                           )}
                         </Stack>
                       </TableCell>
                       <TableCell>
                         <Typography
-                          sx={{ color: tokens.color.textSecondary, fontSize: 13 }}
+                          sx={{
+                            color: tokens.color.textSecondary,
+                            fontSize: 13,
+                          }}
                         >
                           {getTime(claim.createdAt)}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Chip size="small" label={claim.status} sx={{ borderRadius: 0 }} />
+                        <Chip
+                          size="small"
+                          label={claim.status}
+                          sx={{ borderRadius: 0 }}
+                        />
                       </TableCell>
                       <TableCell align="right">
                         <Stack
@@ -320,28 +392,33 @@ export default function ClaimsPage() {
                           sx={{ justifyContent: 'flex-end' }}
                         >
                           <Tooltip title="Xem hồ sơ">
-                            <IconButton size="small" onClick={() => show(claim)}>
+                            <IconButton
+                              size="small"
+                              onClick={() => show(claim)}
+                            >
                               <VisibilityOutlinedIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          {view === 'queue' && <Tooltip
-                            title={
-                              flags.eligibleForApprove
-                                ? 'Đủ điều kiện duyệt'
-                                : 'Hồ sơ chưa đủ điều kiện'
-                            }
-                          >
-                            <span>
-                              <IconButton
-                                size="small"
-                                disabled={!flags.eligibleForApprove}
-                                onClick={() => show(claim)}
-                                sx={{ color: tokens.color.green }}
-                              >
-                                <CheckOutlinedIcon fontSize="small" />
-                              </IconButton>
-                            </span>
-                          </Tooltip>}
+                          {view === 'queue' && (
+                            <Tooltip
+                              title={
+                                flags.eligibleForApprove
+                                  ? 'Đủ điều kiện duyệt'
+                                  : 'Hồ sơ chưa đủ điều kiện'
+                              }
+                            >
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={!flags.eligibleForApprove}
+                                  onClick={() => show(claim)}
+                                  sx={{ color: tokens.color.green }}
+                                >
+                                  <CheckOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          )}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -377,9 +454,6 @@ export default function ClaimsPage() {
         }
         onReject={(reason) =>
           selected && run(() => rejectClaim(selected._id, reason))
-        }
-        onRequestEvidence={(message) =>
-          selected && run(() => requestClaimEvidence(selected._id, message))
         }
       />
     </Box>

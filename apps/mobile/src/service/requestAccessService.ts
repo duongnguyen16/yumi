@@ -1,4 +1,5 @@
 import api from "./aixos";
+import { getNoticeMessage } from "@/ui/feedback";
 
 export type AccessSide = "owner" | "requester";
 export type AccessState =
@@ -53,15 +54,6 @@ type ApiResult = {
   message?: string;
 };
 
-const getMessage = (err: unknown, fallback: string) => {
-  if (typeof err === "object" && err !== null && "response" in err) {
-    const res = err as { response?: { data?: { message?: string | string[] } } };
-    const message = res.response?.data?.message;
-    return Array.isArray(message) ? message.join(", ") : message || fallback;
-  }
-  return err instanceof Error ? err.message : fallback;
-};
-
 export async function createAccess(locationId: string, reason?: string) {
   try {
     const res = await api.post("/request-access", { locationId, reason });
@@ -69,7 +61,11 @@ export async function createAccess(locationId: string, reason?: string) {
       request?: { id: string; status: string; timeoutAt: string };
     };
   } catch (err) {
-    return { success: false, message: getMessage(err, "Không thể gửi yêu cầu chuyển quyền.") };
+    const message = getNoticeMessage(
+      err,
+      "Không thể gửi yêu cầu chuyển quyền.",
+    );
+    return { success: false, message };
   }
 }
 
@@ -78,10 +74,11 @@ export async function listAccess(side: AccessSide) {
     const res = await api.get("/request-access/mine", { params: { side } });
     return res.data as ApiResult & { items: AccessRequest[] };
   } catch (err) {
+    const message = getNoticeMessage(err, "Không thể lấy danh sách yêu cầu.");
     return {
       success: false,
       items: [],
-      message: getMessage(err, "Không thể lấy danh sách yêu cầu."),
+      message,
     };
   }
 }
@@ -91,7 +88,8 @@ export async function getAccess(id: string) {
     const res = await api.get(`/request-access/${id}`);
     return res.data as ApiResult & { request?: AccessRequest };
   } catch (err) {
-    return { success: false, message: getMessage(err, "Không thể lấy yêu cầu.") };
+    const message = getNoticeMessage(err, "Không thể lấy yêu cầu.");
+    return { success: false, message };
   }
 }
 
@@ -101,20 +99,28 @@ export async function respondAccess(
   reason?: string,
 ) {
   try {
-    const res = await api.patch(`/request-access/${id}/respond`, { action, reason });
+    const res = await api.patch(`/request-access/${id}/respond`, {
+      action,
+      reason,
+    });
     return res.data as ApiResult & { canAppeal?: boolean };
   } catch (err) {
-    return { success: false, message: getMessage(err, "Không thể phản hồi yêu cầu.") };
+    const message = getNoticeMessage(err, "Không thể phản hồi yêu cầu.");
+    return { success: false, message };
   }
 }
 
-export async function verifyAccess(id: string, evidenceFiles: AccessEvidence[]) {
+export async function verifyAccess(
+  id: string,
+  evidenceFiles: AccessEvidence[],
+) {
   try {
     const res = await api.patch(`/request-access/${id}/verify-takeover`, {
       evidenceFiles,
     });
     return res.data as ApiResult;
   } catch (err) {
-    return { success: false, message: getMessage(err, "Không thể xác minh chuyển quyền.") };
+    const message = getNoticeMessage(err, "Không thể xác minh chuyển quyền.");
+    return { success: false, message };
   }
 }

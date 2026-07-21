@@ -15,12 +15,8 @@ import {
 const appealTypes = [
   ['REQUEST_ACCESS_REJECTED', 'Từ chối yêu cầu quyền truy cập'],
   ['LOCATION_REJECTED', 'Từ chối địa điểm'],
-  ['CLAIM_REJECTED', 'Từ chối yêu cầu sở hữu'],
-  ['DUPLICATE_HIDDEN', 'Ẩn địa điểm trùng lặp'],
   ['OWNERSHIP_REVOKED', 'Thu hồi quyền sở hữu'],
-  ['REVIEW_REMOVED', 'Gỡ đánh giá'],
   ['USER_BANNED', 'Khóa tài khoản'],
-  ['USER_WARNED', 'Cảnh cáo tài khoản'],
 ];
 
 test('localizes known admin review enums and fields', () => {
@@ -92,6 +88,8 @@ test('appeal surfaces use localized labels and accessible decision cards', async
   assert.match(page, /appealTypeLabel\(item\.type\)/);
   assert.match(page, /appealStatusLabel\(item\.status\)/);
   assert.match(page, /position: 'sticky'/);
+  assert.match(page, /<Snackbar/);
+  assert.match(page, /open=\{!!drawerError\}/);
   assert.doesNotMatch(page, />\{item\.type\}</);
   assert.match(drawer, /appealDecisionOptions\(item\?\.type\)/);
   assert.match(drawer, /aria-pressed=/);

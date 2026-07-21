@@ -100,10 +100,17 @@ type SubCategoryOption = {
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === "object" && error !== null && "response" in error) {
     const response = error as {
-      response?: { data?: { message?: string } };
+      response?: { data?: { message?: string | string[] } };
     };
-    if (response.response?.data?.message) {
-      return response.response.data.message;
+    const apiMessage = response.response?.data?.message;
+    if (typeof apiMessage === "string" && apiMessage.trim()) {
+      return apiMessage;
+    }
+    if (Array.isArray(apiMessage)) {
+      const text = apiMessage
+        .filter((item): item is string => typeof item === "string")
+        .join("\n");
+      if (text.trim()) return text;
     }
   }
 
@@ -112,6 +119,10 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   }
 
   return fallback;
+};
+
+const logContributeError = (stage: string, error: unknown) => {
+  console.log(`[Contribute][${stage}]`, error);
 };
 
 const formatFileSize = (fileSize: number) => {
@@ -243,7 +254,7 @@ export default function ContributePlaceScreen() {
         );
         setMapStyle(styleJson);
       } catch (error) {
-        console.log("Error bootstrapping contribute place:", error);
+        logContributeError("bootstrap", error);
         setNotice("Không tải được dữ liệu đóng góp địa điểm.");
       } finally {
         setLoading(false);
@@ -282,7 +293,7 @@ export default function ContributePlaceScreen() {
           );
         }
       } catch (error) {
-        console.log("Error loading sub categories:", error);
+        logContributeError("load-sub-categories", error);
         if (active) {
           setSubCategories([]);
           setSubCategoryError("Không tải được danh mục con.");
@@ -341,7 +352,7 @@ export default function ContributePlaceScreen() {
           setAutoAddress(address);
         }
       } catch (error) {
-        console.log("Error loading device location:", error);
+        logContributeError("load-device-location", error);
         setNotice("Không lấy được vị trí hiện tại.");
       }
     };
@@ -370,7 +381,7 @@ export default function ContributePlaceScreen() {
         setSimilarLocations(analysis.similarLocations ?? []);
         setDraftAnalysisError("");
       } catch (error) {
-        console.log("Error analyzing draft:", error);
+        logContributeError("analyze-draft", error);
         setSimilarLocations([]);
         setDraftAnalysisError("Không thể kiểm tra địa điểm trùng lặp.");
       }
@@ -414,32 +425,43 @@ export default function ContributePlaceScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_IMAGES - images.length,
-      quality: 0.8,
-      exif: true,
-    });
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        setNotice("Bạn cần cấp quyền thư viện ảnh để chọn ảnh.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_IMAGES - images.length,
+        quality: 0.8,
+        exif: true,
+      });
 
-    if (result.canceled) {
-      return;
+      if (result.canceled) {
+        return;
+      }
+
+      const newImages = result.assets.map((asset, index) => ({
+        id: `${Date.now()}-${index}`,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `place-${Date.now()}-${index}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+        fileSize: asset.fileSize ?? 1024,
+        capturedAt:
+          asset.exif?.DateTimeOriginal ||
+          asset.exif?.DateTimeDigitized ||
+          asset.exif?.DateTime ||
+          null,
+      }));
+
+      setImages((current) => [...current, ...newImages].slice(0, MAX_IMAGES));
+    } catch (error) {
+      logContributeError("pick-images", error);
+      setNotice(getErrorMessage(error, "Không thể chọn ảnh. Vui lòng thử lại."));
     }
-
-    const newImages = result.assets.map((asset, index) => ({
-      id: `${Date.now()}-${index}`,
-      uri: asset.uri,
-      fileName: asset.fileName ?? `place-${Date.now()}-${index}.jpg`,
-      mimeType: asset.mimeType ?? "image/jpeg",
-      fileSize: asset.fileSize ?? 1024,
-      capturedAt:
-        asset.exif?.DateTimeOriginal ||
-        asset.exif?.DateTimeDigitized ||
-        asset.exif?.DateTime ||
-        null,
-    }));
-
-    setImages((current) => [...current, ...newImages].slice(0, MAX_IMAGES));
   };
 
   const handlePickVideos = async () => {
@@ -448,32 +470,44 @@ export default function ContributePlaceScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["videos"],
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_VIDEOS - videos.length,
-      quality: 0.8,
-    });
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        setNotice("Bạn cần cấp quyền thư viện để chọn video.");
+        return;
+      }
 
-    if (result.canceled) {
-      return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["videos"],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_VIDEOS - videos.length,
+        quality: 0.8,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const videoValidation = validateVendorVideos(result.assets);
+      if (!videoValidation.isValid) {
+        setNotice(videoValidation.message || "Video xác thực không hợp lệ.");
+        return;
+      }
+
+      const newVideos = result.assets.map((asset, index) => ({
+        id: `video-${Date.now()}-${index}`,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
+        mimeType: asset.mimeType ?? "video/mp4",
+        fileSize: asset.fileSize as number,
+      }));
+
+      setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
+    } catch (error) {
+      logContributeError("pick-videos", error);
+      setNotice(getErrorMessage(error, "Không thể chọn video. Vui lòng thử lại."));
     }
-
-    const videoValidation = validateVendorVideos(result.assets);
-    if (!videoValidation.isValid) {
-      setNotice(videoValidation.message || "Video xác thực không hợp lệ.");
-      return;
-    }
-
-    const newVideos = result.assets.map((asset, index) => ({
-      id: `video-${Date.now()}-${index}`,
-      uri: asset.uri,
-      fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
-      mimeType: asset.mimeType ?? "video/mp4",
-      fileSize: asset.fileSize as number,
-    }));
-
-    setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
   };
 
   const handlePickLicenseFiles = async () => {
@@ -482,34 +516,48 @@ export default function ContributePlaceScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_LICENSES - licenseFiles.length,
-      quality: 0.8,
-      exif: true,
-    });
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== "granted") {
+        setNotice("Bạn cần cấp quyền thư viện ảnh để chọn giấy phép.");
+        return;
+      }
 
-    if (result.canceled) {
-      return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_LICENSES - licenseFiles.length,
+        quality: 0.8,
+        exif: true,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const newLicenseFiles = result.assets.map((asset, index) => ({
+        id: `license-${Date.now()}-${index}`,
+        uri: asset.uri,
+        fileName: asset.fileName ?? `license-${Date.now()}-${index}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+        fileSize: asset.fileSize ?? 1024,
+        capturedAt:
+          asset.exif?.DateTimeOriginal ||
+          asset.exif?.DateTimeDigitized ||
+          asset.exif?.DateTime ||
+          null,
+      }));
+
+      setLicenseFiles((current) =>
+        [...current, ...newLicenseFiles].slice(0, MAX_LICENSES),
+      );
+    } catch (error) {
+      logContributeError("pick-license-files", error);
+      setNotice(
+        getErrorMessage(error, "Không thể chọn ảnh giấy phép. Vui lòng thử lại."),
+      );
     }
-
-    const newLicenseFiles = result.assets.map((asset, index) => ({
-      id: `license-${Date.now()}-${index}`,
-      uri: asset.uri,
-      fileName: asset.fileName ?? `license-${Date.now()}-${index}.jpg`,
-      mimeType: asset.mimeType ?? "image/jpeg",
-      fileSize: asset.fileSize ?? 1024,
-      capturedAt:
-        asset.exif?.DateTimeOriginal ||
-        asset.exif?.DateTimeDigitized ||
-        asset.exif?.DateTime ||
-        null,
-    }));
-
-    setLicenseFiles((current) =>
-      [...current, ...newLicenseFiles].slice(0, MAX_LICENSES),
-    );
   };
 
   const buildCustomerContributionPayload = (): CustomerContributionPayload => {
@@ -545,10 +593,25 @@ export default function ContributePlaceScreen() {
     }));
 
   const submitCustomerDataToBackend = async () => {
-    await submitCustomerContribution(
-      buildCustomerContributionPayload(),
-      toPendingEvidenceFiles(images),
-    );
+    try {
+      const payload = buildCustomerContributionPayload();
+      console.log("[Contribute][submit-customer] payload", {
+        imageCount: images.length,
+        payload,
+      });
+      const response = await submitCustomerContribution(
+        payload,
+        toPendingEvidenceFiles(images),
+      );
+      console.log("[Contribute][submit-customer] response", response);
+      if (response?.success === false) {
+        throw new Error(response.message || "Gửi địa điểm thất bại.");
+      }
+      return response;
+    } catch (error) {
+      logContributeError("submit-customer", error);
+      throw error;
+    }
   };
 
   const submitVendorRegistrationDataToBackend = async () => {
@@ -559,6 +622,11 @@ export default function ContributePlaceScreen() {
       };
     }
     try {
+      console.log("[Contribute][submit-vendor] payload", {
+        imageCount: images.length,
+        licenseCount: licenseFiles.length,
+        videoCount: videos.length,
+      });
       const response = await submitVendorRegistration({
         ...buildCustomerContributionPayload(),
         systemCode,
@@ -573,14 +641,15 @@ export default function ContributePlaceScreen() {
           message: response?.message || "Đăng ký địa điểm thất bại",
         };
       }
+      console.log("[Contribute][submit-vendor] response", response);
       return {
         success: true,
       };
     } catch (error) {
-      console.error("Error submitting vendor registration:", error);
+      logContributeError("submit-vendor", error);
       return {
         success: false,
-        message: error?.response?.data?.message || "Đăng ký địa điểm thất bại",
+        message: getErrorMessage(error, "Đăng ký địa điểm thất bại"),
       };
     }
   };
@@ -594,6 +663,13 @@ export default function ContributePlaceScreen() {
         openingHours,
       });
       if (!basicValidation.isValid) {
+        logContributeError("step-basic-validation", {
+          descriptionLength: description.trim().length,
+          message: basicValidation.message,
+          nameLength: name.trim().length,
+          openingHours,
+          selectedCategoryId,
+        });
         setNotice(basicValidation.message || "Thông tin địa điểm không hợp lệ.");
         return;
       }
@@ -610,6 +686,12 @@ export default function ContributePlaceScreen() {
       let checkingDuplicates = false;
       try {
         setSaving(true);
+        console.log("[Contribute][continue-validate-position] payload", {
+          accuracyMeters,
+          deviceCoords,
+          pinCoords,
+          resolvedAddress,
+        });
         const validatePosition = await validateContributionPosition({
           pinLatitude: pinCoords.latitude,
           pinLongitude: pinCoords.longitude,
@@ -630,6 +712,12 @@ export default function ContributePlaceScreen() {
           return;
         }
         checkingDuplicates = true;
+        console.log("[Contribute][continue-check-duplicates] payload", {
+          latitude: pinCoords.latitude,
+          longitude: pinCoords.longitude,
+          name: name.trim(),
+          selectedCategoryId,
+        });
         const analysis = await analyzeLocationDraft(
           name.trim(),
           selectedCategoryId || undefined,
@@ -649,6 +737,10 @@ export default function ContributePlaceScreen() {
 
         setStep(2);
       } catch (error: unknown) {
+        logContributeError(
+          checkingDuplicates ? "continue-check-duplicates" : "continue-validate-position",
+          error,
+        );
         setNotice(
           getErrorMessage(
             error,
@@ -685,6 +777,12 @@ export default function ContributePlaceScreen() {
     if (step === 3) {
       try {
         setSaving(true);
+        console.log("[Contribute][continue-submit] start", {
+          imageCount: images.length,
+          isVendorRegistration,
+          licenseCount: licenseFiles.length,
+          videoCount: videos.length,
+        });
         if (isVendorRegistration) {
           const response = await submitVendorRegistrationDataToBackend();
           if (response?.success === false) {
@@ -711,6 +809,10 @@ export default function ContributePlaceScreen() {
           onPress: () => router.replace("/(tabs)/home"),
         });
       } catch (error: unknown) {
+        logContributeError(
+          isVendorRegistration ? "continue-submit-vendor" : "continue-submit-customer",
+          error,
+        );
         setNotice(
           getErrorMessage(
             error,
@@ -731,15 +833,20 @@ export default function ContributePlaceScreen() {
   };
 
   const handleMapRegionChange = async () => {
-    const center = await mapRef.current?.getCenter();
-    if (!center) {
-      return;
-    }
+    try {
+      const center = await mapRef.current?.getCenter();
+      if (!center) {
+        return;
+      }
 
-    setPinCoords({
-      longitude: center[0],
-      latitude: center[1],
-    });
+      setPinCoords({
+        longitude: center[0],
+        latitude: center[1],
+      });
+    } catch (error) {
+      logContributeError("map-region-change", error);
+      setNotice("Không thể cập nhật vị trí ghim trên bản đồ.");
+    }
   };
 
   const renderStepContent = () => {

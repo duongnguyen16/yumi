@@ -1,7 +1,22 @@
 import { createAccess } from "@/service/requestAccessService";
-import { AppText, BottomActionBar, Button, FormSection, NavigationBar, NoticeSnackbar, Page, PageContent, TextArea } from "@/ui/components";
+import {
+  AppText,
+  BottomActionBar,
+  Button,
+  FormSection,
+  NavigationBar,
+  NoticeSnackbar,
+  Page,
+  PageContent,
+  TextArea,
+} from "@/ui/components";
 import { colors } from "@/ui/tokens";
-import { Stack as RouterStack, useLocalSearchParams, useRouter } from "expo-router";
+import { returnAfterSuccess } from "@/navigation/return-after-success";
+import {
+  Stack as RouterStack,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import { useState } from "react";
 
 function param(value: string | string[] | undefined) {
@@ -16,7 +31,6 @@ export default function NewAccessScreen() {
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
   const submit = async () => {
     if (!locationId) return;
@@ -24,25 +38,47 @@ export default function NewAccessScreen() {
     setMessage("");
     const response = await createAccess(locationId, reason.trim() || undefined);
     setLoading(false);
-    if (!response.success) setMessage(response.message || "Không thể gửi yêu cầu.");
-    else {
-      setSubmitted(true);
-      setMessage("Yêu cầu đã gửi. Chủ địa điểm có 3 ngày để phản hồi.");
+    if (!response.success) {
+      setMessage(response.message || "Không thể gửi yêu cầu.");
+      return;
     }
+
+    returnAfterSuccess(router);
   };
 
+  const locationName = name || "Địa điểm này";
+  const supportingText = `${locationName} đang có chủ. Chủ hiện tại có 3 ngày để đồng ý hoặc từ chối.`;
   return (
     <Page>
       <RouterStack.Screen options={{ headerShown: false }} />
       <NavigationBar onBack={() => router.back()} title="Xin chuyển quyền" />
       <PageContent>
-        <FormSection supportingText={`${name || "Địa điểm này"} đang có chủ. Chủ hiện tại có 3 ngày để đồng ý hoặc từ chối.`} title="Yêu cầu quyền quản lý">
-          <TextArea label="Lý do yêu cầu" onChangeText={setReason} placeholder="Mô tả mối liên hệ của bạn với địa điểm" value={reason} />
-          <AppText style={{ color: colors.textSecondary }} variant="caption">Nếu chủ không phản hồi sau 3 ngày, bạn cần chụp bằng chứng tại chỗ để tiếp tục.</AppText>
+        <FormSection
+          supportingText={supportingText}
+          title="Yêu cầu quyền quản lý"
+        >
+          <TextArea
+            label="Lý do yêu cầu"
+            onChangeText={setReason}
+            placeholder="Mô tả mối liên hệ của bạn với địa điểm"
+            value={reason}
+          />
+          <AppText style={{ color: colors.textSecondary }} variant="caption">
+            Nếu chủ không phản hồi sau 3 ngày, bạn cần chụp bằng chứng tại chỗ
+            để tiếp tục.
+          </AppText>
         </FormSection>
       </PageContent>
-      <BottomActionBar><Button disabled={loading} label="Gửi yêu cầu" loading={loading} onPress={submit} width="full" /></BottomActionBar>
-      <NoticeSnackbar action={submitted ? { label: "Xem", onPress: () => router.replace("/request-access" as never) } : undefined} message={message} onDismiss={() => setMessage("")} />
+      <BottomActionBar>
+        <Button
+          disabled={loading}
+          label="Gửi yêu cầu"
+          loading={loading}
+          onPress={submit}
+          width="full"
+        />
+      </BottomActionBar>
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );
 }

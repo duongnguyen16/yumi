@@ -19,12 +19,12 @@ export class UpdateReviewDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(20)
+  @MinLength(1)
   comment?: string;
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(3)
+  @ArrayMaxSize(5)
   @IsUrl({}, { each: true })
   imageUrls?: string[];
 }

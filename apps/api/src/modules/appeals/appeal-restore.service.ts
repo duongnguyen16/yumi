@@ -3,15 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AuditLog, AuditLogDocument } from 'src/common/schemas/audit-log.schema';
 import {
-  ClaimRequest,
-  ClaimRequestDocument,
-} from 'src/common/schemas/claim-request.schema';
-import {
   AppealType,
-  ClaimRequestStatus,
   DisputeStatus,
   LocationStatus,
-  ReviewStatus,
   UserStatus,
 } from 'src/common/schemas/common.enums';
 import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
@@ -21,7 +15,6 @@ import {
   LocationRequestDocument,
   LocationRequestStatus,
 } from 'src/common/schemas/location-request';
-import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { TrustEngineService } from 'src/modules/trust-engine/trust-engine.service';
 
@@ -38,12 +31,8 @@ export class AppealRestoreService {
     private readonly reqModel: Model<LocationRequestDocument>,
     @InjectModel(Location.name)
     private readonly locModel: Model<LocationDocument>,
-    @InjectModel(ClaimRequest.name)
-    private readonly claimModel: Model<ClaimRequestDocument>,
     @InjectModel(Dispute.name)
     private readonly disputeModel: Model<DisputeDocument>,
-    @InjectModel(Review.name)
-    private readonly reviewModel: Model<ReviewDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     @InjectModel(AuditLog.name)
@@ -53,13 +42,8 @@ export class AppealRestoreService {
 
   async restore(type: AppealType, id: Types.ObjectId): Promise<RestoreResult> {
     if (type === AppealType.LOCATION_REJECTED) return this.restoreLocation(id);
-    if (type === AppealType.CLAIM_REJECTED) return this.restoreClaim(id);
-    if (type === AppealType.DUPLICATE_HIDDEN) return this.restoreDuplicate(id);
     if (type === AppealType.OWNERSHIP_REVOKED) return this.restoreOwner(id);
-    if (type === AppealType.REVIEW_REMOVED) return this.restoreReview(id);
-    if (type === AppealType.USER_BANNED || type === AppealType.USER_WARNED) {
-      return this.restoreUser(id, type);
-    }
+    if (type === AppealType.USER_BANNED) return this.restoreUser(id);
     return { success: false, message: 'Loại kháng cáo không hỗ trợ khôi phục' };
   }
 
@@ -90,49 +74,6 @@ export class AppealRestoreService {
           from: LocationStatus.REJECTED,
           to: LocationStatus.PUBLISHED,
         },
-      },
-    };
-  }
-
-  private async restoreClaim(id: Types.ObjectId) {
-    const claim = await this.claimModel.findById(id).exec();
-    if (!claim) return this.fail('Không tìm thấy claim');
-    if (claim.status !== ClaimRequestStatus.REJECTED) {
-      return this.fail('Claim không còn ở trạng thái bị từ chối');
-    }
-    claim.status = ClaimRequestStatus.PENDING;
-    claim.adminDecision = undefined;
-    await claim.save();
-    return {
-      success: true,
-      message: 'Đã đưa claim về hàng đợi',
-      diff: {
-        claimStatus: {
-          from: ClaimRequestStatus.REJECTED,
-          to: ClaimRequestStatus.PENDING,
-        },
-      },
-    };
-  }
-
-  private async restoreDuplicate(id: Types.ObjectId) {
-    const loc = await this.locModel.findById(id).exec();
-    if (!loc) return this.fail('Không tìm thấy địa điểm');
-    if (loc.status !== LocationStatus.HIDDEN || !loc.isDuplicate) {
-      return this.fail('Địa điểm không còn ở trạng thái trùng lặp bị ẩn');
-    }
-    loc.status = LocationStatus.PUBLISHED;
-    loc.isDuplicate = false;
-    await loc.save();
-    return {
-      success: true,
-      message: 'Đã khôi phục địa điểm trùng lặp',
-      diff: {
-        locationStatus: {
-          from: LocationStatus.HIDDEN,
-          to: LocationStatus.PUBLISHED,
-        },
-        isDuplicate: { from: true, to: false },
       },
     };
   }
@@ -168,42 +109,17 @@ export class AppealRestoreService {
     };
   }
 
-  private async restoreReview(id: Types.ObjectId) {
-    const review = await this.reviewModel.findById(id).exec();
-    if (!review) return this.fail('Không tìm thấy đánh giá');
-    if (review.status !== ReviewStatus.REMOVED_BY_ADMIN) {
-      return this.fail('Đánh giá không còn ở trạng thái bị gỡ');
-    }
-    review.status = ReviewStatus.PUBLISHED;
-    await review.save();
-    return {
-      success: true,
-      message: 'Đã khôi phục đánh giá',
-      diff: {
-        reviewStatus: {
-          from: ReviewStatus.REMOVED_BY_ADMIN,
-          to: ReviewStatus.PUBLISHED,
-        },
-      },
-    };
-  }
-
-  private async restoreUser(
-    id: Types.ObjectId,
-    type: AppealType.USER_BANNED | AppealType.USER_WARNED,
-  ) {
+  private async restoreUser(id: Types.ObjectId) {
     const user = await this.userModel.findById(id).exec();
     if (!user) return this.fail('Không tìm thấy người dùng');
-    const status =
-      type === AppealType.USER_BANNED ? UserStatus.BANNED : UserStatus.WARNED;
-    if (user.status !== status) {
+    if (user.status !== UserStatus.BANNED) {
       return this.fail('Trạng thái người dùng đã thay đổi');
     }
     const log = await this.logModel
       .findOne({
         targetCollection: 'users',
         targetId: id,
-        action: `update_user_status:${status}`,
+        action: `update_user_status:${UserStatus.BANNED}`,
       })
       .sort({ createdAt: -1 })
       .lean()
@@ -212,10 +128,8 @@ export class AppealRestoreService {
     if (!Object.values(UserStatus).includes(oldStatus as UserStatus)) {
       return this.fail('Không tìm thấy trạng thái cũ trong audit');
     }
-    if (type === AppealType.USER_BANNED) {
-      await this.trust.unbanUser(id);
-    }
-    if (type === AppealType.USER_WARNED || oldStatus !== UserStatus.ACTIVE) {
+    await this.trust.unbanUser(id);
+    if (oldStatus !== UserStatus.ACTIVE) {
       await this.userModel
         .updateOne({ _id: id }, { $set: { status: oldStatus } })
         .exec();
@@ -223,7 +137,7 @@ export class AppealRestoreService {
     return {
       success: true,
       message: 'Đã khôi phục trạng thái người dùng',
-      diff: { userStatus: { from: status, to: oldStatus } },
+      diff: { userStatus: { from: UserStatus.BANNED, to: oldStatus } },
     };
   }
 
