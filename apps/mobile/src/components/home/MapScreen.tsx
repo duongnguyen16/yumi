@@ -237,6 +237,7 @@ export default function MapScreen() {
   const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
     if (!currentLocation) return;
+    setSelectedLocation(null);
     const coordinates: [number, number] = [
       currentLocation.coords.longitude,
       currentLocation.coords.latitude,
@@ -249,6 +250,24 @@ export default function MapScreen() {
       easing: "ease",
     });
   }, [setLocation]);
+
+  const setCameraByLocation = useCallback(async () => {
+    if (!selectedLocation) return;
+    cameraRef.current?.setStop({
+      center: selectedLocation.coordinates,
+      zoom: EXPLORE_NEARBY_ZOOM,
+      duration: 1000,
+      easing: "ease",
+      padding: {
+        bottom: 300,
+      },
+    });
+  }, [selectedLocation]);
+
+  useEffect(() => {
+    if (!mapStyle || !selectedLocation) return;
+    setCameraByLocation();
+  }, [mapStyle, selectedLocation]);
 
   useEffect(() => {
     if (!mapStyle || locationId || hasAutoCentered.current) return;
@@ -415,7 +434,7 @@ export default function MapScreen() {
               zIndex: 2,
             }}
           >
-            <View
+            {/* <View
               style={{
                 backgroundColor: colors.surfaceApp,
                 flex: 3,
@@ -435,7 +454,7 @@ export default function MapScreen() {
                 flex: 1,
                 opacity: 0.12,
               }}
-            />
+            /> */}
           </View>
           <View
             pointerEvents="none"
@@ -448,7 +467,7 @@ export default function MapScreen() {
               zIndex: 2,
             }}
           >
-            <View
+            {/* <View
               style={{
                 backgroundColor: colors.surfaceApp,
                 flex: 1,
@@ -468,7 +487,7 @@ export default function MapScreen() {
                 flex: 3,
                 opacity: 0.7,
               }}
-            />
+            /> */}
           </View>
           {selectedLocation ? (
             <MapLocationDrawer
