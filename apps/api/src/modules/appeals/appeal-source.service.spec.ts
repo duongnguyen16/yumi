@@ -38,8 +38,6 @@ describe('Kiểm thử AppealSourceService', () => {
       empty as unknown as Model<any>,
       empty as unknown as Model<any>,
       empty as unknown as Model<any>,
-      empty as unknown as Model<any>,
-      empty as unknown as Model<any>,
       logModel as unknown as Model<any>,
     );
 
@@ -69,8 +67,6 @@ describe('Kiểm thử AppealSourceService', () => {
       findOne: jest.fn().mockReturnValue(query(null)),
     };
     const service = new AppealSourceService(
-      empty as unknown as Model<any>,
-      empty as unknown as Model<any>,
       empty as unknown as Model<any>,
       empty as unknown as Model<any>,
       empty as unknown as Model<any>,

@@ -23,7 +23,7 @@ import {
 import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
-const FAR_PIN_THRESHOLD = 50;
+const FAR_PIN_THRESHOLD = 500;
 
 const REVIEWABLE_STATUSES: LocationRequestStatus[] = [
   LocationRequestStatus.PENDING,

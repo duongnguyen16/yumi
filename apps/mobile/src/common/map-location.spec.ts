@@ -109,7 +109,7 @@ describe("map location helpers", () => {
 
   it("keeps products open and review previews compact by default", () => {
     expect(locationProductsExpandedByDefault).toBe(true);
-    expect(locationReviewCardHeight).toBe(168);
+    expect(locationReviewCardHeight).toBe(216);
     expect(locationReviewCommentLines).toBe(3);
   });
 

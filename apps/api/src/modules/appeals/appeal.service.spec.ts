@@ -21,7 +21,7 @@ describe('Kiểm thử hợp đồng kháng nghị', () => {
       'REQUEST_ACCESS_REJECTED',
     );
     expect(AppealStatus.ACCEPTED_TO_DISPUTE).toBe('ACCEPTED_TO_DISPUTE');
-    expect(AppealType.USER_WARNED).toBe('USER_WARNED');
+    expect(AppealType.USER_BANNED).toBe('USER_BANNED');
   });
 
   it('lưu ngữ cảnh quyết định kháng nghị', () => {

@@ -18,30 +18,6 @@ describe("notification destination", () => {
       appealType: "LOCATION_REJECTED",
     },
     {
-      notificationType: "CLAIM_REJECTED",
-      refCollection: "claim_requests",
-      refId: "claim-1",
-      appealType: "CLAIM_REJECTED",
-    },
-    {
-      notificationType: "LOCATION_DUPLICATE_HIDDEN",
-      refCollection: "locations",
-      refId: "location-1",
-      appealType: "DUPLICATE_HIDDEN",
-    },
-    {
-      notificationType: "REVIEW_REMOVED",
-      refCollection: "reviews",
-      refId: "review-1",
-      appealType: "REVIEW_REMOVED",
-    },
-    {
-      notificationType: "ACCOUNT_WARNED",
-      refCollection: "users",
-      refId: "user-1",
-      appealType: "USER_WARNED",
-    },
-    {
       notificationType: "ACCOUNT_BANNED",
       refCollection: "users",
       refId: "user-1",
@@ -61,6 +37,21 @@ describe("notification destination", () => {
       );
     },
   );
+
+  it.each([
+    ["CLAIM_REJECTED", "claim_requests", "claim-1", null],
+    ["LOCATION_DUPLICATE_HIDDEN", "locations", "location-1", "/location/location-1"],
+    ["REVIEW_REMOVED", "reviews", "review-1", null],
+    ["ACCOUNT_WARNED", "users", "user-1", null],
+  ])("does not open an appeal for obsolete type %s", (type, refCollection, refId, expected) => {
+    const destination = getNotificationDestination({
+      type,
+      refCollection,
+      refId,
+    });
+
+    expect(destination).toBe(expected);
+  });
 
   it("does not invent destinations for unsupported or incomplete references", () => {
     expect(

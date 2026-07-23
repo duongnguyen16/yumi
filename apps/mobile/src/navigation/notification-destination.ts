@@ -26,22 +26,6 @@ const appealNotifications: Record<string, AppealNotification> = {
     refCollection: "location_requests",
     appealType: "LOCATION_REJECTED",
   },
-  CLAIM_REJECTED: {
-    refCollection: "claim_requests",
-    appealType: "CLAIM_REJECTED",
-  },
-  LOCATION_DUPLICATE_HIDDEN: {
-    refCollection: "locations",
-    appealType: "DUPLICATE_HIDDEN",
-  },
-  REVIEW_REMOVED: {
-    refCollection: "reviews",
-    appealType: "REVIEW_REMOVED",
-  },
-  ACCOUNT_WARNED: {
-    refCollection: "users",
-    appealType: "USER_WARNED",
-  },
   ACCOUNT_BANNED: {
     refCollection: "users",
     appealType: "USER_BANNED",
