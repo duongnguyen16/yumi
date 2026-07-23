@@ -139,15 +139,22 @@ function CustomMap(
   const getLocation = async () => {
     try {
       const response = await getCurrentLocation();
+      if (!response.success || !response.locationData) {
+        console.error("Failed to get current location:", response.message);
+        return;
+      }
       cameraRef.current?.setStop({
-        center: [response.coords.longitude, response.coords.latitude],
+        center: [
+          response.locationData.coords.longitude,
+          response.locationData.coords.latitude,
+        ],
         zoom: 15,
         duration: 1000,
         easing: "ease",
       });
       setPinLocation({
-        longitude: response.coords.longitude,
-        latitude: response.coords.latitude,
+        longitude: response.locationData.coords.longitude,
+        latitude: response.locationData.coords.latitude,
       });
     } catch (error) {
       console.error("Error fetching current location:", error);

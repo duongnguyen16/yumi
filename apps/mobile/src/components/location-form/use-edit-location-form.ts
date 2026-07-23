@@ -226,6 +226,13 @@ export function useEditLocationForm({
     const device = selectedFields.includes("address")
       ? await getCurrentLocation()
       : null;
+    if (
+      (!device?.success || !device.locationData) &&
+      selectedFields.includes("address")
+    ) {
+      Alert.alert("Không thể lấy vị trí thiết bị. Vui lòng thử lại.");
+      return;
+    }
     const payload = {
       name: selectedFields.includes("name") ? name : undefined,
       address: selectedFields.includes("address") ? address : undefined,
@@ -248,8 +255,8 @@ export function useEditLocationForm({
       pinLatitude: selectedFields.includes("address")
         ? (pinLocation?.latitude ?? coordinates?.[1])
         : undefined,
-      deviceLongitude: device?.coords.longitude,
-      deviceLatitude: device?.coords.latitude,
+      deviceLongitude: device?.locationData.coords.longitude,
+      deviceLatitude: device?.locationData.coords.latitude,
     };
     const formData = new FormData();
     formData.append("data", JSON.stringify(payload));

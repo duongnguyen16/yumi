@@ -236,11 +236,17 @@ export default function MapScreen() {
 
   const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
-    if (!currentLocation) return;
+    if (!currentLocation?.success || !currentLocation.locationData) {
+      console.error(
+        "Failed to get current location:",
+        currentLocation?.message,
+      );
+      return;
+    }
     setSelectedLocation(null);
     const coordinates: [number, number] = [
-      currentLocation.coords.longitude,
-      currentLocation.coords.latitude,
+      currentLocation.locationData.coords.longitude,
+      currentLocation.locationData.coords.latitude,
     ];
     setLocation(coordinates);
     cameraRef.current?.setStop({
