@@ -35,9 +35,19 @@ npm-debug.log*
 Thumbs.db
 
 # IDE
-.vscode/*
-!.vscode/settings.json
+.vscode/
 .idea/
+
+# Local agent and editor tooling
+.commandcode/
+.claude/
+.agents/
+
+# Local design notes and screenshots
+/DESIGN-claude.md
+/DESIGN_SPECS.md
+/REDESIGN-SPECS.md
+/.tmp-yumi-screen.png
 
 # Testing
 coverage/
