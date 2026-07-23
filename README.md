@@ -1,6 +1,6 @@
 # YuMi
 
-YuMi is the codebase developed for the WDP301 (Web Development Project) course. It is a campus local guide that helps users discover and review places, allows vendors to manage and claim locations, and provides administrators with moderation and ownership workflows.
+YuMi is the codebase developed for the Web Development Project course. It is a campus local guide that helps users discover and review places, allows vendors to manage and claim locations, and provides administrators with moderation and ownership workflows.
 
 The project was built as a full-stack team application around three roles. Customers explore the map, contribute places, write reviews, and report inaccurate content. Vendors verify their accounts, claim or request access to locations, manage business information, and respond to customers. Administrators review submissions, resolve reports and ownership conflicts, and maintain the platform.
 
@@ -84,16 +84,3 @@ npm run dev:api
 npm run dev:web
 npm run dev:mobile
 ```
-
-## Testing and Builds
-
-```bash
-npm test
-npm run build --workspace=api
-npm run build --workspace=web
-npm run build --workspace=@wdp301/shared
-```
-
-## Academic Context
-
-This repository was created as a team project for the WDP301 course and documents the design and implementation of a full-stack web and mobile system.
