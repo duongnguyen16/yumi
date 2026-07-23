@@ -1,11 +1,29 @@
-# YuMi Installation Guide
+# YuMi
 
-YuMi is a monorepo with three applications:
+YuMi is the codebase developed for the Web Development Project course. It is a campus local guide that helps users discover and review places, allows vendors to manage and claim locations, and provides administrators with moderation and ownership workflows.
 
-- `apps/api`: NestJS API server
-- `apps/web`: Next.js admin web app
-- `apps/mobile`: Expo React Native mobile app
-- `packages/shared`: shared TypeScript package used by the apps
+The project models the lifecycle of community-managed location data: submissions, validation, approvals, ownership claims, access requests, disputes, appeals, notifications, audit logs, and trust records.
+
+## Main Features
+
+- Map-based place discovery, search, bookmarks, reviews, and contributions
+- Vendor registration, location ownership claims, products, and edit suggestions
+- Location access requests, ownership disputes, and appeals
+- Admin management for locations, claims, reports, categories, users, and audit logs
+- Notifications, trust events, image uploads, email, and OTP verification
+
+## Project Structure
+
+| Path | Application |
+| --- | --- |
+| `apps/api` | NestJS REST API with MongoDB |
+| `apps/mobile` | Expo and React Native mobile application |
+| `apps/web` | Next.js administration application |
+| `packages/shared` | Shared TypeScript contracts and utilities |
+
+## Technology
+
+TypeScript, NestJS, MongoDB, Expo, React Native, Next.js, Material UI, Supabase Storage, and Goong Maps.
 
 ## Prerequisites
 
@@ -14,6 +32,8 @@ Install the following tools before setting up the project:
 - Node.js 20 or later
 - npm 10 or later
 - MongoDB running locally, or a MongoDB connection string
+- Supabase project for file storage
+- Goong Maps API key
 - Expo tooling for mobile development
 - Android Studio for Android emulator/device builds
 - Xcode for iOS builds, if you are working on macOS
@@ -36,6 +56,8 @@ npm install
 This installs dependencies for the API, web app, mobile app, and shared package.
 
 ## 2. Configure Environment Variables
+
+Create local, untracked environment files. Never commit environment files or credentials.
 
 ### API Environment
 
@@ -101,6 +123,7 @@ Default mobile values:
 
 ```env
 EXPO_PUBLIC_BASE_URL=http://localhost:9999/api
+EXPO_PUBLIC_MAP_API=
 EXPO_PUBLIC_VERBOSE=1
 ```
 
@@ -166,9 +189,7 @@ npm run demo:reset --workspace=api
 
 ## 5. Run the Applications
 
-### Run Everything
-
-From the repository root:
+Run everything from the repository root:
 
 ```bash
 npm run dev
@@ -181,47 +202,13 @@ This starts:
 - Admin web app on `http://localhost:3001`
 - Expo mobile development server
 
-### Run API Only
+Run applications individually:
 
 ```bash
 npm run dev:api
-```
-
-API endpoints are served under:
-
-```text
-http://localhost:9999/api
-```
-
-Swagger docs are available at:
-
-```text
-http://localhost:9999/api/docs
-```
-
-### Run Web Only
-
-```bash
 npm run dev:web
-```
-
-Open:
-
-```text
-http://localhost:3001
-```
-
-### Run Mobile Only
-
-```bash
 npm run dev:mobile
 ```
-
-Then choose one of the Expo options:
-
-- Press `a` to open Android
-- Press `i` to open iOS on macOS
-- Scan the QR code with Expo Go if the app is compatible with your local setup
 
 You can also run:
 
@@ -313,15 +300,3 @@ RESEND_FROM_EMAIL=YuMi <no-reply@example.com>
 ### SMS OTP Does Not Send Locally
 
 Local development does not send paid SMS messages. OTP codes are printed in the API console unless `NODE_ENV=production`.
-
-## Common Commands
-
-```bash
-npm install
-npm run dev
-npm run dev:api
-npm run dev:web
-npm run dev:mobile
-npm run seed:test --workspace=api
-npm test
-```

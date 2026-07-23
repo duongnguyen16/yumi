@@ -233,7 +233,6 @@ export default function MapScreen() {
       return () => subscription.remove();
     }, [closeSearch, searchScreen]),
   );
-
   const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
     if (!currentLocation?.success || !currentLocation.locationData) {
