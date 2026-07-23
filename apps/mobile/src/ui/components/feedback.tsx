@@ -38,8 +38,10 @@ export function Badge({
           alignSelf: "flex-start",
           backgroundColor: colors.surfaceElevated,
           borderRadius: radius.pill,
+          justifyContent: "center",
+          minHeight: 20,
           paddingHorizontal: spacing[2],
-          paddingVertical: 2,
+          paddingVertical: 0,
         }}
       >
         <AppText
@@ -47,7 +49,7 @@ export function Badge({
             color: toneColor,
             fontFamily: fontFamily.semibold,
             fontSize: 10,
-            lineHeight: 13,
+            lineHeight: 14,
           }}
           variant="footnote"
         >

@@ -12,7 +12,6 @@ import {
   Camera,
   Map,
   MapRef,
-  NativeUserLocation,
 } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { TimePickerModal } from "react-native-paper-dates";
@@ -829,7 +828,6 @@ export default function ContributePlaceScreen() {
                       zoom: 17,
                     }}
                   />
-                  <NativeUserLocation />
                 </Map>
                 <View
                   pointerEvents="none"
