@@ -53,8 +53,12 @@ Thumbs.db
 coverage/
 .demo-mongodb/
 
-# Local implementation guides (not shared)
+# Local documentation and seed data (not shared)
 /guideline/
+/seed_data/
+/docs/superpowers/
+/docs/Campus-Local-Guide-Implementation-Guide.md
+/docs/Campus-Local-Guide-Implementation-Guide-EN.md
 
 # Android build output
 android/
