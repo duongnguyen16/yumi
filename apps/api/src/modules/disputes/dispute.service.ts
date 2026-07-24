@@ -12,6 +12,7 @@ import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { DisputeOutcome, ResolveDisputeDTO } from './dto/resolve-dispute.dto';
+import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 
 @Injectable()
 export class DisputeService {
@@ -57,6 +58,39 @@ export class DisputeService {
       return this.fail(403, 'Bạn không có quyền xem tranh chấp này');
     }
     return { success: true, dispute: item };
+  }
+
+  async addEvidence(id: string, userId: string, dto: AddDisputeEvidenceDTO) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) {
+      return this.fail(400, 'ID không hợp lệ');
+    }
+    const item = await this.disputeModel.findById(id).exec();
+    if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
+    if (item.status !== DisputeStatus.OPEN) {
+      return this.fail(
+        409,
+        'Chỉ có thể thêm bằng chứng khi tranh chấp đang mở',
+      );
+    }
+    const side = this.sideOf(item, userId);
+    if (!side) {
+      return this.fail(403, 'Bạn không có quyền thêm bằng chứng');
+    }
+    if (side === 'A') {
+      item.evidenceA.push(...dto.evidenceFiles);
+    } else {
+      item.evidenceB.push(...dto.evidenceFiles);
+    }
+    await item.save();
+    return {
+      success: true,
+      message: 'Đã thêm bằng chứng tranh chấp',
+      dispute: {
+        id: item._id,
+        evidenceA: item.evidenceA.length,
+        evidenceB: item.evidenceB.length,
+      },
+    };
   }
 
   // list tranh chấp cho admin

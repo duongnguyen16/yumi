@@ -1,5 +1,6 @@
 import Timeline from "@/components/workflow/Timeline";
 import WorkflowDetailScreen from "@/components/workflow/WorkflowDetailScreen";
+import EvidenceGallery from "@/components/workflow/evidence-gallery";
 import { getWorkflowStatus } from "@/components/workflow/status";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
 import { userContext } from "@/contexts/userContext";
@@ -194,6 +195,9 @@ export default function AccessDetailScreen() {
   const canOwnerRespond = isOwner && item?.effectiveState === "PENDING_OPEN";
   const canVerifyTakeover = isRequester && item?.canVerifyTakeover;
   const canAppeal = item?.status === "REJECTED" && isRequester;
+  const legacyRequestReason =
+    item?.status === "PENDING" ? item.responseReason : undefined;
+  const requestReason = item?.requestReason || legacyRequestReason;
 
   return (
     <WorkflowDetailScreen
@@ -208,12 +212,31 @@ export default function AccessDetailScreen() {
     >
       {item ? <Timeline items={timelineItems} /> : null}
 
+      {item ? (
+        <Card>
+          <Stack>
+            <AppText variant="headline">Lý do yêu cầu</AppText>
+            <AppText style={{ color: colors.textSecondary }} variant="subhead">
+              {requestReason || "Người gửi không cung cấp lý do."}
+            </AppText>
+          </Stack>
+        </Card>
+      ) : null}
+
+      {item ? (
+        <EvidenceGallery
+          evidence={item.evidenceFiles || []}
+          title="Bằng chứng khi gửi yêu cầu"
+        />
+      ) : null}
+
       {canOwnerRespond ? (
         <Card>
           <Stack>
             <AppText variant="headline">Phản hồi của chủ sở hữu</AppText>
             <TextArea
               label="Lý do nếu từ chối"
+              maxLength={500}
               onChangeText={setReason}
               value={reason}
             />

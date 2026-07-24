@@ -1,4 +1,4 @@
-import { Button as PaperButton, Chip as PaperChip, IconButton as PaperIconButton, SegmentedButtons } from "react-native-paper";
+import { Button as PaperButton, Chip as PaperChip, Icon as PaperIcon, IconButton as PaperIconButton, SegmentedButtons } from "react-native-paper";
 import { colors, fontFamily, radius } from "../tokens";
 import type { IconName } from "./types";
 
@@ -52,11 +52,18 @@ export function IconButton({ icon, label, onPress, selected = false }: { icon: I
   );
 }
 
-export function Chip({ label, icon, selected = false, onPress }: { label: string; icon?: IconName; selected?: boolean; onPress?: () => void }) {
+export function Chip({ label, icon, iconColor, selected = false, onPress }: { label: string; icon?: IconName; iconColor?: string; selected?: boolean; onPress?: () => void }) {
+  const renderedIcon =
+    icon && iconColor
+      ? ({ size }: { color: string; size: number }) => (
+          <PaperIcon color={iconColor} size={size} source={icon} />
+        )
+      : icon;
+
   return (
     <PaperChip
       compact
-      icon={icon}
+      icon={renderedIcon}
       mode="flat"
       onPress={onPress}
       selected={selected}

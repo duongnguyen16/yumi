@@ -1,5 +1,6 @@
 import Timeline from "@/components/workflow/Timeline";
 import WorkflowDetailScreen from "@/components/workflow/WorkflowDetailScreen";
+import EvidenceGallery from "@/components/workflow/evidence-gallery";
 import { getWorkflowStatus } from "@/components/workflow/status";
 import { getAppeal, type AppealItem } from "@/service/appealService";
 import { GroupedList, ListRow } from "@/ui/components";
@@ -62,6 +63,12 @@ export default function AppealDetailScreen() {
   const deadline = item?.appealDeadline
     ? new Date(item.appealDeadline).toLocaleString("vi-VN")
     : "—";
+  const originalDecidedAt = item?.originalDecidedAt
+    ? new Date(item.originalDecidedAt).toLocaleString("vi-VN")
+    : "—";
+  const decidedAt = item?.adminDecision?.decidedAt
+    ? new Date(item.adminDecision.decidedAt).toLocaleString("vi-VN")
+    : "—";
 
   return (
     <WorkflowDetailScreen
@@ -82,8 +89,33 @@ export default function AppealDetailScreen() {
           showChevron={false}
           supportingText={item?.originalDecisionReason || "Không có lý do."}
         />
+        <ListRow
+          label="Thời điểm quyết định gốc"
+          showChevron={false}
+          value={originalDecidedAt}
+        />
         <ListRow label="Hạn kháng cáo" showChevron={false} value={deadline} />
       </GroupedList>
+      <EvidenceGallery
+        evidence={item?.additionalEvidenceFiles || []}
+        title="Bằng chứng kháng cáo"
+      />
+      {item?.adminDecision ? (
+        <GroupedList>
+          <ListRow
+            label="Lý do xử lý"
+            showChevron={false}
+            supportingText={
+              item.adminDecision.reason || "Không có lý do xử lý."
+            }
+          />
+          <ListRow
+            label="Thời điểm xử lý"
+            showChevron={false}
+            value={decidedAt}
+          />
+        </GroupedList>
+      ) : null}
     </WorkflowDetailScreen>
   );
 }

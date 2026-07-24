@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Alert,
   Box,
@@ -10,14 +10,14 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import { ActionButton } from '@/components/admin/ActionButton';
-import { DetailDrawer } from '@/components/admin/DetailDrawer';
-import type { AdminClaim } from '@/lib/admin-api';
-import { tokens } from '@/theme/admin-tokens';
+} from "@mui/material";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import { ActionButton } from "@/components/admin/ActionButton";
+import { DetailDrawer } from "@/components/admin/DetailDrawer";
+import type { AdminClaim } from "@/lib/admin-api";
+import { tokens } from "@/theme/admin-tokens";
 
-type Mode = 'default' | 'reject';
+type Mode = "default" | "reject";
 
 interface Props {
   open: boolean;
@@ -40,14 +40,14 @@ export function ClaimDetailDrawer({
   onApprove,
   onReject,
 }: Props) {
-  const [mode, setMode] = useState<Mode>('default');
-  const [text, setText] = useState('');
+  const [mode, setMode] = useState<Mode>("default");
+  const [text, setText] = useState("");
   const loc =
-    claim?.locationId && typeof claim.locationId === 'object'
+    claim?.locationId && typeof claim.locationId === "object"
       ? claim.locationId
       : null;
   const vendor =
-    claim?.vendorId && typeof claim.vendorId === 'object'
+    claim?.vendorId && typeof claim.vendorId === "object"
       ? claim.vendorId
       : null;
   const flags = claim?.flags;
@@ -57,8 +57,8 @@ export function ClaimDetailDrawer({
       ? [
           {
             url: claim.licenseUrl,
-            fileType: 'DOCUMENT' as const,
-            label: 'Giấy phép kinh doanh',
+            fileType: "DOCUMENT" as const,
+            label: "Giấy phép kinh doanh",
             geo: undefined,
             capturedAt: undefined,
           },
@@ -67,16 +67,16 @@ export function ClaimDetailDrawer({
   ];
   const vendorName = vendor?.fullName ?? vendor?.email;
   const textLength = text.trim().length;
-  const isEditing = !readOnly && mode !== 'default';
+  const isEditing = !readOnly && mode !== "default";
 
   function back() {
-    setMode('default');
-    setText('');
+    setMode("default");
+    setText("");
   }
 
   function submit() {
     const value = text.trim();
-    if (mode === 'reject') {
+    if (mode === "reject") {
       onReject(value);
     }
   }
@@ -90,13 +90,13 @@ export function ClaimDetailDrawer({
       );
     }
 
-    if (mode === 'default') {
+    if (mode === "default") {
       return (
         <>
           <ActionButton
             variant="reject"
             disabled={saving}
-            onClick={() => setMode('reject')}
+            onClick={() => setMode("reject")}
             sx={{ flex: 1 }}
           >
             Từ chối
@@ -107,7 +107,7 @@ export function ClaimDetailDrawer({
             onClick={() => onApprove()}
             sx={{ flex: 1 }}
           >
-            {saving ? 'Đang xử lý' : 'Duyệt'}
+            {saving ? "Đang xử lý" : "Duyệt"}
           </ActionButton>
         </>
       );
@@ -124,7 +124,7 @@ export function ClaimDetailDrawer({
           onClick={submit}
           sx={{ flex: 1.5 }}
         >
-          {saving ? 'Đang gửi' : 'Xác nhận'}
+          {saving ? "Đang gửi" : "Xác nhận"}
         </ActionButton>
       </>
     );
@@ -142,10 +142,10 @@ export function ClaimDetailDrawer({
         <Box>
           <Typography variant="overline">Địa điểm</Typography>
           <Typography sx={{ fontSize: 20, fontWeight: 700 }}>
-            {loc?.name ?? 'Không rõ địa điểm'}
+            {loc?.name ?? "Không rõ địa điểm"}
           </Typography>
           <Typography sx={{ color: tokens.color.textSecondary, fontSize: 13 }}>
-            {loc?.address ?? 'Chưa có địa chỉ'}
+            {loc?.address ?? "Chưa có địa chỉ"}
           </Typography>
         </Box>
 
@@ -154,11 +154,11 @@ export function ClaimDetailDrawer({
             <Typography variant="overline">Yếu tố xác minh</Typography>
             <Stack
               direction="row"
-              sx={{ flexWrap: 'wrap', gap: 0.75, mt: 0.75 }}
+              sx={{ flexWrap: "wrap", gap: 0.75, mt: 0.75 }}
             >
               <StateChip
                 ok={flags.otpVerified || flags.needsAdminScrutiny}
-                label={flags.otpVerified ? 'OTP hợp lệ' : 'Kiểm tra no-phone'}
+                label={flags.otpVerified ? "OTP hợp lệ" : "Kiểm tra no-phone"}
               />
               <StateChip ok={flags.hasOnSiteProof} label="Ảnh tại chỗ" />
               <StateChip ok={flags.hasSiteCode} label="Mã tại chỗ" />
@@ -173,29 +173,29 @@ export function ClaimDetailDrawer({
         )}
 
         <Box sx={{ border: `1px solid ${tokens.color.border}` }}>
-          <Meta label="Vendor" value={vendorName ?? '—'} />
+          <Meta label="Vendor" value={vendorName ?? "—"} />
           <Divider />
-          <Meta label="Email" value={vendor?.email ?? '—'} />
+          <Meta label="Email" value={vendor?.email ?? "—"} />
           <Divider />
-          <Meta label="Điện thoại" value={loc?.phone ?? 'Không có'} />
+          <Meta label="Điện thoại" value={loc?.phone ?? "Không có"} />
           <Divider />
           <Meta
             label="Khoảng cách"
             value={
-              typeof claim?.deviceDistanceMeters === 'number'
+              typeof claim?.deviceDistanceMeters === "number"
                 ? `${claim.deviceDistanceMeters} m`
-                : '—'
+                : "—"
             }
           />
         </Box>
 
         {readOnly && (
           <Box sx={{ border: `1px solid ${tokens.color.border}` }}>
-            <Meta label="Trạng thái" value={claim?.status ?? '—'} />
+            <Meta label="Trạng thái" value={claim?.status ?? "—"} />
             <Divider />
             <Meta
               label="Lý do xử lý"
-              value={claim?.adminDecision?.reason ?? 'Không có'}
+              value={claim?.adminDecision?.reason ?? "Không có"}
             />
             <Divider />
             <Meta
@@ -203,9 +203,9 @@ export function ClaimDetailDrawer({
               value={
                 claim?.adminDecision?.decidedAt
                   ? new Date(claim.adminDecision.decidedAt).toLocaleString(
-                    'vi-VN',
-                  )
-                  : '—'
+                      "vi-VN",
+                    )
+                  : "—"
               }
             />
           </Box>
@@ -215,8 +215,11 @@ export function ClaimDetailDrawer({
           <Typography variant="overline">Bằng chứng</Typography>
           <Box
             sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+              },
               gap: 1,
               mt: 0.75,
             }}
@@ -229,22 +232,22 @@ export function ClaimDetailDrawer({
                   minWidth: 0,
                 }}
               >
-                {file.fileType === 'IMAGE' && (
+                {file.fileType === "IMAGE" && (
                   <Link
                     href={file.url}
                     target="_blank"
                     rel="noreferrer"
-                    sx={{ display: 'block', lineHeight: 0 }}
+                    sx={{ display: "block", lineHeight: 0 }}
                   >
                     <Box
                       component="img"
                       src={file.url}
                       alt={`Bằng chứng ${index + 1}`}
                       sx={{
-                        width: '100%',
-                        aspectRatio: '4 / 3',
-                        display: 'block',
-                        objectFit: 'cover',
+                        width: "100%",
+                        aspectRatio: "4 / 3",
+                        display: "block",
+                        objectFit: "cover",
                       }}
                     />
                   </Link>
@@ -252,11 +255,11 @@ export function ClaimDetailDrawer({
                 {file.label && (
                   <Box
                     sx={{
-                      width: '100%',
-                      aspectRatio: '4 / 3',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      width: "100%",
+                      aspectRatio: "4 / 3",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                       bgcolor: tokens.color.preview,
                     }}
                   >
@@ -273,14 +276,14 @@ export function ClaimDetailDrawer({
                     <Typography
                       sx={{ color: tokens.color.textMuted, fontSize: 12 }}
                     >
-                      {file.geo.coordinates.join(', ')}
+                      {file.geo.coordinates.join(", ")}
                     </Typography>
                   )}
                   {file.capturedAt && (
                     <Typography
                       sx={{ color: tokens.color.textMuted, fontSize: 12 }}
                     >
-                      {new Date(file.capturedAt).toLocaleString('vi-VN')}
+                      {new Date(file.capturedAt).toLocaleString("vi-VN")}
                     </Typography>
                   )}
                   <Link
@@ -288,7 +291,7 @@ export function ClaimDetailDrawer({
                     target="_blank"
                     rel="noreferrer"
                     underline="hover"
-                    sx={{ display: 'inline-block', fontSize: 12, mt: 0.75 }}
+                    sx={{ display: "inline-block", fontSize: 12, mt: 0.75 }}
                   >
                     Mở file
                   </Link>
@@ -309,10 +312,11 @@ export function ClaimDetailDrawer({
             fullWidth
             multiline
             minRows={3}
-            label={mode === 'reject' ? 'Lý do từ chối' : 'Nội dung cần bổ sung'}
+            label={mode === "reject" ? "Lý do từ chối" : "Nội dung cần bổ sung"}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            helperText="Tối thiểu 5 ký tự"
+            helperText={`${text.length}/500 ký tự · tối thiểu 5 ký tự`}
+            slotProps={{ htmlInput: { maxLength: 500 } }}
           />
         )}
 
@@ -342,7 +346,7 @@ function Meta({ label, value }: { label: string; value: string }) {
   return (
     <Stack
       direction="row"
-      sx={{ justifyContent: 'space-between', gap: 2, px: 1.5, py: 1 }}
+      sx={{ justifyContent: "space-between", gap: 2, px: 1.5, py: 1 }}
     >
       <Typography variant="overline" sx={{ color: tokens.color.textMuted }}>
         {label}
@@ -352,7 +356,7 @@ function Meta({ label, value }: { label: string; value: string }) {
           color: tokens.color.textSecondary,
           fontFamily: tokens.font.mono,
           fontSize: 12,
-          textAlign: 'right',
+          textAlign: "right",
         }}
       >
         {value}

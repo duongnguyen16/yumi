@@ -55,6 +55,7 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
+      {} as never,
     );
     attachUserModel(service);
 
@@ -97,6 +98,7 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
+      {} as never,
     );
     attachUserModel(service);
 
@@ -140,6 +142,9 @@ describe('Kiểm thử ClaimService', () => {
     };
     const notification = { notify: jest.fn().mockResolvedValue(undefined) };
     const sms = { sendOtp: jest.fn() };
+    const siteCodeImage = {
+      contains: jest.fn().mockResolvedValue(true),
+    };
     const service = new ClaimService(
       locationModel as never,
       claimModel as never,
@@ -148,6 +153,7 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
+      siteCodeImage as never,
     );
     attachUserModel(service);
 
@@ -160,7 +166,7 @@ describe('Kiểm thử ClaimService', () => {
             fileType: 'IMAGE',
             geo: { type: 'Point', coordinates: [105.5, 21.0] },
             capturedAt: '2026-07-10T08:00:00.000Z',
-            metadata: { siteCode: 'CLG-ABC123' },
+            metadata: { siteCode: 'CLIENT-CANNOT-BE-TRUSTED' },
           },
         ],
       },
@@ -173,14 +179,27 @@ describe('Kiểm thử ClaimService', () => {
     });
     expect(claimModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        evidenceFiles: [
+          expect.objectContaining({
+            metadata: expect.objectContaining({
+              siteCodeVerified: true,
+            }),
+          }),
+        ],
         vendorId,
         locationId,
         otpVerified: false,
         status: 'PENDING',
       }),
     );
+    const createdClaim = claimModel.create.mock.calls[0][0];
+    expect(createdClaim.evidenceFiles[0].metadata.siteCode).toBeUndefined();
     expect(location.ownerId).toBeNull();
     expect(notification.notify).toHaveBeenCalledTimes(1);
+    expect(siteCodeImage.contains).toHaveBeenCalledWith(
+      'https://example.com/proof.jpg',
+      'CLG-ABC123',
+    );
   });
 
   it.each([
@@ -219,6 +238,7 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
+      {} as never,
     );
     const userModel = attachUserModel(service, user);
 
@@ -248,6 +268,7 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
+      {} as never,
     );
     attachUserModel(service, { ...eligibleVendor, phoneVerified: false });
 

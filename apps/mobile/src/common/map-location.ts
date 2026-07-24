@@ -18,7 +18,7 @@ export type LocationPublicDetails = {
   tags: string[];
 };
 
-export const mapSelectionZoom = 13;
+export const mapSelectionZoom = 16;
 export const locationSheetActionHeight = 60;
 export const locationSheetSections = [
   "details",

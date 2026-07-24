@@ -41,6 +41,7 @@ export type AccessRequest = {
   evidenceFiles: AccessEvidence[];
   status: string;
   timeoutAt: string;
+  requestReason?: string;
   responseReason?: string;
   respondedAt?: string;
   createdAt?: string;
@@ -54,9 +55,17 @@ type ApiResult = {
   message?: string;
 };
 
-export async function createAccess(locationId: string, reason?: string) {
+export async function createAccess(
+  locationId: string,
+  reason: string | undefined,
+  evidenceFiles: AccessEvidence[],
+) {
   try {
-    const res = await api.post("/request-access", { locationId, reason });
+    const res = await api.post("/request-access", {
+      locationId,
+      reason,
+      evidenceFiles,
+    });
     return res.data as ApiResult & {
       request?: { id: string; status: string; timeoutAt: string };
     };

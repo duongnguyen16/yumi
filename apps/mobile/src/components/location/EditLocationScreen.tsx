@@ -86,6 +86,7 @@ export default function EditLocationScreen({
         {form.selectedFields.map((field) => (
           <Chip
             icon={getEditSelectionChipIcon(true, true)}
+            iconColor={colors.textInverse}
             key={field}
             label={labels[field]}
             onPress={() => setSelectedChip(field)}
@@ -192,6 +193,11 @@ export default function EditLocationScreen({
                   form.flagValue === option.value,
                   true,
                 )}
+                iconColor={
+                  form.flagValue === option.value
+                    ? colors.textInverse
+                    : undefined
+                }
                 key={option.value}
                 label={option.label}
                 onPress={() =>

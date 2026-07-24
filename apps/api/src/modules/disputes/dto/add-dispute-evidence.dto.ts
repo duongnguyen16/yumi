@@ -3,23 +3,11 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsMongoId,
-  IsOptional,
-  IsString,
-  MaxLength,
   ValidateNested,
 } from 'class-validator';
-import { AccessEvidenceDTO } from './access-evidence.dto';
+import { AccessEvidenceDTO } from '../../request-access/dto/access-evidence.dto';
 
-export class CreateRequestAccessDTO {
-  @IsMongoId()
-  locationId!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  reason?: string;
-
+export class AddDisputeEvidenceDTO {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(5)

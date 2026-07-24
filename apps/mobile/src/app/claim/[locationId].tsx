@@ -182,7 +182,6 @@ export default function ClaimLocationScreen() {
         geo: { type: "Point", coordinates },
         accuracyMeters: location.coords.accuracy || undefined,
         capturedAt,
-        metadata: { siteCode },
       };
       const result = await submitClaim({
         locationId,
@@ -227,8 +226,7 @@ export default function ClaimLocationScreen() {
       <WizardScreen
         continueLabel={continueLabel}
         continueDisabled={
-          (step === 1 && otp.trim().length !== 6) ||
-          (step === 2 && !proof)
+          (step === 1 && otp.trim().length !== 6) || (step === 2 && !proof)
         }
         currentStep={step}
         loading={loading}
@@ -242,10 +240,7 @@ export default function ClaimLocationScreen() {
         {step === 0 ? (
           <UIStack gap={spacing[2]}>
             <AppText variant="largeTitle">Bắt đầu xác minh</AppText>
-            <AppText
-              style={{ color: colors.textSecondary }}
-              variant="subhead"
-            >
+            <AppText style={{ color: colors.textSecondary }} variant="subhead">
               Hệ thống sẽ kiểm tra yêu cầu xác minh phù hợp cho địa điểm này.
             </AppText>
           </UIStack>

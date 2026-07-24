@@ -49,6 +49,9 @@ export class RequestAccess {
   timeoutAt!: Date;
 
   @Prop({ trim: true })
+  requestReason?: string;
+
+  @Prop({ trim: true })
   responseReason?: string;
 
   @Prop({ type: Date })

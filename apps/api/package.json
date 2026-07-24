@@ -41,6 +41,7 @@
     "@nestjs/swagger": "^11.4.4",
     "@nestjs/throttler": "^6.5.0",
     "@supabase/supabase-js": "^2.110.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "@wdp301/shared": "file:../../packages/shared",
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
@@ -54,6 +55,7 @@
     "resend": "6.12.4",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
+    "tesseract.js": "^7.0.0",
     "tslog": "4.11.0"
   },
   "devDependencies": {

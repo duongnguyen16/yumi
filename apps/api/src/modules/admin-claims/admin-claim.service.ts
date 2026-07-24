@@ -270,7 +270,7 @@ export class AdminClaimService {
       return Boolean(file.capturedAt);
     });
     const hasSiteCode = files.some(
-      (file) => typeof file.metadata?.siteCode === 'string',
+      (file) => file.metadata?.siteCodeVerified === true,
     );
     const needsAdminScrutiny = files.some(
       (file) => file.metadata?.adminScrutiny === 'NO_PHONE_HIGHER_SCRUTINY',

@@ -5,6 +5,8 @@ import { ClaimRequestDocument } from 'src/common/schemas/claim-request.schema';
 import {
   LocationStatus,
   RequestAccessStatus,
+  UserRole,
+  UserStatus,
 } from 'src/common/schemas/common.enums';
 import { LocationDocument } from 'src/common/schemas/location.schema';
 import { RequestAccessDocument } from 'src/common/schemas/request-access.schema';
@@ -31,6 +33,15 @@ describe('Kiểm thử RequestAccessService', () => {
     const locModel = { findById: jest.fn() };
     const claimModel = { exists: jest.fn() };
     const logModel = { create: jest.fn().mockResolvedValue({}) };
+    const userModel = {
+      findById: jest.fn().mockReturnValue(
+        query({
+          role: UserRole.VENDOR,
+          status: UserStatus.ACTIVE,
+          phoneVerified: true,
+        }),
+      ),
+    };
     const notify = { notify: jest.fn().mockResolvedValue(undefined) };
     const service = new RequestAccessService(
       reqModel as unknown as Model<RequestAccessDocument>,
@@ -38,8 +49,17 @@ describe('Kiểm thử RequestAccessService', () => {
       claimModel as unknown as Model<ClaimRequestDocument>,
       logModel as unknown as Model<AuditLogDocument>,
       notify as NotificationPort,
+      userModel as never,
     );
-    return { service, reqModel, locModel, claimModel, logModel, notify };
+    return {
+      service,
+      reqModel,
+      locModel,
+      claimModel,
+      logModel,
+      userModel,
+      notify,
+    };
   }
 
   function request(data: Record<string, unknown> = {}) {
@@ -94,6 +114,47 @@ describe('Kiểm thử RequestAccessService', () => {
     expect(reqModel.create).not.toHaveBeenCalled();
   });
 
+  it('chặn người dùng không phải Vendor tạo yêu cầu chuyển quyền', async () => {
+    const { service, userModel, locModel } = setup();
+    userModel.findById.mockReturnValue(
+      query({
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
+        phoneVerified: true,
+      }),
+    );
+
+    const result = await service.createRequest(String(userId), {
+      locationId: String(locId),
+      evidenceFiles: [
+        {
+          url: 'https://example.com/proof.jpg',
+          fileType: 'IMAGE',
+          geo: { type: 'Point', coordinates: [105.8, 21] },
+          capturedAt: new Date(),
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ success: false, statusCode: 403 });
+    expect(locModel.findById).not.toHaveBeenCalled();
+  });
+
+  it('yêu cầu bằng chứng tại chỗ ngay khi tạo yêu cầu chuyển quyền', async () => {
+    const { service, locModel, claimModel, reqModel } = setup();
+    locModel.findById.mockReturnValue(query(location()));
+    claimModel.exists.mockResolvedValue(null);
+    reqModel.exists.mockResolvedValue(null);
+
+    const result = await service.createRequest(String(userId), {
+      locationId: String(locId),
+      evidenceFiles: [],
+    });
+
+    expect(result).toMatchObject({ success: false, statusCode: 422 });
+    expect(reqModel.create).not.toHaveBeenCalled();
+  });
+
   it('tạo một yêu cầu chờ duyệt và thông báo cho chủ sở hữu', async () => {
     const { service, locModel, claimModel, reqModel, notify } = setup();
     const created = request();
@@ -105,6 +166,14 @@ describe('Kiểm thử RequestAccessService', () => {
     const result = await service.createRequest(String(userId), {
       locationId: String(locId),
       reason: 'Tôi đang vận hành địa điểm',
+      evidenceFiles: [
+        {
+          url: 'https://example.com/proof.jpg',
+          fileType: 'IMAGE',
+          geo: { type: 'Point', coordinates: [105.8, 21] },
+          capturedAt: new Date(),
+        },
+      ],
     });
 
     expect(result.success).toBe(true);
@@ -112,6 +181,7 @@ describe('Kiểm thử RequestAccessService', () => {
       expect.objectContaining({
         requesterId: userId,
         currentOwnerId: ownerId,
+        requestReason: 'Tôi đang vận hành địa điểm',
         status: RequestAccessStatus.PENDING,
       }),
     );

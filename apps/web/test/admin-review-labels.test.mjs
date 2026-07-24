@@ -1,6 +1,6 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   appealDecisionOptions,
   appealStatusLabel,
@@ -10,78 +10,87 @@ import {
   locationStatusLabel,
   locationRequestStatusLabel,
   locationRequestTypeLabel,
-} from '../src/components/admin/admin-review-labels.ts';
+} from "../src/components/admin/admin-review-labels.ts";
 
 const appealTypes = [
-  ['REQUEST_ACCESS_REJECTED', 'Từ chối yêu cầu quyền truy cập'],
-  ['LOCATION_REJECTED', 'Từ chối địa điểm'],
-  ['OWNERSHIP_REVOKED', 'Thu hồi quyền sở hữu'],
-  ['USER_BANNED', 'Khóa tài khoản'],
+  ["REQUEST_ACCESS_REJECTED", "Từ chối yêu cầu quyền truy cập"],
+  ["LOCATION_REJECTED", "Từ chối địa điểm"],
+  ["OWNERSHIP_REVOKED", "Thu hồi quyền sở hữu"],
+  ["USER_BANNED", "Khóa tài khoản"],
 ];
 
-test('localizes known admin review enums and fields', () => {
+test("localizes known admin review enums and fields", () => {
   for (const [value, label] of appealTypes) {
     assert.equal(appealTypeLabel(value), label);
   }
 
-  assert.equal(appealStatusLabel('PENDING'), 'Chờ xử lý');
-  assert.equal(appealStatusLabel('ACCEPTED_TO_DISPUTE'), 'Đã chuyển sang tranh chấp');
-  assert.equal(appealStatusLabel('OVERTURNED'), 'Đã đảo quyết định');
-  assert.equal(appealStatusLabel('UPHELD'), 'Giữ nguyên quyết định');
-  assert.equal(locationRequestTypeLabel('CREATE'), 'Tạo địa điểm mới');
-  assert.equal(locationRequestTypeLabel('UPDATE'), 'Cập nhật địa điểm');
-  assert.equal(locationRequestTypeLabel('DELETE'), 'Xóa địa điểm');
-  assert.equal(locationRequestStatusLabel('PENDING'), 'Chờ xử lý');
-  assert.equal(locationRequestStatusLabel('APPROVED'), 'Đã duyệt');
-  assert.equal(locationRequestStatusLabel('REJECTED'), 'Đã từ chối');
-  assert.equal(locationRequestStatusLabel('CANCELLED'), 'Đã hủy');
-  assert.equal(locationRequestStatusLabel('PENDING_RE_APPROVAL'), 'Chờ duyệt lại');
-  assert.equal(locationStatusLabel('SUBMITTED'), 'Đã gửi duyệt');
-  assert.equal(locationStatusLabel('PUBLISHED'), 'Đang hiển thị');
-  assert.equal(locationStatusLabel('HIDDEN'), 'Đã ẩn');
-  assert.equal(locationStatusLabel('REJECTED'), 'Đã từ chối');
-  assert.equal(locationStatusLabel('PENDING_RE_APPROVAL'), 'Chờ duyệt lại');
-  assert.equal(locationStatusLabel('DELETED'), 'Đã xóa');
-  assert.equal(locationFieldLabel('name'), 'Tên địa điểm');
-  assert.equal(locationFieldLabel('address'), 'Địa chỉ');
-  assert.equal(locationFieldLabel('categoryId'), 'Danh mục');
-  assert.equal(locationFieldLabel('location'), 'Tọa độ');
-  assert.equal(locationFieldLabel('phone'), 'Số điện thoại');
-  assert.equal(locationFieldLabel('website'), 'Trang web');
-  assert.equal(locationFieldLabel('description'), 'Mô tả');
+  assert.equal(appealStatusLabel("PENDING"), "Chờ xử lý");
+  assert.equal(
+    appealStatusLabel("ACCEPTED_TO_DISPUTE"),
+    "Đã chuyển sang tranh chấp",
+  );
+  assert.equal(appealStatusLabel("OVERTURNED"), "Đã đảo quyết định");
+  assert.equal(appealStatusLabel("UPHELD"), "Giữ nguyên quyết định");
+  assert.equal(locationRequestTypeLabel("CREATE"), "Tạo địa điểm mới");
+  assert.equal(locationRequestTypeLabel("UPDATE"), "Cập nhật địa điểm");
+  assert.equal(locationRequestTypeLabel("DELETE"), "Xóa địa điểm");
+  assert.equal(locationRequestStatusLabel("PENDING"), "Chờ xử lý");
+  assert.equal(locationRequestStatusLabel("APPROVED"), "Đã duyệt");
+  assert.equal(locationRequestStatusLabel("REJECTED"), "Đã từ chối");
+  assert.equal(locationRequestStatusLabel("CANCELLED"), "Đã hủy");
+  assert.equal(
+    locationRequestStatusLabel("PENDING_RE_APPROVAL"),
+    "Chờ duyệt lại",
+  );
+  assert.equal(locationStatusLabel("SUBMITTED"), "Đã gửi duyệt");
+  assert.equal(locationStatusLabel("PUBLISHED"), "Đang hiển thị");
+  assert.equal(locationStatusLabel("HIDDEN"), "Đã ẩn");
+  assert.equal(locationStatusLabel("REJECTED"), "Đã từ chối");
+  assert.equal(locationStatusLabel("PENDING_RE_APPROVAL"), "Chờ duyệt lại");
+  assert.equal(locationStatusLabel("DELETED"), "Đã xóa");
+  assert.equal(locationFieldLabel("name"), "Tên địa điểm");
+  assert.equal(locationFieldLabel("address"), "Địa chỉ");
+  assert.equal(locationFieldLabel("categoryId"), "Danh mục");
+  assert.equal(locationFieldLabel("location"), "Tọa độ");
+  assert.equal(locationFieldLabel("phone"), "Số điện thoại");
+  assert.equal(locationFieldLabel("website"), "Trang web");
+  assert.equal(locationFieldLabel("description"), "Mô tả");
 });
 
-test('uses readable fallbacks instead of leaking uppercase enum values', () => {
-  assert.equal(humanizeAdminValue('SOME_NEW_VALUE'), 'Some new value');
-  assert.equal(appealTypeLabel('SOME_NEW_VALUE'), 'Some new value');
-  assert.equal(locationFieldLabel('wheelchairAccess'), 'Wheelchair access');
+test("uses readable fallbacks instead of leaking uppercase enum values", () => {
+  assert.equal(humanizeAdminValue("SOME_NEW_VALUE"), "Some new value");
+  assert.equal(appealTypeLabel("SOME_NEW_VALUE"), "Some new value");
+  assert.equal(locationFieldLabel("wheelchairAccess"), "Wheelchair access");
 });
 
-test('returns only decisions allowed by the appeal type', () => {
+test("returns only decisions allowed by the appeal type", () => {
   assert.deepEqual(
-    appealDecisionOptions('REQUEST_ACCESS_REJECTED').map(({ value }) => value),
-    ['ACCEPTED_TO_DISPUTE', 'UPHELD'],
+    appealDecisionOptions("REQUEST_ACCESS_REJECTED").map(({ value }) => value),
+    ["ACCEPTED_TO_DISPUTE", "UPHELD"],
   );
   assert.deepEqual(
-    appealDecisionOptions('LOCATION_REJECTED').map(({ value }) => value),
-    ['OVERTURNED', 'UPHELD'],
+    appealDecisionOptions("LOCATION_REJECTED").map(({ value }) => value),
+    ["OVERTURNED", "UPHELD"],
   );
 
-  for (const option of appealDecisionOptions('LOCATION_REJECTED')) {
+  for (const option of appealDecisionOptions("LOCATION_REJECTED")) {
     assert.ok(option.label.length > 0);
     assert.ok(option.description.length > 0);
   }
 });
 
-test('appeal surfaces use localized labels and accessible decision cards', async () => {
+test("appeal surfaces use localized labels and accessible decision cards", async () => {
   const [page, drawer] = await Promise.all([
-    readFile(new URL('../src/app/(protected)/appeals/page.tsx', import.meta.url), 'utf8'),
+    readFile(
+      new URL("../src/app/(protected)/appeals/page.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(
       new URL(
-        '../src/app/(protected)/appeals/components/AppealDetailDrawer.tsx',
+        "../src/app/(protected)/appeals/components/AppealDetailDrawer.tsx",
         import.meta.url,
       ),
-      'utf8',
+      "utf8",
     ),
   ]);
 
@@ -97,18 +106,21 @@ test('appeal surfaces use localized labels and accessible decision cards', async
   assert.doesNotMatch(drawer, /preview=\{/);
 });
 
-test('location review surfaces keep quick actions and localize visible data', async () => {
+test("location review surfaces keep quick actions and localize visible data", async () => {
   const [page, drawer] = await Promise.all([
     readFile(
-      new URL('../src/app/(protected)/location-requests/page.tsx', import.meta.url),
-      'utf8',
+      new URL(
+        "../src/app/(protected)/location-requests/page.tsx",
+        import.meta.url,
+      ),
+      "utf8",
     ),
     readFile(
       new URL(
-        '../src/app/(protected)/location-requests/components/LocationRequestDetailDrawer.tsx',
+        "../src/app/(protected)/location-requests/components/LocationRequestDetailDrawer.tsx",
         import.meta.url,
       ),
-      'utf8',
+      "utf8",
     ),
   ]);
 
@@ -124,11 +136,41 @@ test('location review surfaces keep quick actions and localize visible data', as
   assert.doesNotMatch(drawer, /preview=\{/);
 });
 
-test('shared detail drawer labels its close control', async () => {
+test("shared detail drawer labels its close control", async () => {
   const drawer = await readFile(
-    new URL('../src/components/admin/DetailDrawer.tsx', import.meta.url),
-    'utf8',
+    new URL("../src/components/admin/DetailDrawer.tsx", import.meta.url),
+    "utf8",
   );
 
   assert.match(drawer, /aria-label="Đóng bảng chi tiết"/);
+});
+
+test("limits ownership workflow decision reasons to 500 characters", async () => {
+  const files = await Promise.all([
+    readFile(
+      new URL(
+        "../src/app/(protected)/claims/components/ClaimDetailDrawer.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../src/app/(protected)/appeals/components/AppealDetailDrawer.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../src/app/(protected)/disputes/components/DisputeDetailDrawer.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+
+  for (const source of files) {
+    assert.match(source, /maxLength: 500/);
+  }
 });

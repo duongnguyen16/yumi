@@ -15,6 +15,8 @@ export type AppealItem = {
   additionalEvidenceFiles: AppealEvidence[];
   status: string;
   originalDecisionReason?: string;
+  originalDecidedAt?: string;
+  adminDecision?: { reason?: string; decidedAt?: string };
   appealDeadline: string;
   createdAt?: string;
 };

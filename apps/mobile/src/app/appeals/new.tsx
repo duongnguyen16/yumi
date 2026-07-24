@@ -9,6 +9,7 @@ import {
   Button,
   EmptyState,
   FormSection,
+  MediaPicker,
   NavigationBar,
   NoticeSnackbar,
   Page,
@@ -17,8 +18,6 @@ import {
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
-import { radius } from "@/ui/tokens";
-import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import {
   Stack as RouterStack,
@@ -32,6 +31,7 @@ type Proof = {
   fileName: string;
   mimeType: string;
   fileSize: number;
+  capturedAt: string;
 };
 
 function param(value: string | string[] | undefined) {
@@ -46,11 +46,13 @@ export default function NewAppealScreen() {
   const presentation = getAppealPresentation(appealType);
   const router = useRouter();
   const [argument, setArgument] = useState("");
-  const [proof, setProof] = useState<Proof | null>(null);
+  const [proofs, setProofs] = useState<Proof[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const pick = async () => {
+    if (proofs.length >= 5) return;
+
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       setMessage("Cần quyền camera để chụp bằng chứng.");
@@ -66,30 +68,36 @@ export default function NewAppealScreen() {
     if (!file) return;
 
     const fallbackName = `appeal-${Date.now()}.jpg`;
-    setProof({
+    const proof = {
       uri: file.uri,
       fileName: file.fileName || fallbackName,
       mimeType: file.mimeType || "image/jpeg",
       fileSize: file.fileSize || 0,
-    });
+      capturedAt: new Date().toISOString(),
+    };
+    setProofs((current) => [...current, proof]);
   };
 
   const submit = async () => {
     const trimmedArgument = argument.trim();
     if (!appealType || !targetId) return;
-    if (!proof || trimmedArgument.length < 10) return;
+    if (proofs.length === 0 || trimmedArgument.length < 10) return;
 
     setLoading(true);
     setMessage("");
     try {
-      const url = await uploadAppealImage(proof);
-      const capturedAt = new Date().toISOString();
-      const evidence = { url, fileType: "IMAGE" as const, capturedAt };
+      const additionalEvidenceFiles = await Promise.all(
+        proofs.map(async (proof) => ({
+          url: await uploadAppealImage(proof),
+          fileType: "IMAGE" as const,
+          capturedAt: proof.capturedAt,
+        })),
+      );
       const payload = {
         type: appealType,
         targetId,
         argument: trimmedArgument,
-        additionalEvidenceFiles: [evidence],
+        additionalEvidenceFiles,
       };
       const response = await submitAppeal(payload);
       if (!response.success || !response.appeal) {
@@ -105,7 +113,12 @@ export default function NewAppealScreen() {
     }
   };
 
-  const canSubmit = Boolean(proof) && argument.trim().length >= 10;
+  const canSubmit = proofs.length > 0 && argument.trim().length >= 10;
+  const proofItems = proofs.map((proof) => ({
+    id: proof.uri,
+    name: proof.fileName,
+    uri: proof.uri,
+  }));
 
   if (!appealType || !targetId || !presentation) {
     return (
@@ -134,22 +147,22 @@ export default function NewAppealScreen() {
         >
           <TextArea
             label="Nội dung kháng cáo"
+            maxLength={500}
             onChangeText={setArgument}
             value={argument}
           />
-          {proof ? (
-            <Image
-              alt="Bằng chứng kháng cáo"
-              source={{ uri: proof.uri }}
-              style={{ borderRadius: radius.large, height: 240, width: "100%" }}
-            />
-          ) : null}
-          <Button
-            icon="camera-outline"
-            label={proof ? "Chụp lại" : "Chụp bằng chứng"}
-            onPress={pick}
-            variant="secondary"
-            width="full"
+          <MediaPicker
+            addLabel="Chụp thêm bằng chứng"
+            items={proofItems}
+            maxCount={5}
+            onAdd={pick}
+            onRemove={(uri) =>
+              setProofs((current) =>
+                current.filter((proof) => proof.uri !== uri),
+              )
+            }
+            supportingText="Chụp từ 1 đến 5 ảnh bổ sung cho nội dung kháng cáo."
+            title="Bằng chứng kháng cáo"
           />
         </FormSection>
       </PageContent>

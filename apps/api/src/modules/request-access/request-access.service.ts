@@ -17,12 +17,16 @@ import {
   ClaimRequestStatus,
   LocationStatus,
   RequestAccessStatus,
+  UserRole,
+  UserStatus,
 } from 'src/common/schemas/common.enums';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
   RequestAccess,
   RequestAccessDocument,
 } from 'src/common/schemas/request-access.schema';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
+import { AccessEvidenceDTO } from './dto/access-evidence.dto';
 import { CreateRequestAccessDTO } from './dto/create-request-access.dto';
 import {
   RespondAction,
@@ -58,6 +62,8 @@ export class RequestAccessService {
     private readonly logModel: Model<AuditLogDocument>,
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   resolveEffectiveState(
@@ -78,6 +84,9 @@ export class RequestAccessService {
       if (!Types.ObjectId.isValid(userId)) {
         return this.fail(400, 'ID người yêu cầu không hợp lệ');
       }
+
+      const eligibilityFailure = await this.getEligibilityFailure(userId);
+      if (eligibilityFailure) return eligibilityFailure;
 
       // lấy location
       const loc = await this.locModel.findById(dto.locationId).exec();
@@ -105,6 +114,9 @@ export class RequestAccessService {
       ]);
       if (claim) return this.fail(409, 'Địa điểm đang có claim chờ xử lý');
       if (req) return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
+      if (!this.hasOnSiteProof(dto.evidenceFiles)) {
+        return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
+      }
 
       // create request access
       const now = new Date();
@@ -116,7 +128,7 @@ export class RequestAccessService {
         otpVerified: false,
         status: RequestAccessStatus.PENDING,
         timeoutAt: new Date(now.getTime() + RESPONSE_DAYS * DAY_MS),
-        responseReason: dto.reason?.trim() || undefined,
+        requestReason: dto.reason?.trim() || undefined,
       });
 
       await this.notification.notify({
@@ -415,12 +427,32 @@ export class RequestAccessService {
     });
   }
 
-  private hasOnSiteProof(files: VerifyTakeoverDTO['evidenceFiles']) {
+  private hasOnSiteProof(files: AccessEvidenceDTO[]) {
     return files.some((file) => {
       if (file.fileType !== 'IMAGE') return false;
       if (file.geo?.coordinates.length !== 2) return false;
       return Boolean(file.capturedAt);
     });
+  }
+
+  private async getEligibilityFailure(userId: string) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || user.role !== UserRole.VENDOR) {
+      return this.fail(
+        403,
+        'Chỉ tài khoản Vendor mới có thể xin quyền quản lý',
+      );
+    }
+    if (user.status !== UserStatus.ACTIVE) {
+      return this.fail(403, 'Tài khoản Vendor không ở trạng thái hoạt động');
+    }
+    if (user.phoneVerified !== true) {
+      return this.fail(
+        403,
+        'Bạn cần xác minh số điện thoại trước khi xin quyền quản lý',
+      );
+    }
+    return null;
   }
 
   // chuyển đổi request access sang view model
