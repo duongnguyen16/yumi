@@ -379,7 +379,7 @@ export interface ClaimEvidenceFile {
   geo?: { type: "Point"; coordinates: [number, number] };
   capturedAt?: string;
   metadata?: {
-    siteCode?: string;
+    siteCodeVerified?: boolean;
     adminScrutiny?: string;
     [key: string]: unknown;
   };

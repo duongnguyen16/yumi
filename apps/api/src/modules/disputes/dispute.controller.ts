@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Param,
   Patch,
+  Post,
   Query,
   Request as NestRequest,
   UseGuards,
@@ -20,6 +21,7 @@ import { AdminGuard } from 'src/common/guard/admin.guard';
 import { DisputeService } from './dispute.service';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { ResolveDisputeDTO } from './dto/resolve-dispute.dto';
+import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 
 interface UserRequest extends Request {
   user: { userId: string };
@@ -59,6 +61,14 @@ export class DisputeController {
     return handle(await this.service.getForUser(id, req.user.userId));
   }
 
+  @Post(':id/evidence')
+  async addEvidence(
+    @Param('id') id: string,
+    @Body() dto: AddDisputeEvidenceDTO,
+    @NestRequest() req: UserRequest,
+  ) {
+    return handle(await this.service.addEvidence(id, req.user.userId, dto));
+  }
 }
 
 @ApiTags('admin-disputes')

@@ -72,13 +72,19 @@ export class AppealService {
         .exec();
       if (existed) return this.fail(409, 'Quyết định này đã được kháng cáo');
 
+      const additionalEvidenceFiles = dto.additionalEvidenceFiles.map(
+        (file) => ({
+          ...file,
+          capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
+        }),
+      );
       const appeal = await this.appealModel.create({
         type: dto.type,
         targetCollection: source.targetCollection,
         targetId,
         appellantId: new Types.ObjectId(userId),
         argument: dto.argument.trim(),
-        additionalEvidenceFiles: dto.additionalEvidenceFiles,
+        additionalEvidenceFiles,
         status: AppealStatus.PENDING,
         originalDecisionReason: source.reason,
         originalDeciderId: source.deciderId

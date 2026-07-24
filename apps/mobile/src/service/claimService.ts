@@ -7,7 +7,6 @@ export type ClaimEvidence = {
   geo: { type: "Point"; coordinates: [number, number] };
   accuracyMeters?: number;
   capturedAt: string;
-  metadata: { siteCode: string };
 };
 
 type ClaimApiResponse = {

@@ -21,9 +21,11 @@ describe("submitClaim", () => {
         {
           url: "https://example.com/proof.jpg",
           fileType: "IMAGE" as const,
-          geo: { type: "Point" as const, coordinates: [105.8, 21.0] as [number, number] },
+          geo: {
+            type: "Point" as const,
+            coordinates: [105.8, 21.0] as [number, number],
+          },
           capturedAt: "2026-07-21T08:00:00.000Z",
-          metadata: { siteCode: "ABC123" },
         },
       ],
       licenseUrl: "https://example.com/license.jpg",

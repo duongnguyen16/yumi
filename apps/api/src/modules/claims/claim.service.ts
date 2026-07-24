@@ -31,6 +31,7 @@ import {
 } from 'src/common/contracts/notification.port';
 import { SmsService } from '../auth/services/sms.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
+import { SiteCodeImageService } from './site-code-image.service';
 
 const SESSION_TTL_MINUTES = 30;
 const MAX_OTP_ATTEMPTS = 5;
@@ -53,6 +54,7 @@ export class ClaimService {
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
     private readonly sms: SmsService,
+    private readonly siteCodeImage: SiteCodeImageService,
   ) {}
 
   // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
@@ -99,7 +101,7 @@ export class ClaimService {
 
       // lấy số điện thoại
       const phone = location.phone?.trim() || undefined;
-      
+
       // có sdt thì yêu cầu otp
       const otpRequired = Boolean(phone);
       const otp = otpRequired ? this.generateOtp() : undefined;
@@ -150,7 +152,7 @@ export class ClaimService {
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
-      
+
       const eligibilityFailure = await this.getEligibilityFailure(vendorId);
       if (eligibilityFailure) return eligibilityFailure;
       const session = await this.sessionModel
@@ -241,12 +243,11 @@ export class ClaimService {
           'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
         );
       }
-      // ảnh phải có siteCode, siteCode là gì ?
-      // siteCode là cái code mà hệ thống cấp cho vendor để chụp ảnh, để chứng minh rằng vendor đã đến địa điểm đó, và ảnh phải có siteCode này trong metadata. siteCode này lấy ở đâu?
-      const siteCodeSeen = dto.evidenceFiles.some(
-        (file) => file.metadata?.siteCode === session.siteCode,
+      const siteCodeImageUrl = await this.findSiteCodeImage(
+        dto.evidenceFiles,
+        session.siteCode,
       );
-      if (!siteCodeSeen) {
+      if (!siteCodeImageUrl) {
         return this.failure(400, 'Ảnh phải cho thấy mã hệ thống đã cấp');
       }
       if (await this.hasPendingSlot(dto.locationId)) {
@@ -258,7 +259,8 @@ export class ClaimService {
         ...file,
         capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
         metadata: {
-          ...(file.metadata ?? {}),
+          ...this.sanitizeMetadata(file.metadata),
+          ...(file.url === siteCodeImageUrl ? { siteCodeVerified: true } : {}),
           ...(session.otpRequired
             ? {}
             : { adminScrutiny: 'NO_PHONE_HIGHER_SCRUTINY' }),
@@ -324,6 +326,24 @@ export class ClaimService {
     return false;
   }
 
+  private async findSiteCodeImage(
+    files: SubmitClaimDto['evidenceFiles'],
+    siteCode: string,
+  ) {
+    for (const file of files) {
+      if (file.fileType !== 'IMAGE') continue;
+
+      const matched = await this.siteCodeImage.contains(file.url, siteCode);
+      if (matched) return file.url;
+    }
+    return null;
+  }
+
+  private sanitizeMetadata(metadata?: Record<string, unknown>) {
+    const sanitized = { ...(metadata ?? {}) };
+    delete sanitized.siteCode;
+    return sanitized;
+  }
 
   private async getEligibilityFailure(vendorId: string) {
     const user = await this.userModel.findById(vendorId).lean().exec();

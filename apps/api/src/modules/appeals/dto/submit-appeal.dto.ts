@@ -5,7 +5,9 @@ import {
   IsArray,
   IsEnum,
   IsIn,
+  IsISO8601,
   IsMongoId,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -19,6 +21,10 @@ export class AppealEvidenceDTO {
 
   @IsIn(['IMAGE', 'VIDEO', 'DOCUMENT'])
   fileType!: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+
+  @IsOptional()
+  @IsISO8601()
+  capturedAt?: string;
 }
 
 export class SubmitAppealDTO {
@@ -31,7 +37,7 @@ export class SubmitAppealDTO {
   // lý do kháng nghị
   @IsString()
   @MinLength(10)
-  @MaxLength(1000)
+  @MaxLength(500)
   argument!: string;
 
   // bằng chứng bổ sung

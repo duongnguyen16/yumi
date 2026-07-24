@@ -95,6 +95,70 @@ describe('Kiểm thử DisputeService', () => {
     expect(result.success).toBe(true);
   });
 
+  it('thêm bằng chứng vào đúng phía của bên đang tranh chấp', async () => {
+    const { service, disputeModel } = setup();
+    const item = dispute();
+    disputeModel.findById.mockReturnValue(query(item));
+    const addEvidence = Reflect.get(service, 'addEvidence') as
+      | ((
+          id: string,
+          userId: string,
+          dto: {
+            evidenceFiles: Array<{
+              url: string;
+              fileType: 'IMAGE';
+            }>;
+          },
+        ) => Promise<unknown>)
+      | undefined;
+    const result = addEvidence
+      ? await addEvidence.call(service, String(disputeId), String(vendorB), {
+          evidenceFiles: [
+            {
+              url: 'https://example.com/new-proof.jpg',
+              fileType: 'IMAGE',
+            },
+          ],
+        })
+      : undefined;
+
+    expect(result).toMatchObject({ success: true });
+    expect(item.evidenceA).toHaveLength(0);
+    expect(item.evidenceB).toHaveLength(1);
+    expect(item.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('chặn thêm bằng chứng sau khi tranh chấp đã đóng', async () => {
+    const { service, disputeModel } = setup();
+    disputeModel.findById.mockReturnValue(
+      query(dispute({ status: DisputeStatus.RESOLVED_KEEP })),
+    );
+    const addEvidence = Reflect.get(service, 'addEvidence') as
+      | ((
+          id: string,
+          userId: string,
+          dto: {
+            evidenceFiles: Array<{
+              url: string;
+              fileType: 'IMAGE';
+            }>;
+          },
+        ) => Promise<unknown>)
+      | undefined;
+    const result = addEvidence
+      ? await addEvidence.call(service, String(disputeId), String(vendorA), {
+          evidenceFiles: [
+            {
+              url: 'https://example.com/new-proof.jpg',
+              fileType: 'IMAGE',
+            },
+          ],
+        })
+      : undefined;
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+  });
+
   it('liệt kê tranh chấp đã giải quyết theo lịch sử mới nhất trước', async () => {
     const { service, disputeModel } = setup();
     const find = {

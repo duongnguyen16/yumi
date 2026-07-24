@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Alert,
   Box,
@@ -9,18 +9,18 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material';
-import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
-import { ActionButton } from '@/components/admin/ActionButton';
-import { DetailDrawer } from '@/components/admin/DetailDrawer';
+} from "@mui/material";
+import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
+import { ActionButton } from "@/components/admin/ActionButton";
+import { DetailDrawer } from "@/components/admin/DetailDrawer";
 import type {
   AdminDispute,
   DecisionEvidence,
   DecisionUser,
-} from '@/lib/admin-api';
-import { tokens } from '@/theme/admin-tokens';
+} from "@/lib/admin-api";
+import { tokens } from "@/theme/admin-tokens";
 
-type Outcome = 'KEEP' | 'TRANSFER' | 'REVOKE';
+type Outcome = "KEEP" | "TRANSFER" | "REVOKE";
 
 interface Props {
   open: boolean;
@@ -41,11 +41,11 @@ export function DisputeDetailDrawer({
   onClose,
   onResolve,
 }: Props) {
-  const [outcome, setOutcome] = useState<Outcome>('KEEP');
-  const [reason, setReason] = useState('');
-  const loc = typeof item?.locationId === 'object' ? item.locationId : null;
-  const a = typeof item?.vendorAId === 'object' ? item.vendorAId : null;
-  const b = typeof item?.vendorBId === 'object' ? item.vendorBId : null;
+  const [outcome, setOutcome] = useState<Outcome>("KEEP");
+  const [reason, setReason] = useState("");
+  const loc = typeof item?.locationId === "object" ? item.locationId : null;
+  const a = typeof item?.vendorAId === "object" ? item.vendorAId : null;
+  const b = typeof item?.vendorBId === "object" ? item.vendorBId : null;
 
   return (
     <DetailDrawer
@@ -77,7 +77,7 @@ export function DisputeDetailDrawer({
               onClick={() => onResolve(outcome, reason.trim())}
               sx={{ flex: 1.5 }}
             >
-              {saving ? 'Đang xử lý' : 'Xác nhận'}
+              {saving ? "Đang xử lý" : "Xác nhận"}
             </ActionButton>
           </>
         )
@@ -87,13 +87,13 @@ export function DisputeDetailDrawer({
         <Box>
           <Typography variant="overline">Địa điểm</Typography>
           <Typography sx={{ fontSize: 20, fontWeight: 700 }}>
-            {loc?.name ?? 'Không rõ'}
+            {loc?.name ?? "Không rõ"}
           </Typography>
           <Typography sx={{ color: tokens.color.textSecondary, fontSize: 13 }}>
-            {loc?.address ?? 'Chưa có địa chỉ'}
+            {loc?.address ?? "Chưa có địa chỉ"}
           </Typography>
         </Box>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           <Party
             title="Vendor A · Chủ hiện tại"
             user={a}
@@ -108,8 +108,8 @@ export function DisputeDetailDrawer({
         {!readOnly && (
           <Box>
             <Typography variant="overline">Phán quyết</Typography>
-            <Stack direction="row" sx={{ gap: 1, mt: 1, flexWrap: 'wrap' }}>
-              {(['KEEP', 'TRANSFER', 'REVOKE'] as Outcome[]).map((value) => (
+            <Stack direction="row" sx={{ gap: 1, mt: 1, flexWrap: "wrap" }}>
+              {(["KEEP", "TRANSFER", "REVOKE"] as Outcome[]).map((value) => (
                 <Chip
                   key={value}
                   label={value}
@@ -121,7 +121,7 @@ export function DisputeDetailDrawer({
                         ? tokens.color.orange
                         : tokens.color.inputBg,
                     color:
-                      outcome === value ? '#fff' : tokens.color.textPrimary,
+                      outcome === value ? "#fff" : tokens.color.textPrimary,
                     fontWeight: 700,
                   }}
                 />
@@ -137,24 +137,25 @@ export function DisputeDetailDrawer({
             label="Lý do phán quyết"
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            helperText="Tối thiểu 5 ký tự"
+            helperText={`${reason.length}/500 ký tự · tối thiểu 5 ký tự`}
+            slotProps={{ htmlInput: { maxLength: 500 } }}
           />
         )}
         {readOnly && (
           <Box sx={{ border: `1px solid ${tokens.color.border}`, p: 1.5 }}>
             <Typography variant="overline">Kết quả</Typography>
             <Typography sx={{ fontWeight: 700 }}>
-              {item?.status ?? '—'}
+              {item?.status ?? "—"}
             </Typography>
             <Typography
               sx={{ color: tokens.color.textSecondary, fontSize: 13 }}
             >
-              {item?.adminDecision?.reason ?? 'Không có lý do'}
+              {item?.adminDecision?.reason ?? "Không có lý do"}
             </Typography>
             <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
               {item?.adminDecision?.decidedAt
-                ? new Date(item.adminDecision.decidedAt).toLocaleString('vi-VN')
-                : '—'}
+                ? new Date(item.adminDecision.decidedAt).toLocaleString("vi-VN")
+                : "—"}
             </Typography>
           </Box>
         )}
@@ -185,9 +186,9 @@ function Party({
       }}
     >
       <Typography variant="overline">{title}</Typography>
-      <Typography sx={{ fontWeight: 700 }}>{userName ?? 'Không rõ'}</Typography>
+      <Typography sx={{ fontWeight: 700 }}>{userName ?? "Không rõ"}</Typography>
       <Typography sx={{ color: tokens.color.textMuted, fontSize: 12, mb: 1 }}>
-        {user?.email ?? '—'}
+        {user?.email ?? "—"}
       </Typography>
       <Stack spacing={0.75}>
         {files.map((file, index) => (
