@@ -20,9 +20,6 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [businessPhone, setBusinessPhone] = useState("");
-  const [businessAddress, setBusinessAddress] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -32,9 +29,6 @@ export default function Register() {
     password,
     name: name.trim(),
     phone: phone.trim(),
-    business_name: businessName.trim(),
-    business_phone: businessPhone.trim(),
-    business_address: businessAddress.trim() || undefined,
   };
 
   const handleSelectRole = (selected: Role) => {
@@ -48,7 +42,7 @@ export default function Register() {
     if (!name.trim() || !email.trim() || !password || !confirmPassword) setError("Vui lòng nhập đầy đủ thông tin.");
     else if (password.length < 8) setError("Mật khẩu phải có ít nhất 8 ký tự.");
     else if (password !== confirmPassword) setError("Mật khẩu xác nhận không khớp.");
-    else if (role === "vendor" && (!phone.trim() || !businessName.trim() || !businessPhone.trim())) setError("Vui lòng nhập đầy đủ thông tin doanh nghiệp.");
+    else if (role === "vendor" && !phone.trim()) setError("Vui lòng nhập số điện thoại.");
     else {
       setLoading(true);
       if (role === "customer") {
@@ -122,11 +116,8 @@ export default function Register() {
           </FormSection>
 
           {role === "vendor" ? (
-            <FormSection supportingText="Thông tin này phục vụ xác minh và quản lý địa điểm." title="Doanh nghiệp">
-              <TextField keyboardType="phone-pad" label="Số điện thoại cá nhân" onChangeText={setPhone} placeholder="0xxxxxxxxx" value={phone} />
-              <TextField label="Tên cơ sở kinh doanh" onChangeText={setBusinessName} value={businessName} />
-              <TextField keyboardType="phone-pad" label="Số điện thoại kinh doanh" onChangeText={setBusinessPhone} placeholder="0xxxxxxxxx" value={businessPhone} />
-              <TextField label="Địa chỉ kinh doanh (tùy chọn)" onChangeText={setBusinessAddress} value={businessAddress} />
+            <FormSection supportingText="Số điện thoại này được dùng để xác minh tài khoản đối tác." title="Xác minh">
+              <TextField keyboardType="phone-pad" label="Số điện thoại" onChangeText={setPhone} placeholder="0xxxxxxxxx" value={phone} />
             </FormSection>
           ) : null}
 

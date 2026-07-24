@@ -1,7 +1,6 @@
 import {
   IsEmail,
   IsNotEmpty,
-  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -28,19 +27,4 @@ export class RequestVendorOtpDTO {
     message: 'Số điện thoại phải đúng định dạng Việt Nam',
   })
   phone!: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(200)
-  business_name!: string;
-
-  @Matches(VN_PHONE_REGEX, {
-    message: 'Số điện thoại doanh nghiệp phải đúng định dạng Việt Nam',
-  })
-  business_phone!: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  business_address?: string;
 }
