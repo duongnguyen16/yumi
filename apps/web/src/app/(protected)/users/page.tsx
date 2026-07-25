@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Stack,
@@ -67,10 +67,30 @@ const TRUST_COLORS: Record<string, string> = {
   BANNED: '#D84C3F',
 };
 
+function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
+const filterSx = {
+  minWidth: 150,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 0,
+    bgcolor: tokens.color.inputBg,
+    fontSize: 14,
+  },
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [trustFilter, setTrustFilter] = useState('');
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   // Dialog states
@@ -111,13 +131,32 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const filtered = search
-    ? users.filter(
-        (u) =>
-          u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-          u.email?.toLowerCase().includes(search.toLowerCase()),
-      )
-    : users;
+  const filtered = useMemo(() => {
+    const q = normalizeSearch(search.trim());
+
+    return users.filter(
+      (u) =>
+        (!roleFilter || u.role === roleFilter) &&
+        (!statusFilter || u.status === statusFilter) &&
+        (!trustFilter || u.trustLevel === trustFilter) &&
+        (!q ||
+          normalizeSearch(
+            [
+              u.fullName,
+              u.email,
+              u.phone,
+              u.role,
+              STATUS_LABELS[u.status] || u.status,
+              u.trustLevel,
+              String(u.trustScore),
+            ]
+              .filter(Boolean)
+              .join(' '),
+          ).includes(q)),
+    );
+  }, [roleFilter, search, statusFilter, trustFilter, users]);
+
+  const hasUserFilter = Boolean(search.trim() || roleFilter || statusFilter || trustFilter);
 
   async function handleStatusChange() {
     if (!statusDialog.user) return;
@@ -209,11 +248,57 @@ export default function AdminUsersPage() {
         title="Quản lí User"
         subtitle={`${users.length} người dùng`}
         actions={
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Tìm kiếm người dùng..."
-          />
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Tìm kiếm người dùng..."
+              sx={{ width: { xs: '100%', sm: 240 } }}
+            />
+            <TextField
+              select
+              size="small"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả vai trò</MenuItem>
+              <MenuItem value="CUSTOMER">Khách hàng</MenuItem>
+              <MenuItem value="VENDOR">Vendor</MenuItem>
+              <MenuItem value="ADMIN">Admin</MenuItem>
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả trạng thái</MenuItem>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={trustFilter}
+              onChange={(e) => setTrustFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả trust</MenuItem>
+              {Object.keys(TRUST_COLORS).map((value) => (
+                <MenuItem key={value} value={value}>
+                  {value}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
         }
       />
 
@@ -242,6 +327,21 @@ export default function AdminUsersPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ borderBottom: 'none' }}>
+                      <EmptyState
+                        icon={<ManageAccountsOutlinedIcon sx={{ fontSize: 28 }} />}
+                        title="Không có người dùng"
+                        subtitle={
+                          hasUserFilter
+                            ? 'Không có người dùng khớp bộ lọc.'
+                            : 'Khi có người dùng đăng ký, họ sẽ xuất hiện ở đây.'
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
                 {filtered.map((u) => (
                   <TableRow
                     key={u._id}

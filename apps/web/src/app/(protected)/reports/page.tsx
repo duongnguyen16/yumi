@@ -18,6 +18,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  MenuItem,
   TextField,
   Tooltip,
   Typography,
@@ -99,6 +100,15 @@ const headSx: SxProps<Theme> = {
   whiteSpace: 'nowrap',
 };
 
+const filterSx: SxProps<Theme> = {
+  minWidth: 150,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 0,
+    bgcolor: tokens.color.inputBg,
+    fontSize: 14,
+  },
+};
+
 export default function ReportsPage() {
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [total, setTotal] = useState(0);
@@ -107,6 +117,9 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [targetFilter, setTargetFilter] = useState('');
+  const [routeFilter, setRouteFilter] = useState('');
 
   // Action modal state
   const [actionReport, setActionReport] = useState<AdminReport | null>(null);
@@ -141,27 +154,33 @@ export default function ReportsPage() {
 
   const filteredReports = useMemo(() => {
     const q = normalizeSearch(search.trim());
-    if (!q) return reports;
 
-    return reports.filter((r) =>
-      normalizeSearch(
-        [
-          r.reporter?.fullName,
-          r.reporter?.email,
-          r.targetType === 'REVIEW' ? 'Đánh giá' : 'Địa điểm',
-          REASON_LABEL[r.reason] ?? r.reason,
-          ROUTE_LABEL[r.route] ?? r.route,
-          STATUS_CHIP[r.status]?.label ?? r.status,
-          r.description,
-          r.targetId,
-          r.handledBy?.fullName,
-          r.handledBy?.email,
-        ]
-          .filter(Boolean)
-          .join(' '),
-      ).includes(q),
+    return reports.filter(
+      (r) =>
+        (!statusFilter || r.status === statusFilter) &&
+        (!targetFilter || r.targetType === targetFilter) &&
+        (!routeFilter || r.route === routeFilter) &&
+        (!q ||
+          normalizeSearch(
+            [
+              r.reporter?.fullName,
+              r.reporter?.email,
+              r.targetType === 'REVIEW' ? 'Đánh giá' : 'Địa điểm',
+              REASON_LABEL[r.reason] ?? r.reason,
+              ROUTE_LABEL[r.route] ?? r.route,
+              STATUS_CHIP[r.status]?.label ?? r.status,
+              r.description,
+              r.targetId,
+              r.handledBy?.fullName,
+              r.handledBy?.email,
+            ]
+              .filter(Boolean)
+              .join(' '),
+          ).includes(q)),
     );
-  }, [reports, search]);
+  }, [reports, routeFilter, search, statusFilter, targetFilter]);
+
+  const hasReportFilter = Boolean(search.trim() || statusFilter || targetFilter || routeFilter);
 
   function handlePageChange(_: unknown, p: number) {
     setPage(p);
@@ -234,11 +253,56 @@ export default function ReportsPage() {
             : 'Tất cả báo cáo'
         }
         actions={
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Tìm kiếm báo cáo..."
-          />
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Tìm kiếm báo cáo..."
+              sx={{ width: { xs: '100%', sm: 240 } }}
+            />
+            <TextField
+              select
+              size="small"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả trạng thái</MenuItem>
+              {Object.entries(STATUS_CHIP).map(([value, chip]) => (
+                <MenuItem key={value} value={value}>
+                  {chip.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={targetFilter}
+              onChange={(e) => setTargetFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả loại</MenuItem>
+              <MenuItem value="LOCATION">Địa điểm</MenuItem>
+              <MenuItem value="REVIEW">Đánh giá</MenuItem>
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={routeFilter}
+              onChange={(e) => setRouteFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả luồng</MenuItem>
+              {Object.entries(ROUTE_LABEL).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
         }
       />
 
@@ -287,7 +351,9 @@ export default function ReportsPage() {
                         subtitle={
                           search.trim()
                             ? 'Không có báo cáo khớp tìm kiếm.'
-                            : 'Chưa có báo cáo nào từ người dùng.'
+                            : hasReportFilter
+                              ? 'Không có báo cáo khớp bộ lọc.'
+                              : 'Chưa có báo cáo nào từ người dùng.'
                         }
                       />
                     </TableCell>
