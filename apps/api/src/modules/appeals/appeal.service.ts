@@ -255,6 +255,26 @@ export class AppealService {
         refCollection: 'appeals',
         refId: String(appeal._id),
       });
+      if (dispute) {
+        await Promise.all([
+          this.notification.notify({
+            userId: String(appeal.appellantId),
+            type: 'DISPUTE_OPENED',
+            title: 'Tranh chấp đã được mở',
+            body: 'Kháng cáo của bạn đã được chuyển sang tranh chấp.',
+            refCollection: 'disputes',
+            refId: String(dispute._id),
+          }),
+          this.notification.notify({
+            userId: String(dispute.vendorAId),
+            type: 'DISPUTE_OPENED',
+            title: 'Tranh chấp quyền sở hữu đã được mở',
+            body: 'Một kháng cáo chuyển quyền đã được chuyển sang tranh chấp.',
+            refCollection: 'disputes',
+            refId: String(dispute._id),
+          }),
+        ]);
+      }
       return {
         success: true,
         message: 'Đã xử lý kháng cáo',
@@ -291,6 +311,7 @@ export class AppealService {
     ];
     const dispute = await this.disputeModel.create({
       requestAccessId: req._id,
+      appealId: appeal._id,
       locationId: req.locationId,
       vendorAId: req.currentOwnerId,
       vendorBId: req.requesterId,

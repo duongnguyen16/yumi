@@ -4,14 +4,21 @@ import {
   NotificationStub,
 } from 'src/common/contracts/notification.port';
 import { SchemaModule } from 'src/common/schemas/schema.module';
+import { ImagesModule } from '../images/images.module';
+import { SmsService } from '../auth/services/sms.service';
+import { OwnershipEvidenceService } from './ownership-evidence.service';
 import { RequestAccessController } from './request-access.controller';
+import { RequestAccessVerificationService } from './request-access-verification.service';
 import { RequestAccessService } from './request-access.service';
 
 @Module({
-  imports: [SchemaModule],
+  imports: [SchemaModule, ImagesModule],
   controllers: [RequestAccessController],
   providers: [
     RequestAccessService,
+    RequestAccessVerificationService,
+    OwnershipEvidenceService,
+    SmsService,
     { provide: NOTIFICATION_PORT, useClass: NotificationStub },
   ],
 })

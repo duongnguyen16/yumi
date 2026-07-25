@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -15,24 +15,27 @@ import {
 } from 'src/common/schemas/claim-request.schema';
 import {
   ClaimRequestStatus,
+  DisputeStatus,
   LocationStatus,
   RequestAccessStatus,
   UserRole,
   UserStatus,
 } from 'src/common/schemas/common.enums';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
+import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import {
   RequestAccess,
   RequestAccessDocument,
 } from 'src/common/schemas/request-access.schema';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
-import { AccessEvidenceDTO } from './dto/access-evidence.dto';
 import { CreateRequestAccessDTO } from './dto/create-request-access.dto';
 import {
   RespondAction,
   RespondRequestAccessDTO,
 } from './dto/respond-request-access.dto';
 import { VerifyTakeoverDTO } from './dto/verify-takeover.dto';
+import { OwnershipEvidenceService } from './ownership-evidence.service';
+import { RequestAccessVerificationService } from './request-access-verification.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RESPONSE_DAYS = 3;
@@ -64,6 +67,10 @@ export class RequestAccessService {
     private readonly notification: NotificationPort,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    private readonly evidenceVerifier: OwnershipEvidenceService,
+    private readonly verification: RequestAccessVerificationService,
+    @InjectModel(Dispute.name)
+    private readonly disputeModel: Model<DisputeDocument>,
   ) {}
 
   resolveEffectiveState(
@@ -114,9 +121,22 @@ export class RequestAccessService {
       ]);
       if (claim) return this.fail(409, 'Địa điểm đang có claim chờ xử lý');
       if (req) return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
-      if (!this.hasOnSiteProof(dto.evidenceFiles)) {
-        return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
+      if (await this.hasOwnershipWorkflowLock(loc._id, new Date())) {
+        return this.fail(409, 'Địa điểm đang có quy trình chuyển quyền');
       }
+      this.evidenceVerifier.assertValid(
+        dto.evidenceFiles,
+        loc,
+        new Types.ObjectId(userId),
+      );
+
+      const verification = await this.verification.consume({
+        sessionId: dto.verificationSessionId,
+        userId,
+        locationId: String(loc._id),
+        purpose: 'CREATE',
+      });
+      if (!verification.success) return verification;
 
       // create request access
       const now = new Date();
@@ -125,7 +145,7 @@ export class RequestAccessService {
         requesterId: new Types.ObjectId(userId),
         currentOwnerId: loc.ownerId,
         evidenceFiles: dto.evidenceFiles ?? [],
-        otpVerified: false,
+        otpVerified: verification.otpVerified,
         status: RequestAccessStatus.PENDING,
         timeoutAt: new Date(now.getTime() + RESPONSE_DAYS * DAY_MS),
         requestReason: dto.reason?.trim() || undefined,
@@ -152,6 +172,9 @@ export class RequestAccessService {
     } catch (err) {
       if (this.isDuplicate(err)) {
         return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
+      }
+      if (err instanceof HttpException) {
+        return this.fail(err.getStatus(), err.message);
       }
       this.logger.error('Không thể tạo yêu cầu chuyển quyền', err);
       return this.fail(500, 'Lỗi khi tạo yêu cầu chuyển quyền');
@@ -319,15 +342,25 @@ export class RequestAccessService {
       if (String(loc.ownerId) !== String(req.currentOwnerId)) {
         return this.fail(409, 'Chủ địa điểm đã thay đổi');
       }
-      if (!this.hasOnSiteProof(dto.evidenceFiles)) {
-        return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
-      }
+      this.evidenceVerifier.assertValid(
+        dto.evidenceFiles,
+        loc,
+        new Types.ObjectId(userId),
+      );
+      const verification = await this.verification.consume({
+        sessionId: dto.verificationSessionId,
+        userId,
+        locationId: String(loc._id),
+        purpose: 'TAKEOVER',
+        requestAccessId: String(req._id),
+      });
+      if (!verification.success) return verification;
 
       // bắt đầu check đổi chủ
       const now = new Date();
       const oldOwner = String(loc.ownerId);
       req.evidenceFiles = dto.evidenceFiles;
-      req.otpVerified = true;
+      req.otpVerified = verification.otpVerified;
       await this.transferOwnership(
         loc,
         req,
@@ -349,6 +382,9 @@ export class RequestAccessService {
       );
       return this.transferResult(req, loc, 'Đã tự động chuyển quyền sở hữu');
     } catch (err) {
+      if (err instanceof HttpException) {
+        return this.fail(err.getStatus(), err.message);
+      }
       this.logger.error('Không thể xác minh chuyển quyền', err);
       return this.fail(500, 'Lỗi khi xác minh chuyển quyền');
     }
@@ -427,14 +463,6 @@ export class RequestAccessService {
     });
   }
 
-  private hasOnSiteProof(files: AccessEvidenceDTO[]) {
-    return files.some((file) => {
-      if (file.fileType !== 'IMAGE') return false;
-      if (file.geo?.coordinates.length !== 2) return false;
-      return Boolean(file.capturedAt);
-    });
-  }
-
   private async getEligibilityFailure(userId: string) {
     const user = await this.userModel.findById(userId).exec();
     if (!user || user.role !== UserRole.VENDOR) {
@@ -453,6 +481,34 @@ export class RequestAccessService {
       );
     }
     return null;
+  }
+
+  private async hasOwnershipWorkflowLock(
+    locationId: Types.ObjectId,
+    now: Date,
+  ) {
+    const appealCutoff = new Date(now.getTime() - 14 * DAY_MS);
+    const [request, dispute] = await Promise.all([
+      this.reqModel.exists({
+        locationId,
+        $or: [
+          {
+            status: {
+              $in: [
+                RequestAccessStatus.PENDING,
+                RequestAccessStatus.ESCALATED,
+              ],
+            },
+          },
+          {
+            status: RequestAccessStatus.REJECTED,
+            respondedAt: { $gte: appealCutoff },
+          },
+        ],
+      }),
+      this.disputeModel.exists({ locationId, status: DisputeStatus.OPEN }),
+    ]);
+    return Boolean(request || dispute);
   }
 
   // chuyển đổi request access sang view model

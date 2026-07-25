@@ -168,6 +168,7 @@ describe('AuthService vendor registration', () => {
       phone: '0900000001',
       otp_hash: await bcrypt.hash('123456', 4),
       attempts: 0,
+      expires_at: new Date(Date.now() + 60_000),
       save: jest.fn(),
     };
     const createdUser = {
@@ -214,5 +215,27 @@ describe('AuthService vendor registration', () => {
         role: UserRole.VENDOR,
       }),
     );
+  });
+
+  it('rejects an expired vendor registration OTP', async () => {
+    const pending = {
+      email: 'vendor@example.com',
+      password_hash: await bcrypt.hash('secret123', 4),
+      name: 'Vendor User',
+      phone: '0900000001',
+      otp_hash: await bcrypt.hash('123456', 4),
+      attempts: 0,
+      expires_at: new Date(Date.now() - 1),
+      save: jest.fn(),
+    };
+    pendingVendorModel.findOne.mockResolvedValue(pending);
+
+    const result = await service.verifyVendorOtp({
+      email: pending.email,
+      otp: '123456',
+    });
+
+    expect(result).toMatchObject({ success: false, statusCode: 400 });
+    expect(userModel.create).not.toHaveBeenCalled();
   });
 });

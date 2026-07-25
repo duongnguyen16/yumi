@@ -8,11 +8,15 @@ import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
   getAccess,
   respondAccess,
+  startAccessVerification,
   verifyAccess,
+  verifyAccessOtp,
   type AccessEvidence,
+  type AccessLocation,
   type AccessRequest,
   type AccessUser,
 } from "@/service/requestAccessService";
+import { getAccessVerificationState } from "@/navigation/request-access-verification";
 import {
   AppText,
   Button,
@@ -20,6 +24,7 @@ import {
   Inline,
   Stack,
   TextArea,
+  TextField,
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
 import Dialog from "@/ui/components/dialog";
@@ -47,6 +52,11 @@ function getUserId(value: AccessUser | string | undefined) {
   return value?._id;
 }
 
+function getLocationId(value: AccessLocation | string | undefined) {
+  if (typeof value === "string") return value;
+  return value?._id;
+}
+
 export default function AccessDetailScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
   const id = param(rawId);
@@ -57,6 +67,10 @@ export default function AccessDetailScreen() {
   const [proof, setProof] = useState<Proof | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp] = useState("");
   const [pendingAction, setPendingAction] = useState<"GRANT" | "REJECT" | null>(
     null,
   );
@@ -148,7 +162,7 @@ export default function AccessDetailScreen() {
   };
 
   const verify = async () => {
-    if (!id || !proof) return;
+    if (!id || !proof || !sessionId || verificationState !== "READY") return;
     setLoading(true);
     setMessage("");
     try {
@@ -178,7 +192,7 @@ export default function AccessDetailScreen() {
         accuracyMeters: position.coords.accuracy || undefined,
         capturedAt,
       };
-      const response = await verifyAccess(id, [evidence]);
+      const response = await verifyAccess(id, [evidence], sessionId);
 
       if (!response.success) {
         setMessage(response.message || "Không thể xác minh.");
@@ -209,10 +223,49 @@ export default function AccessDetailScreen() {
     : [];
   const canOwnerRespond = isOwner && item?.effectiveState === "PENDING_OPEN";
   const canVerifyTakeover = isRequester && item?.canVerifyTakeover;
+  const verificationState = getAccessVerificationState({
+    sessionId,
+    otpRequired,
+    otpVerified,
+    submitting: loading && Boolean(item),
+  });
   const canAppeal = item?.status === "REJECTED" && isRequester;
   const legacyRequestReason =
     item?.status === "PENDING" ? item.responseReason : undefined;
   const requestReason = item?.requestReason || legacyRequestReason;
+
+  useEffect(() => {
+    let active = true;
+    const locationId = getLocationId(item?.locationId);
+    if (!id || !locationId || !canVerifyTakeover) return;
+
+    startAccessVerification(locationId, "TAKEOVER", id).then((response) => {
+      if (!active) return;
+      if (!response.success || !response.sessionId) {
+        setMessage(response.message || "Không thể bắt đầu xác minh.");
+        return;
+      }
+      setSessionId(response.sessionId);
+      setOtpRequired(response.otpRequired === true);
+      setOtpVerified(response.otpRequired !== true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [id, item?.locationId, canVerifyTakeover]);
+
+  const verifyOtp = async () => {
+    if (!sessionId || otp.length !== 6) return;
+    setLoading(true);
+    const response = await verifyAccessOtp(sessionId, otp);
+    setLoading(false);
+    if (!response.success) {
+      setMessage(response.message || "Không thể xác minh OTP.");
+      return;
+    }
+    setOtpVerified(true);
+  };
 
   return (
     <WorkflowDetailScreen
@@ -293,13 +346,34 @@ export default function AccessDetailScreen() {
             ) : null}
             <Button
               icon="camera-outline"
+              disabled={verificationState !== "READY"}
               label={proof ? "Chụp lại ảnh" : "Chụp ảnh bằng chứng"}
               onPress={takeProof}
               variant="secondary"
               width="full"
             />
+            {otpRequired && !otpVerified ? (
+              <>
+                <TextField
+                  keyboardType="number-pad"
+                  label="Mã OTP"
+                  maxLength={6}
+                  onChangeText={(value) =>
+                    setOtp(value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  value={otp}
+                />
+                <Button
+                  disabled={loading || otp.length !== 6}
+                  label="Xác minh OTP"
+                  loading={loading}
+                  onPress={verifyOtp}
+                  width="full"
+                />
+              </>
+            ) : null}
             <Button
-              disabled={!proof || loading}
+              disabled={!proof || loading || verificationState !== "READY"}
               label="Xác minh và nhận quyền"
               loading={loading}
               onPress={() => setVerifyConfirmationVisible(true)}

@@ -23,6 +23,10 @@ import {
   ClaimVerificationSession,
   ClaimVerificationSessionSchema,
 } from './claim-verification-session.schema';
+import {
+  RequestAccessVerificationSession,
+  RequestAccessVerificationSessionSchema,
+} from './request-access-verification-session.schema';
 
 @Module({
   imports: [
@@ -49,6 +53,10 @@ import {
       {
         name: ClaimVerificationSession.name,
         schema: ClaimVerificationSessionSchema,
+      },
+      {
+        name: RequestAccessVerificationSession.name,
+        schema: RequestAccessVerificationSessionSchema,
       },
     ]),
   ],

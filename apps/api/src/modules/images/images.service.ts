@@ -224,6 +224,31 @@ export class ImagesService {
     }
   }
 
+  assertOwnedLocationMediaUrl(userId: string | { toString(): string }, url: string) {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new BadRequestException('URL bằng chứng không hợp lệ');
+    }
+
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    if (!supabaseUrl) {
+      throw new InternalServerErrorException('Thiếu SUPABASE_URL trong .env');
+    }
+
+    const expectedOrigin = new URL(supabaseUrl).origin;
+    if (parsed.origin !== expectedOrigin) {
+      throw new BadRequestException('URL bằng chứng không thuộc Supabase');
+    }
+
+    const bucket = this.getBucket();
+    const expectedPrefix = `/storage/v1/object/public/${bucket}/locations/${userId.toString()}/`;
+    if (!parsed.pathname.startsWith(expectedPrefix)) {
+      throw new BadRequestException('URL bằng chứng không thuộc người dùng');
+    }
+  }
+
   private validateProductImage(file: Express.Multer.File) {
     const extension = extname(file.originalname).toLowerCase();
 

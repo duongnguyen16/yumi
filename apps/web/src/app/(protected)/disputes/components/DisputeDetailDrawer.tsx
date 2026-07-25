@@ -93,6 +93,31 @@ export function DisputeDetailDrawer({
             {loc?.address ?? "Chưa có địa chỉ"}
           </Typography>
         </Box>
+        {item?.context ? (
+          <Box sx={{ border: `1px solid ${tokens.color.border}`, p: 1.5 }}>
+            <Typography variant="overline">Ngữ cảnh tranh chấp</Typography>
+            <ContextRow
+              label="Lý do xin quyền"
+              value={item.context.requestReason}
+            />
+            <ContextRow
+              label="Phản hồi chủ hiện tại"
+              value={item.context.ownerResponseReason}
+            />
+            <ContextRow
+              label="Lập luận kháng cáo"
+              value={item.context.appealArgument}
+            />
+            <ContextRow
+              label="Thời điểm yêu cầu"
+              value={formatDate(item.context.requestedAt)}
+            />
+            <ContextRow
+              label="Thời điểm từ chối"
+              value={formatDate(item.context.rejectedAt)}
+            />
+          </Box>
+        ) : null}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           <Party
             title="Vendor A · Chủ hiện tại"
@@ -163,6 +188,26 @@ export function DisputeDetailDrawer({
       </Stack>
     </DetailDrawer>
   );
+}
+
+function ContextRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <Box sx={{ mt: 1 }}>
+      <Typography sx={{ color: tokens.color.textMuted, fontSize: 12 }}>
+        {label}
+      </Typography>
+      <Typography sx={{ color: tokens.color.textPrimary, fontSize: 13 }}>
+        {value || "—"}
+      </Typography>
+    </Box>
+  );
+}
+
+function formatDate(value?: string) {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toLocaleString("vi-VN");
 }
 
 function Party({
