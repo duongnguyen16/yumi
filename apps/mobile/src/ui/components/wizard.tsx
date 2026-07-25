@@ -8,25 +8,78 @@ import { NavigationBar } from "./navigation";
 import { Screen } from "./screen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export function Stepper({ current, labels }: { current: number; labels: string[] }) {
+export function Stepper({
+  current,
+  labels,
+}: {
+  current: number;
+  labels: string[];
+}) {
   return (
-    <Stack gap={spacing[2]} style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[2] }}>
+    <Stack
+      gap={spacing[2]}
+      style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[2] }}
+    >
       <Inline style={{ justifyContent: "space-between" }}>
-        <AppText style={{ color: colors.textSecondary }} variant="caption">Bước {current + 1}/{labels.length}</AppText>
+        <AppText style={{ color: colors.textSecondary }} variant="caption">
+          Bước {current + 1}/{labels.length}
+        </AppText>
         <AppText variant="caption">{labels[current]}</AppText>
       </Inline>
-      <ProgressBar color={colors.accentPrimary} progress={(current + 1) / labels.length} style={{ backgroundColor: colors.separator, height: 5 }} />
+      <ProgressBar
+        color={colors.accentPrimary}
+        progress={(current + 1) / labels.length}
+        style={{ backgroundColor: colors.separator, height: 5 }}
+      />
     </Stack>
   );
 }
 
-export function FormFooter({ onBack, onContinue, continueLabel, loading = false, backDisabled = false, continueDisabled = false, showBack = true }: { onBack: () => void; onContinue: () => void; continueLabel: string; loading?: boolean; backDisabled?: boolean; continueDisabled?: boolean; showBack?: boolean }) {
+export function FormFooter({
+  onBack,
+  onContinue,
+  continueLabel,
+  loading = false,
+  backDisabled = false,
+  continueDisabled = false,
+  showBack = true,
+}: {
+  onBack: () => void;
+  onContinue: () => void;
+  continueLabel: string;
+  loading?: boolean;
+  backDisabled?: boolean;
+  continueDisabled?: boolean;
+  showBack?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   return (
-    <Surface elevation={0} style={{ backgroundColor: colors.surfaceApp, paddingBottom: Math.max(insets.bottom, spacing[3]), paddingHorizontal: spacing[4], paddingTop: spacing[3] }}>
+    <Surface
+      elevation={0}
+      style={{
+        backgroundColor: colors.surfaceApp,
+        paddingBottom: Math.max(insets.bottom, spacing[3]),
+        paddingHorizontal: spacing[4],
+        paddingTop: spacing[3],
+      }}
+    >
       <Inline>
-        {showBack ? <IconButton icon="arrow-left" label="Quay lại" onPress={backDisabled || loading ? undefined : onBack} /> : null}
-        <View style={{ flex: 1 }}><Button disabled={loading || continueDisabled} label={continueLabel} loading={loading} onPress={onContinue} width="full" /></View>
+        {showBack ? (
+          <IconButton
+            icon="arrow-left"
+            label="Quay lại"
+            onPress={backDisabled || loading ? undefined : onBack}
+          />
+        ) : null}
+        <View style={{ flex: 1 }}>
+          <Button
+            disabled={loading || continueDisabled}
+            label={continueLabel}
+            loading={loading}
+            onPress={onContinue}
+            width="full"
+          />
+        </View>
       </Inline>
     </Surface>
   );
@@ -35,22 +88,83 @@ export function FormFooter({ onBack, onContinue, continueLabel, loading = false,
 export function BottomActionBar({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <Surface elevation={0} style={{ backgroundColor: colors.surfaceApp, paddingBottom: Math.max(insets.bottom, spacing[3]), paddingHorizontal: spacing[4], paddingTop: spacing[3] }}>
+    <Surface
+      elevation={0}
+      style={{
+        backgroundColor: colors.surfaceApp,
+        paddingBottom: Math.max(insets.bottom, spacing[3]),
+        paddingHorizontal: spacing[4],
+        paddingTop: spacing[3],
+      }}
+    >
       {children}
     </Surface>
   );
 }
 
-export function WizardScreen({ title, metadata, currentStep, stepLabels, children, onExit, onStepBack, onContinue, continueLabel, continueDisabled = false, loading = false, showFooterBack = true, showProgress = true }: { title: string; metadata?: string; currentStep: number; stepLabels: string[]; children: ReactNode; onExit: () => void; onStepBack: () => void; onContinue: () => void; continueLabel: string; continueDisabled?: boolean; loading?: boolean; showFooterBack?: boolean; showProgress?: boolean }) {
+export function WizardScreen({
+  title,
+  metadata,
+  currentStep,
+  stepLabels,
+  children,
+  onExit,
+  onStepBack,
+  onContinue,
+  continueLabel,
+  continueDisabled = false,
+  loading = false,
+  showFooterBack = true,
+  showProgress = true,
+}: {
+  title: string;
+  metadata?: string;
+  currentStep: number;
+  stepLabels: string[];
+  children: ReactNode;
+  onExit: () => void;
+  onStepBack: () => void;
+  onContinue: () => void;
+  continueLabel: string;
+  continueDisabled?: boolean;
+  loading?: boolean;
+  showFooterBack?: boolean;
+  showProgress?: boolean;
+}) {
   return (
     <Screen>
       <NavigationBar onBack={onExit} title={title} />
-      {metadata ? <AppText style={{ color: colors.textSecondary, paddingHorizontal: spacing[4] }} variant="caption">{metadata}</AppText> : null}
-      {showProgress ? <Stepper current={currentStep} labels={stepLabels} /> : null}
-      <ScrollView contentContainerStyle={{ gap: spacing[4], padding: spacing[4], paddingBottom: spacing[6] }} contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
+      {metadata ? (
+        <AppText
+          style={{ color: colors.textSecondary, paddingHorizontal: spacing[4] }}
+          variant="caption"
+        >
+          {metadata}
+        </AppText>
+      ) : null}
+      {showProgress ? (
+        <Stepper current={currentStep} labels={stepLabels} />
+      ) : null}
+      <ScrollView
+        contentContainerStyle={{
+          gap: spacing[4],
+          padding: spacing[4],
+          paddingBottom: spacing[6],
+        }}
+        contentInsetAdjustmentBehavior="automatic"
+        style={{ flex: 1 }}
+      >
         {children}
       </ScrollView>
-      <FormFooter backDisabled continueDisabled={continueDisabled} continueLabel={continueLabel} loading={loading} onBack={onStepBack} onContinue={onContinue} showBack={showFooterBack} />
+      <FormFooter
+        continueDisabled={continueDisabled}
+        continueLabel={continueLabel}
+        loading={loading}
+        onBack={onStepBack}
+        onContinue={onContinue}
+        showBack={showFooterBack}
+        backDisabled={currentStep === 0}
+      />
     </Screen>
   );
 }

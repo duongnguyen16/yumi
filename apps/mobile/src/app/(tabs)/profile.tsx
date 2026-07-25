@@ -1,11 +1,13 @@
 import type { ProfileData } from "@/components/profile/profile-types";
 import { resolveProfileAvatar } from "@/components/profile/profile-avatar";
+import { getAccountLocationActions } from "@/components/profile/account-location-actions";
 import { userContext } from "@/contexts/userContext";
 import { getProfile } from "@/service/profileService";
 import { toAbsoluteUrl } from "@/service/url";
 import {
   getCustomerContributionDestination,
-  getVendorRegistrationDestination,
+  getOwnershipRegistrationAction,
+  getOwnershipVerificationDestination,
 } from "@/navigation/authDestination";
 import {
   AppText,
@@ -56,6 +58,8 @@ export default function AccountScreen() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [logoutVisible, setLogoutVisible] = useState(false);
+  const [phoneVerificationVisible, setPhoneVerificationVisible] =
+    useState(false);
   const displayName = getDisplayName(profile, user);
   const email = String(profile?.email ?? user?.email ?? "");
   const sessionAvatarUrl = getSessionAvatarUrl(user);
@@ -68,7 +72,19 @@ export default function AccountScreen() {
   const phoneVerified =
     profile?.phoneVerified === true || user?.phoneVerified === true;
   const isVendor = profile?.role === "VENDOR" || user?.role === "VENDOR";
+  const locationActions = getAccountLocationActions(
+    isVendor ? "VENDOR" : "CUSTOMER",
+  );
   const logoutConfirmation = getConfirmationCopy("LOGOUT");
+
+  const openOwnershipRegistration = () => {
+    const action = getOwnershipRegistrationAction(phoneVerified);
+    if (action.type === "VERIFY_PHONE") {
+      setPhoneVerificationVisible(true);
+      return;
+    }
+    router.push(action.destination);
+  };
 
   const confirmLogout = async () => {
     const result = await handleLogout();
@@ -175,32 +191,23 @@ export default function AccountScreen() {
         <Stack>
           <SectionHeader title={isVendor ? "Kinh doanh" : "Đóng góp"} />
           <GroupedList>
-            {isVendor ? (
-              <>
-                <ListRow
-                  icon="storefront-outline"
-                  label="Quản lý địa điểm"
-                  onPress={() => router.push("/manage")}
-                  supportingText="Hiệu suất và địa điểm thuộc sở hữu"
-                />
-                <ListRow
-                  icon="map-marker-plus-outline"
-                  label="Đăng ký địa điểm"
-                  onPress={() =>
-                    router.push(getVendorRegistrationDestination(phoneVerified))
-                  }
-                  supportingText="Thêm cơ sở kinh doanh mới"
-                />
-                <ListRow
-                  icon="map-marker-plus-outline"
-                  label="Đóng góp địa điểm"
-                  onPress={() =>
-                    router.push(getCustomerContributionDestination())
-                  }
-                  supportingText="Gợi ý địa điểm còn thiếu như khách hàng"
-                />
-              </>
-            ) : (
+            {locationActions.includes("manage") ? (
+              <ListRow
+                icon="storefront-outline"
+                label="Quản lý địa điểm"
+                onPress={() => router.push("/manage")}
+                supportingText="Hiệu suất và địa điểm thuộc sở hữu"
+              />
+            ) : null}
+            {locationActions.includes("register") ? (
+              <ListRow
+                icon="store-plus-outline"
+                label="Đăng ký địa điểm"
+                onPress={openOwnershipRegistration}
+                supportingText="Thêm địa điểm mới kèm yêu cầu sở hữu"
+              />
+            ) : null}
+            {locationActions.includes("contribute") ? (
               <ListRow
                 icon="map-marker-plus-outline"
                 label="Đóng góp địa điểm"
@@ -209,7 +216,7 @@ export default function AccountScreen() {
                 }
                 supportingText="Thêm một địa điểm còn thiếu trên bản đồ"
               />
-            )}
+            ) : null}
           </GroupedList>
         </Stack>
 
@@ -249,6 +256,20 @@ export default function AccountScreen() {
           width="full"
         />
       </PageContent>
+      <Dialog
+        cancelLabel="Để sau"
+        confirmLabel="Xác minh"
+        message="Bạn cần xác minh số điện thoại trước khi đăng ký sở hữu địa điểm."
+        option
+        result={(confirmed) => {
+          if (confirmed) {
+            router.push(getOwnershipVerificationDestination());
+          }
+        }}
+        setVisible={setPhoneVerificationVisible}
+        title="Cần xác minh số điện thoại"
+        visible={phoneVerificationVisible}
+      />
       <Dialog
         cancelLabel={logoutConfirmation.cancelLabel}
         confirmLabel={logoutConfirmation.confirmLabel}

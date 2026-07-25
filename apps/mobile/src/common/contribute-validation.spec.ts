@@ -1,4 +1,6 @@
 import {
+  getContributionFooterState,
+  getContributionReviewMediaRows,
   validateContributionBasics,
   validateVendorVideos,
   type PickedVideoAsset,
@@ -83,5 +85,69 @@ describe("contribute place validation", () => {
     expect(validateVendorVideos([{ ...baseVideo, duration: 61_000 }]).message).toBe(
       "Vui lòng chọn video ngắn hơn 60 giây.",
     );
+  });
+
+  it("locks the continue footer while selected media is still uploading into the app", () => {
+    expect(
+      getContributionFooterState({
+        mediaUploading: true,
+        saving: false,
+      }),
+    ).toEqual({
+      continueDisabled: true,
+      loading: true,
+    });
+
+    expect(
+      getContributionFooterState({
+        mediaUploading: false,
+        saving: true,
+      }),
+    ).toEqual({
+      continueDisabled: false,
+      loading: true,
+    });
+  });
+
+  it("includes video and license counts in the vendor review summary", () => {
+    expect(
+      getContributionReviewMediaRows({
+        imageCount: 4,
+        isVendorRegistration: true,
+        licenseCount: 2,
+        videoCount: 1,
+      }),
+    ).toEqual([
+      {
+        icon: "image-outline",
+        label: "Hình ảnh",
+        value: "4 ảnh",
+      },
+      {
+        icon: "video-outline",
+        label: "Video xác thực",
+        value: "1 video",
+      },
+      {
+        icon: "file-document-outline",
+        label: "Giấy phép",
+        value: "2 giấy phép",
+      },
+    ]);
+
+    expect(
+      getContributionReviewMediaRows({
+        imageCount: 3,
+        isVendorRegistration: false,
+        licenseCount: 2,
+        videoCount: 1,
+      }),
+    ).toEqual([
+      {
+        icon: "image-outline",
+        label: "Hình ảnh",
+        value: "3 ảnh",
+      },
+    ]);
   });
 });
