@@ -32,20 +32,19 @@ api.interceptors.request.use(async (config) => {
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  logApiInput(config);
+  // logApiInput(config);
   return config;
 });
 
 api.interceptors.response.use(
   (res) => {
-    logApiOutput(res);
+    // logApiOutput(res);
     return res;
   },
   async (error) => {
-    logApiError(error);
+    // logApiError(error);
     const originalRequest = error.config as
-      | (InternalAxiosRequestConfig & { _retry?: boolean })
-      | undefined;
+      (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     if (!error.response || !originalRequest) {
       return Promise.reject(error);
     }
