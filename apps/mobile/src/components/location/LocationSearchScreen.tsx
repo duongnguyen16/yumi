@@ -256,7 +256,6 @@ export default function LocationSearchScreen({
             }}
             data={searchResults}
             keyExtractor={(item, index) => item._id || item.id || String(index)}
-            keyboardShouldPersistTaps="handled"
             onEndReached={loadMore}
             onEndReachedThreshold={0.5}
             renderItem={({ item }) => (
