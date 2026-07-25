@@ -2,7 +2,8 @@ import {
   getAppealsNavigationMode,
   getAuthenticatedDestination,
   getCustomerContributionDestination,
-  getVendorRegistrationDestination,
+  getOwnershipRegistrationAction,
+  getOwnershipVerificationDestination,
 } from "./authDestination";
 
 describe("getAuthenticatedDestination", () => {
@@ -18,16 +19,25 @@ describe("getAuthenticatedDestination", () => {
   );
 });
 
-describe("getVendorRegistrationDestination", () => {
+describe("ownership registration navigation", () => {
   it("opens contribution registration for a verified phone", () => {
-    expect(getVendorRegistrationDestination(true)).toEqual({
-      pathname: "/contribute",
-      params: { type: "register" },
+    expect(getOwnershipRegistrationAction(true)).toEqual({
+      type: "NAVIGATE",
+      destination: {
+        pathname: "/contribute",
+        params: { type: "register" },
+      },
     });
   });
 
-  it("opens Edit Profile and preserves the registration destination for an unverified phone", () => {
-    expect(getVendorRegistrationDestination(false)).toEqual({
+  it("requires a verification dialog before navigation for an unverified phone", () => {
+    expect(getOwnershipRegistrationAction(false)).toEqual({
+      type: "VERIFY_PHONE",
+    });
+  });
+
+  it("preserves the registration destination after phone verification", () => {
+    expect(getOwnershipVerificationDestination()).toEqual({
       pathname: "/profile/edit",
       params: { redirect: "/contribute?type=register" },
     });

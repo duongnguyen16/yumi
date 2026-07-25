@@ -14,6 +14,62 @@ export type PickedVideoAsset = {
   fileSize?: number | null;
 };
 
+export function getContributionFooterState({
+  mediaUploading,
+  saving,
+}: {
+  mediaUploading: boolean;
+  saving: boolean;
+}) {
+  return {
+    continueDisabled: mediaUploading,
+    loading: saving || mediaUploading,
+  };
+}
+
+type ContributionReviewMediaRow = {
+  icon: "image-outline" | "video-outline" | "file-document-outline";
+  label: string;
+  value: string;
+};
+
+export function getContributionReviewMediaRows({
+  imageCount,
+  isVendorRegistration,
+  licenseCount,
+  videoCount,
+}: {
+  imageCount: number;
+  isVendorRegistration: boolean;
+  licenseCount: number;
+  videoCount: number;
+}): ContributionReviewMediaRow[] {
+  const rows: ContributionReviewMediaRow[] = [
+    {
+      icon: "image-outline",
+      label: "Hình ảnh",
+      value: `${imageCount} ảnh`,
+    },
+  ];
+
+  if (isVendorRegistration) {
+    rows.push(
+      {
+        icon: "video-outline",
+        label: "Video xác thực",
+        value: `${videoCount} video`,
+      },
+      {
+        icon: "file-document-outline",
+        label: "Giấy phép",
+        value: `${licenseCount} giấy phép`,
+      },
+    );
+  }
+
+  return rows;
+}
+
 export function validateContributionBasics({
   name,
   description,

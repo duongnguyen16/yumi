@@ -52,7 +52,10 @@ import {
   contributionExitConfirmation,
   getContributionExitAction,
 } from "@/navigation/contribution-exit";
+import { returnContributionToHome } from "@/navigation/return-after-success";
 import {
+  getContributionFooterState,
+  getContributionReviewMediaRows,
   validateContributionBasics,
   validateVendorVideos,
 } from "@/common/contribute-validation";
@@ -162,10 +165,10 @@ export default function ContributePlaceScreen() {
   const router = useRouter();
   const mapRef = useRef<MapRef>(null);
   const [step, setStep] = useState(0);
-  const [exitConfirmationVisible, setExitConfirmationVisible] =
-    useState(false);
+  const [exitConfirmationVisible, setExitConfirmationVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mediaUploading, setMediaUploading] = useState(false);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategoryOption[]>([]);
@@ -202,6 +205,7 @@ export default function ContributePlaceScreen() {
   const [licenseFiles, setLicenseFiles] = useState<SelectedEvidenceFile[]>([]);
   const [systemCode, setSystemCode] = useState<string | null>(null);
   const [duplicateOptionVisible, setDuplicateOptionVisible] = useState(false);
+  const [successDialogVisible, setSuccessDialogVisible] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeAction, setNoticeAction] = useState<
     { label: string; onPress: () => void } | undefined
@@ -221,6 +225,25 @@ export default function ContributePlaceScreen() {
     () =>
       subCategories.filter((item) => selectedSubCategoryIds.includes(item._id)),
     [selectedSubCategoryIds, subCategories],
+  );
+  const footerState = useMemo(
+    () => getContributionFooterState({ mediaUploading, saving }),
+    [mediaUploading, saving],
+  );
+  const reviewMediaRows = useMemo(
+    () =>
+      getContributionReviewMediaRows({
+        imageCount: images.length,
+        isVendorRegistration,
+        licenseCount: licenseFiles.length,
+        videoCount: videos.length,
+      }),
+    [
+      images.length,
+      isVendorRegistration,
+      licenseFiles.length,
+      videos.length,
+    ],
   );
 
   const duplicateWarning = similarLocations.length > 0;
@@ -433,6 +456,7 @@ export default function ContributePlaceScreen() {
     }
 
     try {
+      setMediaUploading(true);
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== "granted") {
@@ -467,7 +491,11 @@ export default function ContributePlaceScreen() {
       setImages((current) => [...current, ...newImages].slice(0, MAX_IMAGES));
     } catch (error) {
       logContributeError("pick-images", error);
-      setNotice(getErrorMessage(error, "Không thể chọn ảnh. Vui lòng thử lại."));
+      setNotice(
+        getErrorMessage(error, "Không thể chọn ảnh. Vui lòng thử lại."),
+      );
+    } finally {
+      setMediaUploading(false);
     }
   };
 
@@ -478,6 +506,7 @@ export default function ContributePlaceScreen() {
     }
 
     try {
+      setMediaUploading(true);
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== "granted") {
@@ -513,7 +542,11 @@ export default function ContributePlaceScreen() {
       setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
     } catch (error) {
       logContributeError("pick-videos", error);
-      setNotice(getErrorMessage(error, "Không thể chọn video. Vui lòng thử lại."));
+      setNotice(
+        getErrorMessage(error, "Không thể chọn video. Vui lòng thử lại."),
+      );
+    } finally {
+      setMediaUploading(false);
     }
   };
 
@@ -524,6 +557,7 @@ export default function ContributePlaceScreen() {
     }
 
     try {
+      setMediaUploading(true);
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== "granted") {
@@ -562,8 +596,13 @@ export default function ContributePlaceScreen() {
     } catch (error) {
       logContributeError("pick-license-files", error);
       setNotice(
-        getErrorMessage(error, "Không thể chọn ảnh giấy phép. Vui lòng thử lại."),
+        getErrorMessage(
+          error,
+          "Không thể chọn ảnh giấy phép. Vui lòng thử lại.",
+        ),
       );
+    } finally {
+      setMediaUploading(false);
     }
   };
 
@@ -662,6 +701,10 @@ export default function ContributePlaceScreen() {
   };
 
   const handleContinue = async () => {
+    if (mediaUploading) {
+      return;
+    }
+
     if (step === 0) {
       const basicValidation = validateContributionBasics({
         name,
@@ -677,7 +720,9 @@ export default function ContributePlaceScreen() {
           openingHours,
           selectedCategoryId,
         });
-        setNotice(basicValidation.message || "Thông tin địa điểm không hợp lệ.");
+        setNotice(
+          basicValidation.message || "Thông tin địa điểm không hợp lệ.",
+        );
         return;
       }
       setStep(1);
@@ -745,7 +790,9 @@ export default function ContributePlaceScreen() {
         setStep(2);
       } catch (error: unknown) {
         logContributeError(
-          checkingDuplicates ? "continue-check-duplicates" : "continue-validate-position",
+          checkingDuplicates
+            ? "continue-check-duplicates"
+            : "continue-validate-position",
           error,
         );
         setNotice(
@@ -806,18 +853,14 @@ export default function ContributePlaceScreen() {
           await submitCustomerDataToBackend();
         }
 
-        setNotice(
-          isVendorRegistration
-            ? "Hồ sơ vendor của bạn đang chờ phê duyệt."
-            : "Địa điểm của bạn đang chờ phê duyệt.",
-        );
-        setNoticeAction({
-          label: "Đóng",
-          onPress: () => router.replace("/(tabs)/home"),
-        });
+        setNotice("");
+        setNoticeAction(undefined);
+        setSuccessDialogVisible(true);
       } catch (error: unknown) {
         logContributeError(
-          isVendorRegistration ? "continue-submit-vendor" : "continue-submit-customer",
+          isVendorRegistration
+            ? "continue-submit-vendor"
+            : "continue-submit-customer",
           error,
         );
         setNotice(
@@ -1120,12 +1163,15 @@ export default function ContributePlaceScreen() {
             showChevron={false}
             value={openingHours || "Chưa chọn"}
           />
-          <ListRow
-            icon="image-outline"
-            label="Hình ảnh"
-            showChevron={false}
-            value={`${images.length} ảnh`}
-          />
+          {reviewMediaRows.map((row) => (
+            <ListRow
+              icon={row.icon}
+              key={row.label}
+              label={row.label}
+              showChevron={false}
+              value={row.value}
+            />
+          ))}
           {isVendorRegistration ? (
             <ListRow
               icon="shield-check-outline"
@@ -1164,11 +1210,12 @@ export default function ContributePlaceScreen() {
             : "Tiếp tục"
         }
         currentStep={step}
-        loading={saving}
+        loading={footerState.loading}
         metadata={isVendorRegistration ? `Mã: ${displaySystemCode}` : undefined}
         onExit={() => setExitConfirmationVisible(true)}
         onStepBack={() => setStep((current) => Math.max(0, current - 1))}
         onContinue={handleContinue}
+        continueDisabled={footerState.continueDisabled}
         showFooterBack={step > 0}
         stepLabels={activeStepLabels.map((label) =>
           label.replace(/^\d+\.\s*/, ""),
@@ -1186,6 +1233,23 @@ export default function ContributePlaceScreen() {
         }}
         setVisible={setExitConfirmationVisible}
         visible={exitConfirmationVisible}
+      />
+
+      <Dialog
+        dismissLabel="Về màn hình chính"
+        message={
+          isVendorRegistration
+            ? "Hồ sơ vendor của bạn đang chờ phê duyệt."
+            : "Địa điểm của bạn đang chờ phê duyệt."
+        }
+        setVisible={(visible) => {
+          setSuccessDialogVisible(visible);
+          if (!visible) {
+            returnContributionToHome(router);
+          }
+        }}
+        title="Gửi thành công"
+        visible={successDialogVisible}
       />
 
       <ActionSheet

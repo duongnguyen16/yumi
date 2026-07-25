@@ -20,13 +20,36 @@ export function getAppealsNavigationMode(
   return "HOME";
 }
 
-export function getVendorRegistrationDestination(phoneVerified: boolean) {
+const ownershipRegistrationDestination = {
+  pathname: "/contribute" as const,
+  params: { type: "register" as const },
+};
+
+export type OwnershipRegistrationAction =
+  | {
+      type: "NAVIGATE";
+      destination: typeof ownershipRegistrationDestination;
+    }
+  | {
+      type: "VERIFY_PHONE";
+    };
+
+export function getOwnershipRegistrationAction(
+  phoneVerified: boolean,
+): OwnershipRegistrationAction {
   return phoneVerified
-    ? { pathname: "/contribute" as const, params: { type: "register" } }
-    : {
-        pathname: "/profile/edit" as const,
-        params: { redirect: "/contribute?type=register" },
-      };
+    ? {
+        type: "NAVIGATE",
+        destination: ownershipRegistrationDestination,
+      }
+    : { type: "VERIFY_PHONE" };
+}
+
+export function getOwnershipVerificationDestination() {
+  return {
+    pathname: "/profile/edit" as const,
+    params: { redirect: "/contribute?type=register" as const },
+  };
 }
 
 export function getCustomerContributionDestination() {
