@@ -438,7 +438,7 @@ export default function AppealsPage() {
         open={!!drawerError}
         autoHideDuration={5000}
         onClose={() => setDrawerError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="error" onClose={() => setDrawerError(null)}>
           {drawerError}

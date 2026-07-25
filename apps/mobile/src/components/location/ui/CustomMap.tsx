@@ -18,7 +18,8 @@ import {
   useState,
 } from "react";
 import { View } from "react-native";
-import { EmptyState, IconButton, LoadingState } from "@/ui/components";
+import { EmptyState, IconButton, LoadingState, NoticeSnackbar } from "@/ui/components";
+import { getNoticeMessage } from "@/ui/feedback";
 import { colors, radius, spacing } from "@/ui/tokens";
 
 const MAP_API =
@@ -63,6 +64,7 @@ function CustomMap(
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
 
@@ -140,7 +142,7 @@ function CustomMap(
     try {
       const response = await getCurrentLocation();
       if (!response.success || !response.locationData) {
-        console.error("Failed to get current location:", response.message);
+        setMessage(response.message || "Không thể lấy vị trí hiện tại.");
         return;
       }
       cameraRef.current?.setStop({
@@ -157,7 +159,7 @@ function CustomMap(
         latitude: response.locationData.coords.latitude,
       });
     } catch (error) {
-      console.error("Error fetching current location:", error);
+      setMessage(getNoticeMessage(error, "Không thể lấy vị trí hiện tại."));
     }
   };
 
@@ -263,6 +265,7 @@ function CustomMap(
           />
         </View>
       )}
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </View>
   );
 }

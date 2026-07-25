@@ -58,7 +58,7 @@ campus-local-guide/
 
 | ID | Service | Build ở ticket | Ai gọi |
 |---|---|---|---|
-| **M1** | Duplicate detection (string similarity + Haversine < 50m) | **F14 / WDP-18** | F13 (submit), F25 (vendor register) |
+| **M1** | Duplicate detection (string similarity + Haversine < 50m) | **F14 / WDP-18** | F13 (submit), F25 (ownership register) |
 | **M2** | Trust engine (TrustEvent + scoring + level + gating) | **F29 / WDP-33** | F15, F19, F22, F27, F31 (mọi chỗ resolve nội dung/quyền) |
 | **M3** | Notification (email + SMS/OTP + in-app) | **F03 / WDP-7** | F04, F06, F15, F22, F23, F24, F26, F27, F28, F31 |
 | **M4** | Location handling (fused location + accuracy + manual pin + reverse geocode) | dùng chung trong **F08/F13** | F13, F25 (ghi khoảng cách pin↔thiết bị) |
@@ -92,13 +92,14 @@ Chi tiết ở `CONTEXT.md` §5–6. Bản rút gọn để agent khỏi tra:
 | I2 | **Chỉ `PUBLISHED`** mới hiện ra public / search / share / trending. | BR-11 | query quên filter status |
 | I3 | **Guest read-only.** Mọi action ghi (bookmark/review/report/claim/submit) → yêu cầu login. | BR-21 | endpoint ghi không có auth guard |
 | I4 | **Mọi action Admin ghi AuditLog** (ai/gì/khi/lý do); log không sửa/xóa. | BR-43 | resolve report/ban user mà không log |
-| I5 | **"Tạo dữ liệu ≠ sở hữu".** Submit/contribute **không** gán owner. Owner chỉ đến từ claim/register-có-proof/transfer. | §3, BR-60 | set `owner` lúc Customer submit |
+| I5 | **"Tạo dữ liệu ≠ sở hữu".** Luồng contribute thông thường **không** gán owner. Owner chỉ đến từ claim/register-có-proof/transfer được Admin duyệt. | §3, BR-60 | set `owner` khi Customer chỉ đóng góp cộng đồng |
 | I6 | **1 location = 1 owner; 1 slot PENDING** (claim **hoặc** request-access) tại 1 thời điểm. | BR-28, BR-61 | cho 2 claim PENDING song song |
 | I7 | **Mọi trường giá** kèm disclaimer "Giá tham khảo", locked. | BR-16 | render giá trần trụi |
 | I8 | **Toàn bộ thay đổi quyền/nội dung sinh TrustEvent qua M2**, không cộng/trừ điểm tay rải rác. | §10 | `user.trust_score += 5` trong controller |
 | I9 | **Location ngoài bán kính Hòa Lạc bị từ chối.** | BR-40 (M5) | tạo location không validate toạ độ |
 | I10 | **Vendor không xóa review khách**; chỉ Admin gỡ. Vendor **không** review địa điểm của mình. | BR-18, BR-48 | endpoint cho vendor delete review |
-| I11 | **Tạo mới review phải có proof tại chỗ**: GPS/fused location ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ; không dùng pin tay. | BR-68, BR-69 | cho tạo review từ xa hoặc đổi `locationId` khi edit |
+| I11 | **Tạo mới review phải kiểm tra hiện diện**: GPS/fused location hiện tại cách địa điểm ≤100m và accuracy ≤50m; không dùng pin tay hoặc ảnh thay thế. Edit review cũ không kiểm tra lại khoảng cách. | BR-68, BR-69 | cho tạo review ngoài 100m hoặc đổi `locationId` khi edit |
+| I12 | **Customer được xin ownership sau khi verify SĐT.** Admin approve đăng ký mới có sở hữu/claim phải gán owner và đổi role `CUSTOMER → VENDOR` trong cùng giao dịch; reject không đổi role. | BR-02, BR-29, BR-45, BR-70 | gán owner nhưng để role Customer, hoặc nâng role trước khi approve |
 
 > **Reversibility (nguyên tắc nền tảng #4):** mọi hành động phá hoại đều phải đảo ngược được + có vết. Khi nghi ngờ "xóa hay ẩn?" → **luôn ẩn (soft)**.
 
@@ -123,9 +124,9 @@ F29 (trust M2, WDP-33) ─── service dùng chung, build sớm S2 → F15,F19
 F14 (dedup M1, WDP-18) ─── service dùng chung → F13,F25 gọi
 
 F13 (submit) → cần F14 (M1) + F08 (pin/map) → tạo SUBMITTED → F15 (admin duyệt)
-F19 (review) → cần location/detail + F08/M4 proof tại chỗ + F29 (trust +2)
+F19 (review) → cần location/detail + F08/M4 presence check GPS ≤100m + F29 (trust +2)
 F23 (claim) → cần F03 (OTP) + cơ chế cấp mã → F24 (admin xét claim)
-F25 (vendor register) → cần F13(form) + cơ chế proof của F23 + F15(duyệt)
+F25 (ownership register) → cần F13(form) + F03 (xác minh SĐT) + cơ chế proof của F23 + F15(duyệt)
 F26 (request-access) → cần ownership tồn tại (F24/F25) + F03
 F27 (dispute) → chỉ cần F26 (RequestAccess bị reject/refuse + B appeal) + F03
 F28 (appeal) → cần các quyết định để kháng: F26,F16,F24,F15,F27,F22,F31  (build cuối)
@@ -179,9 +180,9 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **Mục tiêu:** Form 2 role; **Vendor bắt buộc verify SĐT** (OTP); email duy nhất; mật khẩu mã hóa.
 - **Phụ thuộc:** F03 (OTP), F01.
 - **Đụng tới:** `api` (Auth), `mobile`.
-- **Rule:** BR-01 (email unique), BR-02 (Vendor verify SĐT, Customer optional), BR-03 (OTP 5'/5 lần), BR-04 (hash password).
-- **Ghi chú:** Vendor **không qua OTP thì không tạo account**. Customer bỏ SĐT → bỏ OTP (AF01.1).
-- **DoD:** Tạo được cả 2 loại account; Vendor thiếu OTP → reject.
+- **Rule:** BR-01 (email unique), BR-02 (Vendor verify SĐT; Customer optional cho chức năng thường nhưng bắt buộc verify trước ownership register/claim), BR-03 (OTP 5'/5 lần), BR-04 (hash password).
+- **Ghi chú:** Vendor **không qua OTP thì không tạo account**. Customer có thể bỏ SĐT khi đăng ký tài khoản, nhưng phải bổ sung và xác minh SĐT trước khi vào F23/F25 (AF01.1).
+- **DoD:** Tạo được cả 2 loại account; Vendor thiếu OTP → reject; Customer chưa verify SĐT vẫn dùng chức năng thường nhưng bị chặn ownership register/claim.
 - **Tránh:** Không lưu password plain text (I-auth).
 
 #### WDP-9 · F05 — Đăng nhập / Đăng xuất  `Đã xong!` · owner: Minh · **Cốt lõi**
@@ -262,12 +263,12 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **DoD:** Duyệt đổi status đúng; gửi notify cho người submit; ghi audit; trust cập nhật.
 
 #### WDP-23 · F19 — Đánh giá (review)  `Cần làm` · owner: Long · **Cốt lõi**
-- **Mục tiêu:** Tạo/sửa/xóa; rating 1–5 + nội dung + ảnh ≤ 3; **tạo mới chỉ khi có proof tại chỗ**; **1 review/user/địa điểm**; chặn tự đánh giá địa điểm mình; tính lại rating TB.
+- **Mục tiêu:** Tạo/sửa/xóa; rating 1–5 + nội dung + ảnh ≤ 3; **tạo mới chỉ khi vị trí hiện tại cách địa điểm ≤100m**; **1 review/user/địa điểm**; chặn tự đánh giá địa điểm mình; tính lại rating TB.
 - **Phụ thuộc:** F10 (detail), F08/M4 (GPS/fused location + accuracy), F29 (trust +2), F04.
-- **Rule:** BR-17 (1/user/địa điểm, cập nhật không tạo thêm), BR-18 (Vendor không review địa điểm mình — **I10**), BR-19 (review giữ → M2 +2), BR-48 (Vendor không xóa review khách), **BR-68** (tạo mới cần GPS/fused ≤50m và accuracy ≤50m hoặc ảnh tại chỗ hợp lệ; không pin tay), **BR-69** (edit review cũ từ xa được, nhưng không đổi `locationId`/không tạo mới).
-- **Ghi chú:** Create review kiểm tra hiện diện trước khi lưu; GPS không đạt thì yêu cầu ảnh tại chỗ hợp lệ. Edit/delete review cũ không cần proof mới. Xóa review (tác giả) → `DELETED` + tính lại rating; Admin gỡ → `REMOVED_BY_ADMIN`.
-- **DoD:** Tạo mới bị chặn khi thiếu GPS hợp lệ và thiếu ảnh proof; edit review cũ từ xa vẫn được; rating TB cập nhật khi thêm/sửa/xóa.
-- **Tránh:** Không cho tạo review từ xa bằng pin tay; không cho Vendor xóa review khách; không cho review địa điểm của chính mình; không cho edit đổi `locationId`.
+- **Rule:** BR-17 (1/user/địa điểm, cập nhật không tạo thêm), BR-18 (Vendor không review địa điểm mình — **I10**), BR-19 (review giữ → M2 +2), BR-48 (Vendor không xóa review khách), **BR-68** (tạo mới cần GPS/fused hiện tại cách địa điểm ≤100m và accuracy ≤50m; không pin tay, không ảnh thay thế), **BR-69** (edit review cũ từ xa được và không kiểm tra lại khoảng cách, nhưng không đổi `locationId`/không tạo mới).
+- **Ghi chú:** Create review lấy vị trí thiết bị tại thời điểm submit và kiểm tra khoảng cách Haversine trước khi lưu. Không lấy được vị trí hợp lệ, accuracy >50m hoặc khoảng cách >100m thì chặn. Edit/delete review cũ không cần lấy lại vị trí. Xóa review (tác giả) → `DELETED` + tính lại rating; Admin gỡ → `REMOVED_BY_ADMIN`.
+- **DoD:** Tạo mới chỉ thành công khi GPS/fused hợp lệ, accuracy ≤50m và khoảng cách ≤100m; ngoài bán kính/không có vị trí bị chặn dù có ảnh; edit review cũ từ xa vẫn được; rating TB cập nhật khi thêm/sửa/xóa.
+- **Tránh:** Không cho tạo review từ xa bằng pin tay hoặc ảnh proof; không cho Vendor xóa review khách; không cho review địa điểm của chính mình; không cho edit đổi `locationId`; không áp distance check lên edit review cũ.
 
 #### WDP-33 · F29 — Trust engine (M2)  `Đang làm` · owner: Trung · **Cốt lõi**
 - **Mục tiêu:** `TrustEvent` + scoring (**+15 / +5 / +2, −10 / −10**); level `RESTRICTED/NEW/TRUSTED` (T=30); gating: chặn submit khi RESTRICTED, fast-track khi TRUSTED. *(HF-9)*
@@ -309,29 +310,29 @@ F35 (audit+dashboard) → audit LOGGING dùng chung từ S1; VIEW dashboard ở 
 - **Ghi chú:** Gỡ review → `REMOVED_BY_ADMIN` + tính lại rating. Report đúng → +5 reporter; vu cáo → −10. Report "chủ sai" có thể **REJECT_REPORT**, **APPROVE_REPORT_NO_REVOKE**, hoặc **REVOKE_OWNER**; nếu thông qua/revoke thì notify vendor bị ảnh hưởng kèm nút kháng cáo. Không tạo F27 Dispute từ report.
 - **DoD:** Xử lý đổi status đúng; report "chủ sai" không mở Dispute; trust cập nhật; audit.
 
-#### WDP-27 · F23 — Claim địa điểm + xác minh  `Cần làm` · owner: Dương · **Cốt lõi**
-- **Mục tiêu:** **OTP về SĐT listing** + hệ thống **cấp mã 1 lần** + upload **on-site proof geotagged** (biển hiệu + mã + timestamp) + giấy phép optional; chặn khi đã có yêu cầu PENDING. *(HF-3)*
-- **Phụ thuộc:** **F03 (OTP)**, F10, F04.
+#### WDP-27 · F23 — Customer/Vendor claim địa điểm + xác minh  `Cần làm` · owner: Dương · **Cốt lõi**
+- **Mục tiêu:** Cho Customer/Vendor đã verify SĐT gửi claim địa điểm chưa có chủ; **OTP về SĐT listing** + hệ thống **cấp mã 1 lần** + upload **on-site proof geotagged** (biển hiệu + mã + timestamp) + giấy phép optional; chặn khi đã có yêu cầu PENDING. *(HF-3)*
+- **Phụ thuộc:** **F03 (SĐT tài khoản verified)**, F10, F04.
 - **Đụng tới:** `api` (Claim), `mobile`.
-- **Rule:** BR-14 (OTP về SĐT listing khi có SĐT + on-site proof **bắt buộc**), BR-15 (giấy phép optional, verify = kiểm soát vật lý), **BR-61/I6 (1 slot PENDING)**, BR-02 (Vendor verified).
-- **Ghi chú:** 3 yếu tố proof chính: **geotag + timestamp + mã-1-lần**; OTP là kênh bổ sung bắt buộc khi listing có SĐT. Listing chưa có SĐT → bỏ OTP, dựa on-site proof + Admin soi kỹ. Đã có chủ → chặn claim và chuyển sang **RequestAccess F26**; nếu nghi chủ giả, có thể report "chủ sai" qua F21.
-- **DoD:** Listing có SĐT thì phải OTP + on-site proof; listing chưa có SĐT thì phải proof đủ mạnh; trùng slot PENDING bị chặn.
+- **Rule:** BR-14 (requester phải verify SĐT tài khoản; OTP về SĐT listing khi có SĐT + on-site proof **bắt buộc**), BR-15 (giấy phép optional, verify = kiểm soát vật lý), **BR-61/I6 (1 slot PENDING)**, BR-02.
+- **Ghi chú:** Customer chưa verify SĐT → chặn và dẫn sang F03. Ba yếu tố proof chính: **geotag + timestamp + mã-1-lần**; OTP listing là kênh bổ sung bắt buộc khi listing có SĐT. Listing chưa có SĐT → bỏ OTP listing, vẫn yêu cầu SĐT tài khoản đã verified + on-site proof + Admin soi kỹ. Đã có chủ → Customer không được request-access; Vendor chuyển sang **RequestAccess F26**. Nếu nghi chủ giả, có thể report "chủ sai" qua F21.
+- **DoD:** Customer/Vendor có SĐT tài khoản verified mới gửi được claim; listing có SĐT thì phải OTP listing + on-site proof; listing chưa có SĐT thì phải proof đủ mạnh; trùng slot PENDING bị chặn.
 - **Tránh:** Không cho gửi claim thiếu proof. Không gán owner ở bước này (owner set ở F24). Không mở Dispute từ claim trên địa điểm đã có chủ.
 
 #### WDP-28 · F24 — Admin xét claim  `Cần làm` · owner: Dương · **Cao**
-- **Mục tiêu:** Đối chiếu OTP + on-site proof; **approve → gán owner + badge**; reject → claim mới không ghi đè; cho yêu cầu bổ sung.
+- **Mục tiêu:** Đối chiếu xác minh SĐT tài khoản + OTP listing + on-site proof; **approve → gán owner + badge; nếu requester là Customer thì đổi role thành Vendor trong cùng giao dịch**; reject → giữ nguyên role và claim mới không ghi đè; cho yêu cầu bổ sung.
 - **Phụ thuộc:** F23, **F03**.
-- **Rule:** BR-45 (approve chỉ khi OTP verified + proof khớp), BR-46 (reject → claim mới, **không ghi đè**), BR-29 (gán owner), BR-43 (I4).
-- **Ghi chú:** Approve → set `owner` + badge "Đã xác minh" + M3. Nếu khi xét phát hiện địa điểm đã có chủ khác, không approve claim chồng; dừng/reject với lý do và hướng Vendor sang **RequestAccess F26**. Chỉ mở Dispute sau khi RequestAccess bị owner reject/refuse và B appeal. Giấy phép → fast-track.
-- **DoD:** Approve set chủ sở hữu; reject mở claim mới (record cũ giữ nguyên).
+- **Rule:** BR-45 (approve chỉ khi SĐT tài khoản verified + OTP listing đạt yêu cầu + proof khớp), BR-46 (reject → claim mới, **không ghi đè**), BR-29 (gán owner), BR-70/I12 (Customer → Vendor khi approve), BR-43 (I4).
+- **Ghi chú:** Approve phải transactionally set `owner`, đổi role `CUSTOMER → VENDOR` nếu cần, gắn badge "Đã xác minh" và phát M3. Nếu khi xét phát hiện địa điểm đã có chủ khác, không approve claim chồng; dừng/reject với lý do; chỉ requester đã là Vendor mới có thể sang **RequestAccess F26**. Chỉ mở Dispute sau khi RequestAccess bị owner reject/refuse và B appeal. Giấy phép → fast-track.
+- **DoD:** Approve gán chủ sở hữu; requester Customer được đổi thành Vendor trong cùng giao dịch; requester Vendor giữ nguyên role; reject không đổi role và cho gửi claim mới (record cũ giữ nguyên).
 
-#### WDP-29 · F25 — Vendor đăng ký địa điểm mới (auto-own)  `Cần làm` · owner: Minh · **Cao**
-- **Mục tiêu:** Form như F13 + **bắt buộc on-site proof** để tự thành chủ sau duyệt; **không proof → rơi về no-owner** phải claim sau. *(HF-2)*
-- **Phụ thuộc:** F13 (form), F23 (cơ chế proof), **F14 (M1)**, F15 (duyệt).
-- **Rule:** **BR-60/I5 (đây là chỗ bịt lỗ hổng "đăng ký = thành chủ")**, BR-29 (approve → gán owner), BR-13 (dedup).
-- **Ghi chú:** Có proof → sau Admin duyệt **auto-own**. Thiếu proof → tạo ở tầng B (no-owner), Vendor phải đi claim (F23) sau. Trùng địa điểm chưa chủ → gợi ý dùng claim (AF14.1).
-- **DoD:** Có proof thì auto-own sau khi Admin duyệt; thiếu proof thì no-owner.
-- **Tránh:** **Không** auto-own nếu thiếu on-site proof (đây là loại tấn công "né claim bằng đăng ký mới").
+#### WDP-29 · F25 — Customer/Vendor đăng ký địa điểm mới có sở hữu (auto-own)  `Cần làm` · owner: Minh · **Cao**
+- **Mục tiêu:** Cho Customer/Vendor đã verify SĐT dùng form như F13 + **bắt buộc on-site proof** để tự thành chủ sau duyệt; Customer được đổi thành Vendor khi approve; **không proof → rơi về no-owner**, không đổi role và phải claim sau. *(HF-2)*
+- **Phụ thuộc:** F03 (SĐT tài khoản verified), F13 (form), F23 (cơ chế proof), **F14 (M1)**, F15 (duyệt).
+- **Rule:** **BR-60/I5 (đây là chỗ bịt lỗ hổng "đăng ký = thành chủ")**, BR-29 (approve → gán owner), BR-70/I12 (Customer → Vendor khi approve), BR-13 (dedup).
+- **Ghi chú:** Có proof → Admin approve phải transactionally publish, gán requester làm owner, gắn badge và đổi role Customer → Vendor nếu cần. Thiếu proof → chỉ tạo tầng B (no-owner), không đổi role; requester phải đi claim F23 sau. Trùng địa điểm chưa chủ → gợi ý dùng claim (AF14.1).
+- **DoD:** Customer/Vendor chỉ gửi ownership registration khi SĐT đã verified; có proof thì auto-own sau duyệt và Customer được đổi thành Vendor; thiếu proof thì no-owner/không đổi role; reject không đổi role.
+- **Tránh:** **Không** auto-own nếu thiếu on-site proof; không đổi role trước khi Admin approve; không để trạng thái owner và role cập nhật lệch nhau.
 
 #### WDP-30 · F26 — Request-access + chuyển quyền + hold  `Cần làm` · owner: Dương · **Cốt lõi**
 - **Mục tiêu:** **1 slot PENDING/địa điểm** (người khác bị chặn); báo chủ, hạn **3 ngày (lazy-check)**; grant / reject→kháng nghị / im lặng→verify-to-claim; **hold 7 ngày** khi cấp không qua Admin. *(HF-4)*

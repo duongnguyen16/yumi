@@ -1,14 +1,10 @@
-import { createContext, useContext, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Snackbar, Chip, Icon, Portal, Surface } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getNoticeSnackbarTopOffset } from "../feedback-position";
 import { colors, fontFamily, radius, spacing } from "../tokens";
 import { AppText } from "./layout";
 import type { IconName } from "./types";
-
-const NoticeSnackbarInsetContext = createContext(0);
-
-export function NoticeSnackbarInsetProvider({ bottomOffset, children }: { bottomOffset: number; children: ReactNode }) {
-  return <NoticeSnackbarInsetContext.Provider value={bottomOffset}>{children}</NoticeSnackbarInsetContext.Provider>;
-}
 
 export function Badge({
   label,
@@ -121,7 +117,7 @@ export function NoticeSnackbar({
   onDismiss: () => void;
   action?: { label: string; onPress: () => void };
 }) {
-  const bottomOffset = useContext(NoticeSnackbarInsetContext);
+  const insets = useSafeAreaInsets();
   return (
     <Portal>
       <Snackbar
@@ -130,7 +126,10 @@ export function NoticeSnackbar({
         onDismiss={onDismiss}
         style={{ borderRadius: radius.medium, margin: spacing[4] }}
         visible={Boolean(message)}
-        wrapperStyle={bottomOffset > 0 ? { bottom: bottomOffset } : undefined}
+        wrapperStyle={{
+          bottom: "auto",
+          top: getNoticeSnackbarTopOffset(insets.top),
+        }}
       >
         {message as ReactNode}
       </Snackbar>

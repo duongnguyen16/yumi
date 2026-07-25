@@ -16,6 +16,7 @@ import {
   Chip,
   FormSection,
   MediaPicker,
+  NoticeSnackbar,
   PageContent,
   Stack,
   TextArea,
@@ -288,6 +289,10 @@ export default function EditLocationScreen({
         visible={form.visible}
         // locationName={form.name}
         // categoryId={form.selectedCategory}
+      />
+      <NoticeSnackbar
+        message={form.message}
+        onDismiss={form.dismissMessage}
       />
     </PageContent>
   );

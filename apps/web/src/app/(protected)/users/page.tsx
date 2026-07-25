@@ -619,7 +619,7 @@ export default function AdminUsersPage() {
         open={!!error}
         autoHideDuration={5000}
         onClose={() => setError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="error" onClose={() => setError(null)} sx={{ borderRadius: 0 }}>
           {error}
@@ -629,7 +629,7 @@ export default function AdminUsersPage() {
         open={!!success}
         autoHideDuration={3000}
         onClose={() => setSuccess(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="success" onClose={() => setSuccess(null)} sx={{ borderRadius: 0 }}>
           {success}

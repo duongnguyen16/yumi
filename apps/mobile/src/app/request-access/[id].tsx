@@ -22,6 +22,8 @@ import {
   TextArea,
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
+import Dialog from "@/ui/components/dialog";
+import { getConfirmationCopy } from "@/ui/confirmation";
 import { colors, radius } from "@/ui/tokens";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -55,6 +57,11 @@ export default function AccessDetailScreen() {
   const [proof, setProof] = useState<Proof | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [pendingAction, setPendingAction] = useState<"GRANT" | "REJECT" | null>(
+    null,
+  );
+  const [verifyConfirmationVisible, setVerifyConfirmationVisible] =
+    useState(false);
 
   useEffect(() => {
     let active = true;
@@ -106,6 +113,14 @@ export default function AccessDetailScreen() {
     }
 
     returnAfterSuccess(router);
+  };
+
+  const requestResponse = (action: "GRANT" | "REJECT") => {
+    if (action === "REJECT" && reason.trim().length < 5) {
+      setMessage("Lý do từ chối cần ít nhất 5 ký tự.");
+      return;
+    }
+    setPendingAction(action);
   };
 
   const takeProof = async () => {
@@ -243,13 +258,13 @@ export default function AccessDetailScreen() {
             <Inline>
               <Button
                 label="Từ chối"
-                onPress={() => respond("REJECT")}
+                onPress={() => requestResponse("REJECT")}
                 variant="destructive"
                 width="full"
               />
               <Button
                 label="Đồng ý"
-                onPress={() => respond("GRANT")}
+                onPress={() => requestResponse("GRANT")}
                 width="full"
               />
             </Inline>
@@ -287,7 +302,7 @@ export default function AccessDetailScreen() {
               disabled={!proof || loading}
               label="Xác minh và nhận quyền"
               loading={loading}
-              onPress={verify}
+              onPress={() => setVerifyConfirmationVisible(true)}
               width="full"
             />
           </Stack>
@@ -317,6 +332,28 @@ export default function AccessDetailScreen() {
           </Stack>
         </Card>
       ) : null}
+      <Dialog
+        {...getConfirmationCopy(
+          pendingAction === "REJECT" ? "REJECT_ACCESS" : "GRANT_ACCESS",
+        )}
+        option
+        result={(confirmed) => {
+          if (confirmed && pendingAction) void respond(pendingAction);
+        }}
+        setVisible={(visible) => {
+          if (!visible) setPendingAction(null);
+        }}
+        visible={pendingAction !== null}
+      />
+      <Dialog
+        {...getConfirmationCopy("VERIFY_TAKEOVER")}
+        option
+        result={(confirmed) => {
+          if (confirmed) void verify();
+        }}
+        setVisible={setVerifyConfirmationVisible}
+        visible={verifyConfirmationVisible}
+      />
     </WorkflowDetailScreen>
   );
 }

@@ -41,16 +41,16 @@ export function BottomActionBar({ children }: { children: ReactNode }) {
   );
 }
 
-export function WizardScreen({ title, metadata, currentStep, stepLabels, children, onBack, onContinue, continueLabel, continueDisabled = false, loading = false, showFooterBack = true, showProgress = true }: { title: string; metadata?: string; currentStep: number; stepLabels: string[]; children: ReactNode; onBack: () => void; onContinue: () => void; continueLabel: string; continueDisabled?: boolean; loading?: boolean; showFooterBack?: boolean; showProgress?: boolean }) {
+export function WizardScreen({ title, metadata, currentStep, stepLabels, children, onExit, onStepBack, onContinue, continueLabel, continueDisabled = false, loading = false, showFooterBack = true, showProgress = true }: { title: string; metadata?: string; currentStep: number; stepLabels: string[]; children: ReactNode; onExit: () => void; onStepBack: () => void; onContinue: () => void; continueLabel: string; continueDisabled?: boolean; loading?: boolean; showFooterBack?: boolean; showProgress?: boolean }) {
   return (
     <Screen>
-      <NavigationBar onBack={onBack} title={title} />
+      <NavigationBar onBack={onExit} title={title} />
       {metadata ? <AppText style={{ color: colors.textSecondary, paddingHorizontal: spacing[4] }} variant="caption">{metadata}</AppText> : null}
       {showProgress ? <Stepper current={currentStep} labels={stepLabels} /> : null}
       <ScrollView contentContainerStyle={{ gap: spacing[4], padding: spacing[4], paddingBottom: spacing[6] }} contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         {children}
       </ScrollView>
-      <FormFooter backDisabled continueDisabled={continueDisabled} continueLabel={continueLabel} loading={loading} onBack={onBack} onContinue={onContinue} showBack={showFooterBack} />
+      <FormFooter backDisabled continueDisabled={continueDisabled} continueLabel={continueLabel} loading={loading} onBack={onStepBack} onContinue={onContinue} showBack={showFooterBack} />
     </Screen>
   );
 }

@@ -44,6 +44,7 @@ import {
   LoadingState,
   MapCanvas,
   MapSearchDock,
+  NoticeSnackbar,
 } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
 import LocationSearchScreen from "../location/LocationSearchScreen";
@@ -72,7 +73,12 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
 type CategoryOption = { _id: string; name: string; isActive?: boolean };
 
 export default function MapScreen() {
-  const { location, setLocation } = useLocationContext();
+  const {
+    clearLocationError,
+    location,
+    locationError,
+    setLocation,
+  } = useLocationContext();
   const { locationId } = useLocalSearchParams<{ locationId?: string }>();
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +91,7 @@ export default function MapScreen() {
   const [selectedLocation, setSelectedLocation] =
     useState<MapLocationPreview | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [message, setMessage] = useState("");
   const cameraRef = useRef<CameraRef>(null);
   const searchInputRef = useRef<TextInput>(null);
   const hasAutoCentered = useRef(false);
@@ -112,8 +119,13 @@ export default function MapScreen() {
 
   useEffect(() => {
     getAllLocations()
-      .then((response) => setGeoJson(response.locations ?? emptyGeoJson))
-      .catch((error) => console.error("Error fetching locations:", error));
+      .then((response) => {
+        setGeoJson(response.locations ?? emptyGeoJson);
+        if (!response.success) {
+          setMessage(response.message || "Không thể tải các địa điểm.");
+        }
+      })
+      .catch(() => setMessage("Không thể tải các địa điểm."));
     getAllCategories()
       .then((response) => {
         if (response.success) {
@@ -122,9 +134,9 @@ export default function MapScreen() {
               (category: CategoryOption) => category.isActive !== false,
             ),
           );
-        }
+        } else setMessage(response.message || "Không thể tải danh mục.");
       })
-      .catch(() => undefined);
+      .catch(() => setMessage("Không thể tải danh mục."));
   }, []);
 
   useEffect(() => {
@@ -225,6 +237,8 @@ export default function MapScreen() {
         ? getMapLocationPreview(response.data)
         : null;
       if (active && preview) focusLocation(preview);
+      else if (active && !response?.success)
+        setMessage(response?.message || "Không thể mở chi tiết địa điểm.");
     });
     return () => {
       active = false;
@@ -254,9 +268,8 @@ export default function MapScreen() {
   const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
     if (!currentLocation?.success || !currentLocation.locationData) {
-      console.error(
-        "Failed to get current location:",
-        currentLocation?.message,
+      setMessage(
+        currentLocation?.message || "Không thể lấy vị trí hiện tại.",
       );
       return;
     }
@@ -535,6 +548,13 @@ export default function MapScreen() {
           />
         </View>
       ) : null}
+      <NoticeSnackbar
+        message={message || locationError}
+        onDismiss={() => {
+          setMessage("");
+          clearLocationError();
+        }}
+      />
     </MapCanvas>
   );
 }

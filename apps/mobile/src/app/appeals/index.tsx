@@ -24,6 +24,8 @@ import {
 import { workflowListLayout } from "@/ui/components/workflow-list";
 import { Stack as RouterStack, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useContext, useState } from "react";
+import Dialog from "@/ui/components/dialog";
+import { getConfirmationCopy } from "@/ui/confirmation";
 
 export default function AppealsScreen() {
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function AppealsScreen() {
   const [items, setItems] = useState<AppealItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [logoutVisible, setLogoutVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,6 +72,7 @@ export default function AppealsScreen() {
     user?.status,
     router.canGoBack(),
   );
+  const logoutConfirmation = getConfirmationCopy("LOGOUT");
 
   const exitAppeals = () => {
     if (navigationMode === "BACK") {
@@ -82,9 +86,7 @@ export default function AppealsScreen() {
   const logoutAction = {
     icon: "logout" as const,
     label: "Đăng xuất",
-    onPress: () => {
-      void handleLogout();
-    },
+    onPress: () => setLogoutVisible(true),
   };
   const navigationAction =
     navigationMode === "LOGOUT" ? logoutAction : undefined;
@@ -147,6 +149,22 @@ export default function AppealsScreen() {
           </Stack>
         </PageContent>
       )}
+      <Dialog
+        cancelLabel={logoutConfirmation.cancelLabel}
+        confirmLabel={logoutConfirmation.confirmLabel}
+        message={logoutConfirmation.message}
+        option
+        result={(confirmed) => {
+          if (!confirmed) return;
+          void handleLogout().then((result) => {
+            if (!result.success)
+              setMessage(result.message || "Không thể đăng xuất.");
+          });
+        }}
+        setVisible={setLogoutVisible}
+        title={logoutConfirmation.title}
+        visible={logoutVisible}
+      />
       <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );

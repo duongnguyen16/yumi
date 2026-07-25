@@ -83,6 +83,7 @@ export default function LocationSearchScreen({
             (category: CategoryOption) => category.isActive !== false,
           ),
         );
+      else setMessage(response.message || "Không thể tải danh mục con.");
     });
   }, [initialCategoryId]);
 
