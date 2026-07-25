@@ -48,7 +48,10 @@ export class AppealService {
 
   async submit(userId: string, dto: SubmitAppealDTO) {
     try {
-      if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(dto.targetId)) {
+      if (
+        !Types.ObjectId.isValid(userId) ||
+        !Types.ObjectId.isValid(dto.targetId)
+      ) {
         return this.fail(400, 'ID kháng cáo không hợp lệ');
       }
       const targetId = new Types.ObjectId(dto.targetId);
@@ -57,7 +60,9 @@ export class AppealService {
       if (source.affectedUserId !== userId) {
         return this.fail(403, 'Bạn không có quyền kháng cáo quyết định này');
       }
-      const deadline = new Date(source.decidedAt.getTime() + APPEAL_DAYS * DAY_MS);
+      const deadline = new Date(
+        source.decidedAt.getTime() + APPEAL_DAYS * DAY_MS,
+      );
       if (Date.now() > deadline.getTime()) {
         return this.fail(410, 'Đã quá hạn kháng cáo 14 ngày');
       }
@@ -67,13 +72,19 @@ export class AppealService {
         .exec();
       if (existed) return this.fail(409, 'Quyết định này đã được kháng cáo');
 
+      const additionalEvidenceFiles = dto.additionalEvidenceFiles.map(
+        (file) => ({
+          ...file,
+          capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
+        }),
+      );
       const appeal = await this.appealModel.create({
         type: dto.type,
         targetCollection: source.targetCollection,
         targetId,
         appellantId: new Types.ObjectId(userId),
         argument: dto.argument.trim(),
-        additionalEvidenceFiles: dto.additionalEvidenceFiles,
+        additionalEvidenceFiles,
         status: AppealStatus.PENDING,
         originalDecisionReason: source.reason,
         originalDeciderId: source.deciderId
@@ -101,7 +112,8 @@ export class AppealService {
   }
 
   async listMine(userId: string) {
-    if (!Types.ObjectId.isValid(userId)) return this.fail(400, 'ID không hợp lệ');
+    if (!Types.ObjectId.isValid(userId))
+      return this.fail(400, 'ID không hợp lệ');
     const items = await this.appealModel
       .find({ appellantId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 })
@@ -133,12 +145,15 @@ export class AppealService {
       AppealStatus.OVERTURNED,
       AppealStatus.UPHELD,
     ];
+    let statusFilter: AppealStatus | { $in: AppealStatus[] } =
+      AppealStatus.PENDING;
+    if (query.status) {
+      statusFilter = query.status;
+    } else if (isHistory) {
+      statusFilter = { $in: historyStatuses };
+    }
     const filter: Record<string, unknown> = {
-      status: query.status
-        ? query.status
-        : isHistory
-          ? { $in: historyStatuses }
-          : AppealStatus.PENDING,
+      status: statusFilter,
     };
     if (query.type) filter.type = query.type;
     const sort: Record<string, 1 | -1> = isHistory
@@ -183,11 +198,13 @@ export class AppealService {
       if (appeal.status !== AppealStatus.PENDING) {
         return this.fail(409, 'Kháng cáo đã được xử lý');
       }
-      if (
-        appeal.type !== AppealType.REQUEST_ACCESS_REJECTED &&
-        appeal.originalDeciderId &&
-        String(appeal.originalDeciderId) === adminId
-      ) {
+      const isRequestAccessAppeal =
+        appeal.type === AppealType.REQUEST_ACCESS_REJECTED;
+      const originalDeciderId = appeal.originalDeciderId
+        ? String(appeal.originalDeciderId)
+        : null;
+      const sameAdmin = originalDeciderId === adminId;
+      if (!isRequestAccessAppeal && sameAdmin) {
         return this.fail(403, 'Admin ra quyết định gốc không được tự xét lại');
       }
 
@@ -297,12 +314,9 @@ export class AppealService {
   }
 
   private isDuplicate(err: unknown) {
-    return (
-      typeof err === 'object' &&
-      err !== null &&
-      'code' in err &&
-      (err as { code?: number }).code === 11000
-    );
+    if (!err || typeof err !== 'object') return false;
+    if (!('code' in err)) return false;
+    return err.code === 11000;
   }
 
   private fail(statusCode: number, message: string) {

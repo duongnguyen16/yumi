@@ -20,13 +20,13 @@ export function Stepper({ current, labels }: { current: number; labels: string[]
   );
 }
 
-export function FormFooter({ onBack, onContinue, continueLabel, loading = false, backDisabled = false }: { onBack: () => void; onContinue: () => void; continueLabel: string; loading?: boolean; backDisabled?: boolean }) {
+export function FormFooter({ onBack, onContinue, continueLabel, loading = false, backDisabled = false, continueDisabled = false, showBack = true }: { onBack: () => void; onContinue: () => void; continueLabel: string; loading?: boolean; backDisabled?: boolean; continueDisabled?: boolean; showBack?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
     <Surface elevation={0} style={{ backgroundColor: colors.surfaceApp, paddingBottom: Math.max(insets.bottom, spacing[3]), paddingHorizontal: spacing[4], paddingTop: spacing[3] }}>
       <Inline>
-        <IconButton icon="arrow-left" label="Quay lại" onPress={backDisabled || loading ? undefined : onBack} />
-        <View style={{ flex: 1 }}><Button disabled={loading} label={continueLabel} loading={loading} onPress={onContinue} width="full" /></View>
+        {showBack ? <IconButton icon="arrow-left" label="Quay lại" onPress={backDisabled || loading ? undefined : onBack} /> : null}
+        <View style={{ flex: 1 }}><Button disabled={loading || continueDisabled} label={continueLabel} loading={loading} onPress={onContinue} width="full" /></View>
       </Inline>
     </Surface>
   );
@@ -41,16 +41,16 @@ export function BottomActionBar({ children }: { children: ReactNode }) {
   );
 }
 
-export function WizardScreen({ title, metadata, currentStep, stepLabels, children, onBack, onContinue, continueLabel, loading = false }: { title: string; metadata?: string; currentStep: number; stepLabels: string[]; children: ReactNode; onBack: () => void; onContinue: () => void; continueLabel: string; loading?: boolean }) {
+export function WizardScreen({ title, metadata, currentStep, stepLabels, children, onBack, onContinue, continueLabel, continueDisabled = false, loading = false, showFooterBack = true, showProgress = true }: { title: string; metadata?: string; currentStep: number; stepLabels: string[]; children: ReactNode; onBack: () => void; onContinue: () => void; continueLabel: string; continueDisabled?: boolean; loading?: boolean; showFooterBack?: boolean; showProgress?: boolean }) {
   return (
     <Screen>
       <NavigationBar onBack={onBack} title={title} />
       {metadata ? <AppText style={{ color: colors.textSecondary, paddingHorizontal: spacing[4] }} variant="caption">{metadata}</AppText> : null}
-      <Stepper current={currentStep} labels={stepLabels} />
+      {showProgress ? <Stepper current={currentStep} labels={stepLabels} /> : null}
       <ScrollView contentContainerStyle={{ gap: spacing[4], padding: spacing[4], paddingBottom: spacing[6] }} contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         {children}
       </ScrollView>
-      <FormFooter backDisabled continueLabel={continueLabel} loading={loading} onBack={onBack} onContinue={onContinue} />
+      <FormFooter backDisabled continueDisabled={continueDisabled} continueLabel={continueLabel} loading={loading} onBack={onBack} onContinue={onContinue} showBack={showFooterBack} />
     </Screen>
   );
 }

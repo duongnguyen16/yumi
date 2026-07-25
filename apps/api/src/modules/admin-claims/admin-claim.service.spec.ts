@@ -60,7 +60,7 @@ describe('Kiểm thử AdminClaimService', () => {
           fileType: 'IMAGE',
           geo: { type: 'Point', coordinates: [105.8, 21] },
           capturedAt: new Date(),
-          metadata: { siteCode: 'ABC123' },
+          metadata: { siteCodeVerified: true },
         },
       ],
       save: jest.fn().mockResolvedValue(undefined),
@@ -158,7 +158,7 @@ describe('Kiểm thử AdminClaimService', () => {
           geo: { type: 'Point', coordinates: [105.8, 21] },
           capturedAt: new Date(),
           metadata: {
-            siteCode: 'ABC123',
+            siteCodeVerified: true,
             adminScrutiny: 'NO_PHONE_HIGHER_SCRUTINY',
           },
         },
@@ -185,6 +185,28 @@ describe('Kiểm thử AdminClaimService', () => {
 
     expect(result).toMatchObject({ success: false, statusCode: 422 });
     expect(trust.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('không tin site code do client tự gửi trong metadata', async () => {
+    const { service, claimModel, locModel } = createService();
+    const req = claim({
+      otpVerified: true,
+      evidenceFiles: [
+        {
+          url: 'https://example.com/proof.jpg',
+          fileType: 'IMAGE',
+          geo: { type: 'Point', coordinates: [105.8, 21] },
+          capturedAt: new Date(),
+          metadata: { siteCode: 'CLIENT-VALUE' },
+        },
+      ],
+    });
+    claimModel.findById.mockReturnValue(query(req));
+    locModel.findById.mockReturnValue(query(location()));
+
+    const result = await service.approve(String(claimId), String(adminId));
+
+    expect(result).toMatchObject({ success: false, statusCode: 422 });
   });
 
   it('duyệt claim và ghi nhận các tác động kèm theo', async () => {
@@ -249,25 +271,5 @@ describe('Kiểm thử AdminClaimService', () => {
     expect(loc.ownerId).toEqual(ownerId);
     expect(loc.save).not.toHaveBeenCalled();
     expect(trust.recordEvent).not.toHaveBeenCalled();
-  });
-
-  it('yêu cầu thêm bằng chứng và giữ claim ở trạng thái chờ duyệt', async () => {
-    const { service, claimModel, locModel, notification, logModel } =
-      createService();
-    const req = claim();
-    claimModel.findById.mockReturnValue(query(req));
-    locModel.findById.mockReturnValue(query(location()));
-
-    const result = await service.requestEvidence(
-      String(claimId),
-      String(adminId),
-      'Chụp lại biển hiệu rõ hơn',
-    );
-
-    expect(result.success).toBe(true);
-    expect(req.status).toBe(ClaimRequestStatus.PENDING);
-    expect(req.save).not.toHaveBeenCalled();
-    expect(notification.notify).toHaveBeenCalledTimes(1);
-    expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 });

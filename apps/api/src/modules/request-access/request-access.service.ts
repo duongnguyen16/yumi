@@ -17,12 +17,16 @@ import {
   ClaimRequestStatus,
   LocationStatus,
   RequestAccessStatus,
+  UserRole,
+  UserStatus,
 } from 'src/common/schemas/common.enums';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
   RequestAccess,
   RequestAccessDocument,
 } from 'src/common/schemas/request-access.schema';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
+import { AccessEvidenceDTO } from './dto/access-evidence.dto';
 import { CreateRequestAccessDTO } from './dto/create-request-access.dto';
 import {
   RespondAction,
@@ -58,6 +62,8 @@ export class RequestAccessService {
     private readonly logModel: Model<AuditLogDocument>,
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   resolveEffectiveState(
@@ -78,6 +84,9 @@ export class RequestAccessService {
       if (!Types.ObjectId.isValid(userId)) {
         return this.fail(400, 'ID người yêu cầu không hợp lệ');
       }
+
+      const eligibilityFailure = await this.getEligibilityFailure(userId);
+      if (eligibilityFailure) return eligibilityFailure;
 
       // lấy location
       const loc = await this.locModel.findById(dto.locationId).exec();
@@ -105,6 +114,9 @@ export class RequestAccessService {
       ]);
       if (claim) return this.fail(409, 'Địa điểm đang có claim chờ xử lý');
       if (req) return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
+      if (!this.hasOnSiteProof(dto.evidenceFiles)) {
+        return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
+      }
 
       // create request access
       const now = new Date();
@@ -116,7 +128,7 @@ export class RequestAccessService {
         otpVerified: false,
         status: RequestAccessStatus.PENDING,
         timeoutAt: new Date(now.getTime() + RESPONSE_DAYS * DAY_MS),
-        responseReason: dto.reason?.trim() || undefined,
+        requestReason: dto.reason?.trim() || undefined,
       });
 
       await this.notification.notify({
@@ -146,11 +158,9 @@ export class RequestAccessService {
     }
   }
 
-
   // list request access của owner hoặc requester
   async listMine(userId: string, side: 'owner' | 'requester') {
     try {
-
       // validate userId
       if (!Types.ObjectId.isValid(userId)) {
         return this.fail(400, 'ID người dùng không hợp lệ');
@@ -222,10 +232,9 @@ export class RequestAccessService {
 
       // nếu reject thì set status = REJECTED, nếu grant thì set status = GRANTED và chuyển quyền sở hữu
       const now = new Date();
-      req.respondedAt = now;
-
-      // từ chối 
+      // từ chối
       if (dto.action === RespondAction.REJECT) {
+        req.respondedAt = now;
         req.status = RequestAccessStatus.REJECTED;
         req.responseReason = dto.reason?.trim();
         await req.save();
@@ -267,12 +276,14 @@ export class RequestAccessService {
 
       // đồng ý
       const oldOwner = String(loc.ownerId);
-      loc.ownerId = req.requesterId;
-      loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
-      await loc.save();
-      req.status = RequestAccessStatus.GRANTED;
-      await req.save();
-      await this.notifyTransfer(loc, req, oldOwner, false);
+      await this.transferOwnership(
+        loc,
+        req,
+        oldOwner,
+        now,
+        RequestAccessStatus.GRANTED,
+        false,
+      );
       await this.writeLog(
         ownerId,
         'REQUEST_ACCESS_GRANT',
@@ -312,20 +323,19 @@ export class RequestAccessService {
         return this.fail(422, 'Cần ảnh tại chỗ có vị trí và thời gian chụp');
       }
 
-      // bắt đầu check đổi chủ 
+      // bắt đầu check đổi chủ
       const now = new Date();
       const oldOwner = String(loc.ownerId);
-      loc.ownerId = req.requesterId;
-      loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
-      await loc.save();
-
       req.evidenceFiles = dto.evidenceFiles;
       req.otpVerified = true;
-      req.respondedAt = now;
-      req.status = RequestAccessStatus.AUTO_GRANTED;
-
-      await req.save();
-      await this.notifyTransfer(loc, req, oldOwner, true);
+      await this.transferOwnership(
+        loc,
+        req,
+        oldOwner,
+        now,
+        RequestAccessStatus.AUTO_GRANTED,
+        true,
+      );
       await this.writeLog(
         userId,
         'REQUEST_ACCESS_AUTO_GRANT',
@@ -346,7 +356,6 @@ export class RequestAccessService {
 
   // check xem có tồn tại request access pending không, nếu có thì trả về req, nếu không thì trả về fail
   private async loadPendingRequest(id: string) {
-  
     if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
     const req = await this.reqModel.findById(id).exec();
     if (!req) return this.fail(404, 'Không tìm thấy yêu cầu');
@@ -383,6 +392,24 @@ export class RequestAccessService {
     ]);
   }
 
+  private async transferOwnership(
+    loc: LocationDocument,
+    req: RequestAccessDocument,
+    oldOwner: string,
+    now: Date,
+    status: RequestAccessStatus.GRANTED | RequestAccessStatus.AUTO_GRANTED,
+    auto: boolean,
+  ) {
+    loc.ownerId = req.requesterId;
+    loc.holdExpiresAt = new Date(now.getTime() + HOLD_DAYS * DAY_MS);
+    await loc.save();
+
+    req.respondedAt = now;
+    req.status = status;
+    await req.save();
+    await this.notifyTransfer(loc, req, oldOwner, auto);
+  }
+
   private async writeLog(
     actorId: string,
     action: string,
@@ -400,13 +427,32 @@ export class RequestAccessService {
     });
   }
 
-  private hasOnSiteProof(files: VerifyTakeoverDTO['evidenceFiles']) {
-    return files.some(
-      (file) =>
-        file.fileType === 'IMAGE' &&
-        file.geo?.coordinates.length === 2 &&
-        Boolean(file.capturedAt),
-    );
+  private hasOnSiteProof(files: AccessEvidenceDTO[]) {
+    return files.some((file) => {
+      if (file.fileType !== 'IMAGE') return false;
+      if (file.geo?.coordinates.length !== 2) return false;
+      return Boolean(file.capturedAt);
+    });
+  }
+
+  private async getEligibilityFailure(userId: string) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user || user.role !== UserRole.VENDOR) {
+      return this.fail(
+        403,
+        'Chỉ tài khoản Vendor mới có thể xin quyền quản lý',
+      );
+    }
+    if (user.status !== UserStatus.ACTIVE) {
+      return this.fail(403, 'Tài khoản Vendor không ở trạng thái hoạt động');
+    }
+    if (user.phoneVerified !== true) {
+      return this.fail(
+        403,
+        'Bạn cần xác minh số điện thoại trước khi xin quyền quản lý',
+      );
+    }
+    return null;
   }
 
   // chuyển đổi request access sang view model
@@ -430,9 +476,13 @@ export class RequestAccessService {
       this.idOf(data.currentOwnerId) === userId
     );
   }
-   // 
+  //
   private idOf(value: unknown) {
-    if (value && typeof value === 'object' && '_id' in value) {
+    if (!value || typeof value !== 'object') {
+      return String(value);
+    }
+
+    if ('_id' in value) {
       return String(value._id);
     }
     return String(value);
@@ -456,12 +506,9 @@ export class RequestAccessService {
   }
 
   private isDuplicate(err: unknown) {
-    return (
-      typeof err === 'object' &&
-      err !== null &&
-      'code' in err &&
-      (err as { code?: number }).code === 11000
-    );
+    if (!err || typeof err !== 'object') return false;
+    if (!('code' in err)) return false;
+    return err.code === 11000;
   }
 
   private fail(statusCode: number, message: string) {

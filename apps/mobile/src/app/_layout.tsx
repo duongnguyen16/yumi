@@ -7,7 +7,7 @@ import "../../global.css";
 import UserContextProvider from "@/contexts/userContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Button, configureFonts, MD3LightTheme, PaperProvider, Text } from "react-native-paper";
-import { View } from "react-native";
+import { LogBox, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Location from "expo-location";
 import { useEffect } from "react";
@@ -15,6 +15,10 @@ import LocationContextProvider from "@/contexts/locationContext";
 import { colors, fontFamily } from "@/ui/tokens";
 
 void SplashScreen.preventAutoHideAsync();
+
+if (process.env.EXPO_PUBLIC_VERBOSE === "0") {
+  LogBox.ignoreAllLogs(true);
+}
 
 const appColors = {
   background: colors.surfaceApp,

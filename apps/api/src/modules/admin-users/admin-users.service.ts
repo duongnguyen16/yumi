@@ -2,16 +2,22 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { User, UserDocument } from 'src/common/schemas/user.schema';
 import {
+  NotificationType,
   UserRole,
   UserStatus,
   TrustEventType,
 } from 'src/common/schemas/common.enums';
+import {
+  NOTIFICATION_PORT,
+  NotificationPort,
+} from 'src/common/contracts/notification.port';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { AuditService } from 'src/common/services/audit.service';
 import {
@@ -26,6 +32,8 @@ export class AdminUsersService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly trustEngine: TrustEngineService,
     private readonly auditService: AuditService,
+    @Inject(NOTIFICATION_PORT)
+    private readonly notification: NotificationPort,
   ) {}
 
   async listUsers(actorId: string) {
@@ -36,8 +44,7 @@ export class AdminUsersService {
   }
 
   async getUserDetail(actorId: string, userId: string) {
-    const user = await this.userModel
-      .findById(userId, { passwordHash: 0 });
+    const user = await this.userModel.findById(userId, { passwordHash: 0 });
     if (!user) {
       throw new BadRequestException('Không tìm thấy người dùng');
     }
@@ -100,6 +107,8 @@ export class AdminUsersService {
       diff: { oldStatus, newStatus: target.status },
     });
 
+    await this.notifyAccountStatus(targetUserId, target.status, dto.reason);
+
     return {
       success: true,
       user: this.sanitizeUser(target),
@@ -121,10 +130,7 @@ export class AdminUsersService {
     }
 
     // BR-50: warn when demoting the last Admin (EF23.2)
-    if (
-      target.role === UserRole.ADMIN &&
-      dto.role !== UserRole.ADMIN
-    ) {
+    if (target.role === UserRole.ADMIN && dto.role !== UserRole.ADMIN) {
       const adminCount = await this.userModel.countDocuments({
         role: UserRole.ADMIN,
         _id: { $ne: target._id },
@@ -203,6 +209,35 @@ export class AdminUsersService {
       trustLevel: result.trustLevel,
       event: result.event,
     };
+  }
+
+  private async notifyAccountStatus(
+    userId: string,
+    status: UserStatus,
+    reason?: string,
+  ) {
+    let type: NotificationType;
+    let title: string;
+
+    if (status === UserStatus.WARNED) {
+      type = NotificationType.ACCOUNT_WARNED;
+      title = 'Tài khoản đã bị cảnh báo';
+    } else if (status === UserStatus.BANNED) {
+      type = NotificationType.ACCOUNT_BANNED;
+      title = 'Tài khoản đã bị cấm';
+    } else {
+      return;
+    }
+
+    const body = reason?.trim() || title;
+    await this.notification.notify({
+      userId,
+      type,
+      title,
+      body,
+      refCollection: 'users',
+      refId: userId,
+    });
   }
 
   private sanitizeUser(user: UserDocument) {

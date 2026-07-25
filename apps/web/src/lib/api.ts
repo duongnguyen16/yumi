@@ -5,6 +5,7 @@ import {
   getRefreshToken,
   updateTokens,
 } from "./auth";
+import { logApiError, logApiInput, logApiOutput } from "./verbose-api-logger";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9999/api";
 
@@ -21,12 +22,17 @@ api.interceptors.request.use((config) => {
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  logApiInput(config);
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    logApiOutput(response);
+    return response;
+  },
   async (error: AxiosError) => {
+    logApiError(error);
     const original = error.config as RetriableConfig | undefined;
     const status = error.response?.status;
     const url = original?.url ?? "";
@@ -39,7 +45,7 @@ api.interceptors.response.use(
       const refreshToken = getRefreshToken();
       if (refreshToken) {
         try {
-          const res = await axios.post(`${baseURL}/auth/refresh`, {
+          const res = await api.post("/auth/refresh", {
             refreshToken,
           });
           if (res.data?.success) {
@@ -55,7 +61,7 @@ api.interceptors.response.use(
       }
       clearAuth();
       if (typeof window !== "undefined") {
-        window.location.href = "/admin/login";
+        window.location.href = "/login";
       }
     }
 

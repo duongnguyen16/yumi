@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
   NOTIFICATION_PORT,
+  NotifyParams,
   NotificationPort,
 } from 'src/common/contracts/notification.port';
 import {
@@ -68,13 +69,14 @@ export class AdminClaimService {
         ClaimRequestStatus.RELEASED,
         ClaimRequestStatus.REVOKED,
       ];
-      const filter = q.status
-        ? { status: q.status }
-        : {
-            status: isHistory
-              ? { $in: historyStatuses }
-              : ClaimRequestStatus.PENDING,
-          };
+      let statusFilter: ClaimRequestStatus | { $in: ClaimRequestStatus[] } =
+        ClaimRequestStatus.PENDING;
+      if (q.status) {
+        statusFilter = q.status;
+      } else if (isHistory) {
+        statusFilter = { $in: historyStatuses };
+      }
+      const filter = { status: statusFilter };
       const sort: Record<string, 1 | -1> = isHistory
         ? {
             'adminDecision.decidedAt': -1 as const,
@@ -154,13 +156,10 @@ export class AdminClaimService {
         refCollection: 'claim_requests',
         refId: claim._id,
       });
-      await this.notification.notify({
-        userId: String(claim.vendorId),
+      await this.notifyVendor(claim, {
         type: 'CLAIM_APPROVED',
         title: 'Yêu cầu sở hữu đã được duyệt',
         body: `Bạn đã trở thành chủ sở hữu của "${loc.name}".`,
-        refCollection: 'claim_requests',
-        refId: String(claim._id),
       });
       await this.writeLog(adminId, 'CLAIM_APPROVE', claim._id, reason, {
         claimStatus: {
@@ -198,13 +197,10 @@ export class AdminClaimService {
       };
       await claim.save();
 
-      await this.notification.notify({
-        userId: String(claim.vendorId),
+      await this.notifyVendor(claim, {
         type: 'CLAIM_REJECTED',
         title: 'Yêu cầu sở hữu bị từ chối',
         body: `Yêu cầu sở hữu "${loc.name}" bị từ chối. Lý do: ${reason.trim()}`,
-        refCollection: 'claim_requests',
-        refId: String(claim._id),
       });
       await this.writeLog(adminId, 'CLAIM_REJECT', claim._id, reason.trim(), {
         claimStatus: {
@@ -224,37 +220,7 @@ export class AdminClaimService {
     }
   }
 
-  async requestEvidence(id: string, adminId: string, message: string) {
-    try {
-      const data = await this.load(id);
-      if (!data.success) return data;
-      const { claim, loc } = data;
-      const text = message.trim();
-
-      await this.notification.notify({
-        userId: String(claim.vendorId),
-        type: 'CLAIM_NEEDS_MORE_EVIDENCE',
-        title: 'Cần bổ sung bằng chứng',
-        body: `Claim cho "${loc.name}" cần bổ sung: ${text}`,
-        refCollection: 'claim_requests',
-        refId: String(claim._id),
-      });
-      await this.writeLog(adminId, 'CLAIM_REQUEST_EVIDENCE', claim._id, text, {
-        claimStatus: ClaimRequestStatus.PENDING,
-      });
-
-      return {
-        success: true,
-        message: 'Đã gửi yêu cầu bổ sung bằng chứng',
-        claim: { id: claim._id, status: claim.status },
-      };
-    } catch (err) {
-      this.logger.error('Không thể yêu cầu thêm bằng chứng', err);
-      return this.fail(500, 'Lỗi khi yêu cầu bổ sung bằng chứng');
-    }
-  }
-
-  // chuyển hướng sang request access 
+  // chuyển hướng sang request access
   private async redirectToAccess(
     claim: ClaimRequestDocument,
     loc: LocationDocument,
@@ -268,21 +234,24 @@ export class AdminClaimService {
       decidedAt: new Date(),
     };
     await claim.save();
-    await this.notification.notify({
-      userId: String(claim.vendorId),
+    await this.notifyVendor(claim, {
       type: 'CLAIM_REDIRECTED_TO_REQUEST_ACCESS',
       title: 'Hãy gửi yêu cầu chuyển quyền',
       body: `"${loc.name}" đã có chủ. Bạn có thể gửi RequestAccess để yêu cầu quyền quản lý.`,
-      refCollection: 'claim_requests',
-      refId: String(claim._id),
     });
-    await this.writeLog(adminId, 'CLAIM_REDIRECT_TO_REQUEST_ACCESS', claim._id, reason, {
-      claimStatus: {
-        from: ClaimRequestStatus.PENDING,
-        to: ClaimRequestStatus.REJECTED,
+    await this.writeLog(
+      adminId,
+      'CLAIM_REDIRECT_TO_REQUEST_ACCESS',
+      claim._id,
+      reason,
+      {
+        claimStatus: {
+          from: ClaimRequestStatus.PENDING,
+          to: ClaimRequestStatus.REJECTED,
+        },
+        locationId: String(loc._id),
       },
-      locationId: String(loc._id),
-    });
+    );
     return {
       success: true,
       redirectToRequestAccess: true,
@@ -292,23 +261,24 @@ export class AdminClaimService {
   }
 
   private getFlags(claim: ClaimData) {
-
     // đủ điều kiện k?
     // đủ điều kiện là phải có otpVerified hoặc needsAdminScrutiny, và phải có ảnh hiện trường có vị trí và thời gian chụp, và phải có ảnh có siteCode
     const files = claim.evidenceFiles ?? [];
-    const hasOnSiteProof = files.some(
-      (file) =>
-        file.fileType === 'IMAGE' &&
-        file.geo?.coordinates.length === 2 &&
-        Boolean(file.capturedAt),
-    );
+    const hasOnSiteProof = files.some((file) => {
+      if (file.fileType !== 'IMAGE') return false;
+      if (file.geo?.coordinates.length !== 2) return false;
+      return Boolean(file.capturedAt);
+    });
     const hasSiteCode = files.some(
-      (file) => typeof file.metadata?.siteCode === 'string',
+      (file) => file.metadata?.siteCodeVerified === true,
     );
     const needsAdminScrutiny = files.some(
       (file) => file.metadata?.adminScrutiny === 'NO_PHONE_HIGHER_SCRUTINY',
     );
     const otpVerified = claim.otpVerified === true;
+    const identityVerified = otpVerified || needsAdminScrutiny;
+    const evidenceComplete = hasOnSiteProof && hasSiteCode;
+    const eligibleForApprove = identityVerified && evidenceComplete;
 
     return {
       otpVerified,
@@ -316,12 +286,23 @@ export class AdminClaimService {
       hasOnSiteProof,
       hasSiteCode,
       hasLicense: Boolean(claim.licenseUrl),
-      eligibleForApprove:
-        (otpVerified || needsAdminScrutiny) && hasOnSiteProof && hasSiteCode,
+      eligibleForApprove,
     };
   }
 
-  // load claim base trên id 
+  private notifyVendor(
+    claim: ClaimRequestDocument,
+    notification: Omit<NotifyParams, 'userId' | 'refCollection' | 'refId'>,
+  ) {
+    return this.notification.notify({
+      ...notification,
+      userId: String(claim.vendorId),
+      refCollection: 'claim_requests',
+      refId: String(claim._id),
+    });
+  }
+
+  // load claim base trên id
   private async load(id: string): Promise<LoadResult> {
     if (!Types.ObjectId.isValid(id)) {
       return this.fail(400, 'ID claim không hợp lệ');

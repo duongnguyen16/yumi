@@ -39,44 +39,44 @@ const NAV: NavItem[] = [
   {
     icon: <DashboardOutlinedIcon />,
     label: 'Tổng quan',
-    href: '/admin/dashboard',
+    href: '/dashboard',
   },
   {
     icon: <LocationOnOutlinedIcon />,
     label: 'Duyệt địa điểm',
-    href: '/admin/location-requests',
+    href: '/location-requests',
   },
   {
     icon: <HowToRegOutlinedIcon />,
     label: 'Duyệt Claim',
-    href: '/admin/claims',
+    href: '/claims',
   },
   {
     icon: <EditNoteOutlinedIcon />,
     label: 'Duyệt chỉnh sửa',
-    href: '/admin/edit-suggestions',
+    href: '/edit-suggestions',
   },
-  { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/admin/reports' },
+  { icon: <FlagOutlinedIcon />, label: 'Xử lý Report', href: '/reports' },
   {
     icon: <GavelOutlinedIcon />,
     label: 'Tranh chấp',
-    href: '/admin/disputes',
+    href: '/disputes',
   },
   {
     icon: <RuleOutlinedIcon />,
     label: 'Kháng cáo',
-    href: '/admin/appeals',
+    href: '/appeals',
   },
-  { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User', href: '/admin/users' },
+  { icon: <ManageAccountsOutlinedIcon />, label: 'Quản lí User', href: '/users' },
   {
     icon: <CategoryOutlinedIcon />,
     label: 'Quản lí danh mục',
-    href: '/admin/categories',
+    href: '/categories',
   },
   {
     icon: <HistoryOutlinedIcon />,
     label: 'Lịch sử hoạt động',
-    href: '/admin/audit-logs',
+    href: '/audit-logs',
   },
 ];
 
@@ -96,7 +96,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   function handleLogout() {
     clearAuth();
-    router.replace('/admin/login');
+    router.replace('/login');
   }
 
   const content = (

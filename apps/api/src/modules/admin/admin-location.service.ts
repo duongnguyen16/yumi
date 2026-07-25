@@ -62,19 +62,25 @@ type LocationRequestQueueItem = {
   [key: string]: unknown;
 };
 
+// check tọa độ hợp lệ oke k
+
 function isGeoPoint(value: unknown): value is {
   coordinates: [number, number];
 } {
-  if (!value || typeof value !== 'object' || !('coordinates' in value)) {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  if (!('coordinates' in value)) {
     return false;
   }
 
   const coordinates = value.coordinates;
-  return (
-    Array.isArray(coordinates) &&
-    coordinates.length === 2 &&
-    coordinates.every((coordinate) => typeof coordinate === 'number')
-  );
+  if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+    return false;
+  }
+
+  return coordinates.every((coordinate) => typeof coordinate === 'number');
 }
 
 @Injectable()
@@ -90,10 +96,11 @@ export class AdminLocationService {
     @Inject(NOTIFICATION_PORT) private notification: NotificationPort,
   ) {}
 
+  // lấy ds
   async getList(q: ListPendingRequestsDTO) {
     try {
-      const page = q.page ?? 1,
-        limit = q.limit ?? 30;
+      const page = q.page ?? 1;
+      const limit = q.limit ?? 30;
       const isHistory = q.view === AdminListView.HISTORY;
       const filter = {
         status: { $in: isHistory ? HISTORY_STATUSES : REVIEWABLE_STATUSES },
@@ -114,21 +121,26 @@ export class AdminLocationService {
           .limit(limit)
           .populate('submittedBy', 'fullName email')
           .populate('locationId', 'name address status')
-          .lean()
+          .lean<LocationRequestQueueItem[]>()
           .exec(),
         this.reqModel.countDocuments(filter).exec(),
       ]);
 
-      const data = (list as unknown as LocationRequestQueueItem[]).map((r) => ({
-        ...r,
-        flags: {
-          suspectedDuplicate: r.isPotentialDuplicate === true,
-          suspectedDuplicateLocationIds: r.suspectedDuplicateLocationIds ?? [],
-          farPin:
-            typeof r.deviceDistanceMeters === 'number' &&
-            r.deviceDistanceMeters > FAR_PIN_THRESHOLD,
-        },
-      }));
+      const data = list.map((request) => {
+        const distance = request.deviceDistanceMeters;
+        const hasDistance = typeof distance === 'number';
+        const farPin = hasDistance && distance > FAR_PIN_THRESHOLD;
+
+        return {
+          ...request,
+          flags: {
+            suspectedDuplicate: request.isPotentialDuplicate === true,
+            suspectedDuplicateLocationIds:
+              request.suspectedDuplicateLocationIds ?? [],
+            farPin,
+          },
+        };
+      });
 
       return {
         success: true,
@@ -289,7 +301,7 @@ export class AdminLocationService {
         };
       }
 
-      // k thấy request id 
+      // k thấy request id
 
       const req = await this.reqModel.findById(requestId).exec();
       if (!req) {
@@ -301,7 +313,7 @@ export class AdminLocationService {
       }
 
       const fromReqStatus = req.status;
-      
+
       // status cấm duyệt
 
       if (!REVIEWABLE_STATUSES.includes(req.status)) {
@@ -334,14 +346,13 @@ export class AdminLocationService {
       req.reviewedAt = new Date();
 
       // cập nhật trạng thái req và location
-      
+
       if (action === 'APPROVE') {
         req.status = LocationRequestStatus.APPROVED;
         req.reviewNote = null;
         this.applySnapshot(location, req.newData);
         location.status = LocationStatus.PUBLISHED;
       } else {
-
         const note = duplicateOfLocationId
           ? `${rejectionReason} (trùng với địa điểm ${duplicateOfLocationId})`
           : rejectionReason;
@@ -368,39 +379,49 @@ export class AdminLocationService {
         });
       }
 
+      const approved = action === 'APPROVE';
+      const notificationType = approved
+        ? 'LOCATION_APPROVED'
+        : 'LOCATION_REJECTED';
+      const notificationTitle = approved
+        ? 'Địa điểm của bạn đã được duyệt'
+        : 'Địa điểm của bạn bị từ chối';
+      const notificationBody = approved
+        ? `"${location.name}" đã được công khai.`
+        : `"${location.name}" bị từ chối. Lý do: ${req.reviewNote}`;
+
       await this.notification.notify({
         userId: String(req.submittedBy),
-        type: action === 'APPROVE' ? 'LOCATION_APPROVED' : 'LOCATION_REJECTED',
-        title:
-          action === 'APPROVE'
-            ? 'Địa điểm của bạn đã được duyệt'
-            : 'Địa điểm của bạn bị từ chối',
-        body:
-          action === 'APPROVE'
-            ? `"${location.name}" đã được công khai.`
-            : `"${location.name}" bị từ chối. Lý do: ${req.reviewNote}`,
+        type: notificationType,
+        title: notificationTitle,
+        body: notificationBody,
         refCollection: 'location_requests',
         refId: String(req._id),
       });
 
       // log tí cho bt ai vs ai
 
+      const logAction = approved ? 'LOCATION_APPROVE' : 'LOCATION_REJECT';
+      let logReason: string | undefined;
+      if (!approved) {
+        logReason = req.reviewNote ?? undefined;
+      }
       await this.logModel.create({
         actorId: new Types.ObjectId(adminId),
-        action: action === 'APPROVE' ? 'LOCATION_APPROVE' : 'LOCATION_REJECT',
+        action: logAction,
         targetCollection: 'location_requests',
         targetId: req._id,
-        reason: action === 'REJECT' ? (req.reviewNote ?? undefined) : undefined,
+        reason: logReason,
         diff: {
           requestStatus: { from: fromReqStatus, to: req.status },
           locationStatus: { from: fromLocStatus, to: location.status },
         },
       });
 
+      const message = approved ? 'Đã duyệt địa điểm' : 'Đã từ chối địa điểm';
       return {
         success: true,
-        message:
-          action === 'APPROVE' ? 'Đã duyệt địa điểm' : 'Đã từ chối địa điểm',
+        message,
         request: { id: req._id, status: req.status },
         location: { id: location._id, status: location.status },
       };
@@ -420,81 +441,88 @@ export class AdminLocationService {
     location: LocationDocument,
     snapshot: Record<string, unknown> | null | undefined,
   ) {
-    // k có snapshot thì th
     if (!snapshot || typeof snapshot !== 'object') return;
-
-    // apply các attribute vào locaiton th
 
     for (const key of Object.keys(snapshot)) {
       if (!ALLOWED_SNAPSHOT_FIELDS.has(key)) continue;
+
       const value = snapshot[key];
 
-      switch (key) {
-        case 'name':
-          if (typeof value === 'string') location.name = value.trim();
-          break;
-        case 'description':
-          if (typeof value === 'string') location.description = value.trim();
-          break;
-        case 'address':
-          if (typeof value === 'string') location.address = value.trim();
-          break;
-        case 'openingHours':
-          if (typeof value === 'string') location.openingHours = value;
-          break;
-        case 'phone':
-          if (typeof value === 'string') location.phone = value;
-          break;
-        case 'accuracyMeters':
-          if (typeof value === 'number') location.accuracyMeters = value;
-          break;
-        case 'categoryId':
-          if (typeof value === 'string' && Types.ObjectId.isValid(value)) {
-            location.categoryId = new Types.ObjectId(value);
-          }
-          break;
-        case 'subCategoryIds':
-        case 'tagIds': {
-          if (Array.isArray(value)) {
-            location.subCategoryIds = value
-              .filter(
-                (id): id is string =>
-                  typeof id === 'string' && Types.ObjectId.isValid(id),
-              )
-              .map((id) => new Types.ObjectId(id));
-          }
-          break;
+      if (key === 'name') {
+        if (typeof value === 'string') {
+          location.name = value.trim();
         }
-        case 'geo':
-          if (isGeoPoint(value)) {
-            location.geo = { type: 'Point', coordinates: value.coordinates };
-          }
-          break;
-        case 'latitude':
-        case 'pinLatitude': {
-          const lat = value;
-          const lng =
-            snapshot.longitude ?? snapshot.pinLongitude;
-          if (typeof lat === 'number' && typeof lng === 'number') {
-            location.geo = { type: 'Point', coordinates: [lng, lat] };
-          }
-          break;
+      }
+
+      if (key === 'description') {
+        if (typeof value === 'string') {
+          location.description = value.trim();
         }
-        case 'imagesUrls':
-        case 'imageUrls': {
-          if (Array.isArray(value)) {
-            location.imagesUrls = value
-              .filter((url): url is string => typeof url === 'string')
-              .map((url, i) => ({
-                url,
-                isCover: i === 0,
-                uploadedAt: new Date(),
-              }));
-          }
-          break;
+      }
+
+      if (key === 'address') {
+        if (typeof value === 'string') {
+          location.address = value.trim();
+        }
+      }
+
+      if (key === 'openingHours') {
+        if (typeof value === 'string') {
+          location.openingHours = value;
+        }
+      }
+
+      if (key === 'phone') {
+        if (typeof value === 'string') {
+          location.phone = value;
+        }
+      }
+
+      if (key === 'accuracyMeters') {
+        if (typeof value === 'number') {
+          location.accuracyMeters = value;
+        }
+      }
+
+      if (key === 'categoryId') {
+        if (typeof value === 'string' && Types.ObjectId.isValid(value)) {
+          location.categoryId = new Types.ObjectId(value);
+        }
+      }
+
+      if (key === 'subCategoryIds') {
+        if (Array.isArray(value)) {
+          location.subCategoryIds = value
+            .filter((id): id is string => typeof id === 'string' && Types.ObjectId.isValid(id))
+            .map((id) => new Types.ObjectId(id));
+        }
+      }
+
+      if (key === 'geo') {
+        if (isGeoPoint(value)) {
+          location.geo = { type: 'Point', coordinates: value.coordinates };
+        }
+      }
+
+      if (key === 'latitude' || key === 'pinLatitude') {
+        const lat = value;
+        const lng = snapshot.longitude ?? snapshot.pinLongitude;
+        if (typeof lat === 'number' && typeof lng === 'number') {
+          location.geo = { type: 'Point', coordinates: [lng, lat] };
+        }
+      }
+
+      if (key === 'imagesUrls' || key === 'imageUrls') {
+        if (Array.isArray(value)) {
+          location.imagesUrls = value
+            .filter((url): url is string => typeof url === 'string')
+            .map((url, i) => ({
+              url,
+              isCover: i === 0,
+              uploadedAt: new Date(),
+            }));
         }
       }
     }
-
   }
 }

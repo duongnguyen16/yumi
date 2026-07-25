@@ -14,6 +14,6 @@ export class ResolveAppealDTO {
 
   @IsString()
   @MinLength(5)
-  @MaxLength(1000)
+  @MaxLength(500)
   reason!: string;
 }

@@ -31,6 +31,7 @@ import {
 } from 'src/common/contracts/notification.port';
 import { SmsService } from '../auth/services/sms.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
+import { SiteCodeImageService } from './site-code-image.service';
 
 const SESSION_TTL_MINUTES = 30;
 const MAX_OTP_ATTEMPTS = 5;
@@ -53,6 +54,7 @@ export class ClaimService {
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
     private readonly sms: SmsService,
+    private readonly siteCodeImage: SiteCodeImageService,
   ) {}
 
   // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
@@ -66,24 +68,23 @@ export class ClaimService {
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
+      // kiểm tra tính khả thi? tk có phải vendor ko, tk có bị banned k
+
       const eligibilityFailure = await this.getEligibilityFailure(vendorId);
       if (eligibilityFailure) return eligibilityFailure;
 
-      // lấy location
+      // xử lý location
       const location = await this.locationModel
         .findById(locationId)
         .lean()
         .exec();
 
-      // k có location
       if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
 
-      // location chưa publíh
       if (location.status !== LocationStatus.PUBLISHED) {
         return this.failure(409, 'Chỉ có thể claim địa điểm đã được công khai');
       }
 
-      // đã có ng sở hữu
       if (location.ownerId) {
         return this.failure(
           409,
@@ -91,7 +92,6 @@ export class ClaimService {
         );
       }
 
-      // đã có ng yêu cầu trc r
       if (await this.hasPendingSlot(locationId)) {
         return this.failure(
           409,
@@ -100,7 +100,7 @@ export class ClaimService {
       }
 
       // lấy số điện thoại
-      const phone = this.resolveListingPhone(location);
+      const phone = location.phone?.trim() || undefined;
 
       // có sdt thì yêu cầu otp
       const otpRequired = Boolean(phone);
@@ -111,7 +111,6 @@ export class ClaimService {
       // gửi mã
       if (otp && phone) await this.sms.sendOtp(phone, otp);
 
-      // lưu session, cái này được gọi là thêm k ?
       await this.sessionModel.findOneAndUpdate(
         {
           vendorId: new Types.ObjectId(vendorId),
@@ -153,6 +152,7 @@ export class ClaimService {
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
+
       const eligibilityFailure = await this.getEligibilityFailure(vendorId);
       if (eligibilityFailure) return eligibilityFailure;
       const session = await this.sessionModel
@@ -232,24 +232,22 @@ export class ClaimService {
       }
 
       // ảnh phải có vị trí và thời điểm chụp, và phải có ảnh cho thấy mã siteCode
-      const hasGeoPhoto = dto.evidenceFiles.some(
-        (file) =>
-          file.fileType === 'IMAGE' &&
-          file.geo?.coordinates.length === 2 &&
-          Boolean(file.capturedAt),
-      );
+      const hasGeoPhoto = dto.evidenceFiles.some((file) => {
+        if (file.fileType !== 'IMAGE') return false;
+        if (file.geo?.coordinates.length !== 2) return false;
+        return Boolean(file.capturedAt);
+      });
       if (!hasGeoPhoto) {
         return this.failure(
           400,
           'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
         );
       }
-      // ảnh phải có siteCode, siteCode là gì ?
-      // siteCode là cái code mà hệ thống cấp cho vendor để chụp ảnh, để chứng minh rằng vendor đã đến địa điểm đó, và ảnh phải có siteCode này trong metadata. siteCode này lấy ở đâu?
-      const siteCodeSeen = dto.evidenceFiles.some(
-        (file) => file.metadata?.siteCode === session.siteCode,
+      const siteCodeImageUrl = await this.findSiteCodeImage(
+        dto.evidenceFiles,
+        session.siteCode,
       );
-      if (!siteCodeSeen) {
+      if (!siteCodeImageUrl) {
         return this.failure(400, 'Ảnh phải cho thấy mã hệ thống đã cấp');
       }
       if (await this.hasPendingSlot(dto.locationId)) {
@@ -261,7 +259,8 @@ export class ClaimService {
         ...file,
         capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
         metadata: {
-          ...(file.metadata ?? {}),
+          ...this.sanitizeMetadata(file.metadata),
+          ...(file.url === siteCodeImageUrl ? { siteCodeVerified: true } : {}),
           ...(session.otpRequired
             ? {}
             : { adminScrutiny: 'NO_PHONE_HIGHER_SCRUTINY' }),
@@ -322,11 +321,28 @@ export class ClaimService {
         status: RequestAccessStatus.PENDING,
       }),
     ]);
-    return Boolean(claim || requestAccess);
+
+    if (claim || requestAccess) return true;
+    return false;
   }
 
-  private resolveListingPhone(location: { phone?: string }) {
-    return location.phone?.trim() || undefined;
+  private async findSiteCodeImage(
+    files: SubmitClaimDto['evidenceFiles'],
+    siteCode: string,
+  ) {
+    for (const file of files) {
+      if (file.fileType !== 'IMAGE') continue;
+
+      const matched = await this.siteCodeImage.contains(file.url, siteCode);
+      if (matched) return file.url;
+    }
+    return null;
+  }
+
+  private sanitizeMetadata(metadata?: Record<string, unknown>) {
+    const sanitized = { ...(metadata ?? {}) };
+    delete sanitized.siteCode;
+    return sanitized;
   }
 
   private async getEligibilityFailure(vendorId: string) {
@@ -367,12 +383,9 @@ export class ClaimService {
   }
 
   private isDuplicateKeyError(error: unknown): error is { code: number } {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 11000
-    );
+    if (!error || typeof error !== 'object') return false;
+    if (!('code' in error)) return false;
+    return error.code === 11000;
   }
 
   private logError(context: string, error: unknown) {

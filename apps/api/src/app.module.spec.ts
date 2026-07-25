@@ -9,6 +9,9 @@ describe('AppModule', () => {
     const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, AppModule);
 
     expect(imports).toContain(AdminModule);
+    expect(
+      imports.map((item: { name?: string }) => item?.name),
+    ).not.toContain('LocationAdminModule');
   });
 
   it('registers vendor location routes before generic location routes', () => {

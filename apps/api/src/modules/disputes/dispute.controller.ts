@@ -19,9 +19,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AdminGuard } from 'src/common/guard/admin.guard';
 import { DisputeService } from './dispute.service';
-import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { ResolveDisputeDTO } from './dto/resolve-dispute.dto';
+import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
 
 interface UserRequest extends Request {
   user: { userId: string };
@@ -61,9 +61,8 @@ export class DisputeController {
     return handle(await this.service.getForUser(id, req.user.userId));
   }
 
-   // add bằng chứng
   @Post(':id/evidence')
-  async evidence(
+  async addEvidence(
     @Param('id') id: string,
     @Body() dto: AddDisputeEvidenceDTO,
     @NestRequest() req: UserRequest,

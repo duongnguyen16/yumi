@@ -17,11 +17,9 @@ import { AppealService } from './appeal.service';
 
 describe('Kiểm thử hợp đồng kháng nghị', () => {
   it('hỗ trợ chuyển cấp yêu cầu quyền truy cập', () => {
-    expect(AppealType.REQUEST_ACCESS_REJECTED).toBe(
-      'REQUEST_ACCESS_REJECTED',
-    );
+    expect(AppealType.REQUEST_ACCESS_REJECTED).toBe('REQUEST_ACCESS_REJECTED');
     expect(AppealStatus.ACCEPTED_TO_DISPUTE).toBe('ACCEPTED_TO_DISPUTE');
-    expect(AppealType.USER_WARNED).toBe('USER_WARNED');
+    expect(AppealType.USER_BANNED).toBe('USER_BANNED');
   });
 
   it('lưu ngữ cảnh quyết định kháng nghị', () => {
@@ -88,7 +86,11 @@ describe('Kiểm thử AppealService', () => {
       targetId: String(targetId),
       argument: 'Tôi có thêm bằng chứng tại địa điểm',
       additionalEvidenceFiles: [
-        { url: 'https://example.com/proof.jpg', fileType: 'IMAGE' as const },
+        {
+          url: 'https://example.com/proof.jpg',
+          fileType: 'IMAGE' as const,
+          capturedAt: '2026-07-23T08:00:00.000Z',
+        },
       ],
     };
   }
@@ -123,6 +125,9 @@ describe('Kiểm thử AppealService', () => {
         appellantId: userId,
         status: AppealStatus.PENDING,
         argument: dto().argument,
+        additionalEvidenceFiles: [
+          expect.objectContaining({ capturedAt: expect.any(Date) }),
+        ],
       }),
     );
   });
@@ -142,7 +147,9 @@ describe('Kiểm thử AppealService', () => {
   it('chặn quyết định đã hết hạn', async () => {
     const { service, appealModel, source } = setup();
     source.load.mockResolvedValue(
-      sourceData({ decidedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000) }),
+      sourceData({
+        decidedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+      }),
     );
 
     const result = await service.submit(String(userId), dto());
@@ -195,14 +202,8 @@ describe('Kiểm thử AppealService', () => {
   });
 
   it('chấp nhận kháng nghị yêu cầu truy cập bị từ chối để mở một tranh chấp', async () => {
-    const {
-      service,
-      appealModel,
-      reqModel,
-      disputeModel,
-      audit,
-      notify,
-    } = setup();
+    const { service, appealModel, reqModel, disputeModel, audit, notify } =
+      setup();
     const appeal = {
       _id: new Types.ObjectId(),
       type: AppealType.REQUEST_ACCESS_REJECTED,

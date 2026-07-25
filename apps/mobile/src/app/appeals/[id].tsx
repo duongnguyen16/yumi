@@ -1,5 +1,6 @@
 import Timeline from "@/components/workflow/Timeline";
 import WorkflowDetailScreen from "@/components/workflow/WorkflowDetailScreen";
+import EvidenceGallery from "@/components/workflow/evidence-gallery";
 import { getWorkflowStatus } from "@/components/workflow/status";
 import { getAppeal, type AppealItem } from "@/service/appealService";
 import { GroupedList, ListRow } from "@/ui/components";
@@ -21,33 +22,100 @@ export default function AppealDetailScreen() {
 
   useEffect(() => {
     let active = true;
-    if (id) getAppeal(id).then((response) => {
-      if (!active) return;
-      setItem(response.appeal || null);
-      setDisputeId(response.disputeId || null);
-      setMessage(response.success ? "" : response.message || "Không thể lấy kháng cáo.");
-      setLoading(false);
-    });
-    return () => { active = false; };
+    if (id) {
+      getAppeal(id).then((response) => {
+        if (!active) return;
+
+        setItem(response.appeal || null);
+        setDisputeId(response.disputeId || null);
+        if (response.success) {
+          setMessage("");
+        } else {
+          setMessage(response.message || "Không thể lấy kháng cáo.");
+        }
+        setLoading(false);
+      });
+    }
+
+    return () => {
+      active = false;
+    };
   }, [id]);
+
+  const action = disputeId
+    ? {
+        label: "Mở hồ sơ tranh chấp",
+        onPress: () => router.push(`/disputes/${disputeId}` as never),
+      }
+    : undefined;
+  const status = getWorkflowStatus(item?.status);
+  const timelineItems = [
+    {
+      title: "Đã gửi kháng cáo",
+      detail: item?.argument,
+      active: true,
+    },
+    {
+      title: status.label,
+      detail: "Trạng thái xử lý hiện tại",
+    },
+  ];
+  const deadline = item?.appealDeadline
+    ? new Date(item.appealDeadline).toLocaleString("vi-VN")
+    : "—";
+  const originalDecidedAt = item?.originalDecidedAt
+    ? new Date(item.originalDecidedAt).toLocaleString("vi-VN")
+    : "—";
+  const decidedAt = item?.adminDecision?.decidedAt
+    ? new Date(item.adminDecision.decidedAt).toLocaleString("vi-VN")
+    : "—";
 
   return (
     <WorkflowDetailScreen
-      action={disputeId ? { label: "Mở hồ sơ tranh chấp", onPress: () => router.push(`/disputes/${disputeId}` as never) } : undefined}
+      action={action}
       loading={loading}
       message={message}
       navigationTitle="Chi tiết kháng cáo"
       onBack={() => router.back()}
       onMessageDismiss={() => setMessage("")}
-      status={getWorkflowStatus(item?.status)}
+      status={status}
       supportingText={item?.argument}
       title={item?.type ?? "Kháng cáo"}
     >
-      <Timeline items={[{ title: "Đã gửi kháng cáo", detail: item?.argument, active: true }, { title: getWorkflowStatus(item?.status).label, detail: "Trạng thái xử lý hiện tại" }]} />
+      <Timeline items={timelineItems} />
       <GroupedList>
-        <ListRow label="Quyết định gốc" showChevron={false} supportingText={item?.originalDecisionReason || "Không có lý do."} />
-        <ListRow label="Hạn kháng cáo" showChevron={false} value={item?.appealDeadline ? new Date(item.appealDeadline).toLocaleString("vi-VN") : "—"} />
+        <ListRow
+          label="Quyết định gốc"
+          showChevron={false}
+          supportingText={item?.originalDecisionReason || "Không có lý do."}
+        />
+        <ListRow
+          label="Thời điểm quyết định gốc"
+          showChevron={false}
+          value={originalDecidedAt}
+        />
+        <ListRow label="Hạn kháng cáo" showChevron={false} value={deadline} />
       </GroupedList>
+      <EvidenceGallery
+        evidence={item?.additionalEvidenceFiles || []}
+        title="Bằng chứng kháng cáo"
+      />
+      {item?.adminDecision ? (
+        <GroupedList>
+          <ListRow
+            label="Lý do xử lý"
+            showChevron={false}
+            supportingText={
+              item.adminDecision.reason || "Không có lý do xử lý."
+            }
+          />
+          <ListRow
+            label="Thời điểm xử lý"
+            showChevron={false}
+            value={decidedAt}
+          />
+        </GroupedList>
+      ) : null}
     </WorkflowDetailScreen>
   );
 }

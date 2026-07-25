@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsMongoId,
   IsOptional,
@@ -19,10 +20,10 @@ export class CreateRequestAccessDTO {
   @MaxLength(500)
   reason?: string;
 
-  @IsOptional()
   @IsArray()
+  @ArrayMinSize(1)
   @ArrayMaxSize(5)
   @ValidateNested({ each: true })
   @Type(() => AccessEvidenceDTO)
-  evidenceFiles?: AccessEvidenceDTO[];
+  evidenceFiles!: AccessEvidenceDTO[];
 }

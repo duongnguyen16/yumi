@@ -16,7 +16,6 @@ import { AuditModule } from './common/services/audit.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { LocationContributionsModule } from './modules/location-contributions/location-contributions.module';
-import { LocationAdminModule } from './modules/location-admin/location-admin.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { VendorLocationsModule } from './modules/vendor-locations/vendor-locations.module';
 import { LocationReportsModule } from './modules/location-reports/location-reports.module';
@@ -62,7 +61,6 @@ import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
     ProductsModule,
     ReviewsModule,
     LocationContributionsModule,
-    LocationAdminModule,
     AdminModule,
     LocationReportsModule,
     AdminReportsModule,

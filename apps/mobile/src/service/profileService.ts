@@ -1,6 +1,4 @@
-import axios from "axios";
 import api from "./aixos";
-import { getAccessToken } from "./tokenStorage";
 import { toAbsoluteUrl } from "./url";
 
 type ProfileUpdate = {
@@ -49,14 +47,13 @@ const updateProfile = async ({ name, avatar }: ProfileUpdate) => {
       avatarUri: avatar?.uri ?? null,
     });
 
-    const accessToken = getAccessToken();
-    const response = await axios.patch(
-      `${api.defaults.baseURL}/users/profile`,
+    const response = await api.patch(
+      "/users/profile",
       formData,
       {
         headers: {
           Accept: "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          "Content-Type": "multipart/form-data",
         },
         transformRequest: (data) => data,
       },

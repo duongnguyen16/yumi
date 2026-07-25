@@ -379,7 +379,7 @@ export interface ClaimEvidenceFile {
   geo?: { type: "Point"; coordinates: [number, number] };
   capturedAt?: string;
   metadata?: {
-    siteCode?: string;
+    siteCodeVerified?: boolean;
     adminScrutiny?: string;
     [key: string]: unknown;
   };
@@ -458,17 +458,6 @@ export async function rejectClaim(
   const res = await api.patch<ClaimActionResponse>(
     `/admin/claims/${id}/reject`,
     { reason },
-  );
-  return res.data;
-}
-
-export async function requestClaimEvidence(
-  id: string,
-  message: string,
-): Promise<ClaimActionResponse> {
-  const res = await api.patch<ClaimActionResponse>(
-    `/admin/claims/${id}/request-evidence`,
-    { message },
   );
   return res.data;
 }
