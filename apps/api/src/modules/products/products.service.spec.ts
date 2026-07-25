@@ -185,6 +185,53 @@ describe('ProductsService product images', () => {
     expect(product.deleteOne).toHaveBeenCalled();
   });
 
+  it('blocks product deletion during ownership hold', async () => {
+    const { service, productModel, locationModel, imagesService } =
+      createService();
+    const product = createProductDocument({
+      imagePath: `location-products/${locationId}/${productId}/old.png`,
+    });
+    productModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(product),
+    });
+    locationModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId(locationId),
+        ownerId: new Types.ObjectId(userId),
+        holdExpiresAt: new Date(Date.now() + 60_000),
+      }),
+    });
+
+    await expect(service.remove(productId, userId)).rejects.toThrow(
+      'đang khóa chuyển quyền',
+    );
+    expect(imagesService.deleteProductImage).not.toHaveBeenCalled();
+    expect(product.deleteOne).not.toHaveBeenCalled();
+  });
+
+  it('allows product deletion after ownership hold expires', async () => {
+    const { service, productModel, locationModel, imagesService } =
+      createService();
+    const product = createProductDocument({
+      imagePath: `location-products/${locationId}/${productId}/old.png`,
+    });
+    productModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(product),
+    });
+    locationModel.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId(locationId),
+        ownerId: new Types.ObjectId(userId),
+        holdExpiresAt: new Date(Date.now() - 60_000),
+      }),
+    });
+
+    await service.remove(productId, userId);
+
+    expect(imagesService.deleteProductImage).toHaveBeenCalled();
+    expect(product.deleteOne).toHaveBeenCalled();
+  });
+
   it('deletes a legacy product without calling Supabase', async () => {
     const { service, productModel, imagesService } = createService();
     const product = createProductDocument({

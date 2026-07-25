@@ -21,7 +21,10 @@ import type { Request } from 'express';
 import { CreateRequestAccessDTO } from './dto/create-request-access.dto';
 import { ListRequestAccessDTO } from './dto/list-request-access.dto';
 import { RespondRequestAccessDTO } from './dto/respond-request-access.dto';
+import { StartAccessVerificationDTO } from './dto/start-access-verification.dto';
+import { VerifyAccessOtpDTO } from './dto/verify-access-otp.dto';
 import { VerifyTakeoverDTO } from './dto/verify-takeover.dto';
+import { RequestAccessVerificationService } from './request-access-verification.service';
 import { RequestAccessService } from './request-access.service';
 
 interface UserRequest extends Request {
@@ -39,7 +42,39 @@ interface ServiceResult {
 @Controller('request-access')
 @UseGuards(AuthGuard('jwt-at'))
 export class RequestAccessController {
-  constructor(private readonly service: RequestAccessService) {}
+  constructor(
+    private readonly service: RequestAccessService,
+    private readonly verification: RequestAccessVerificationService,
+  ) {}
+
+  @Post('verification/start')
+  async startVerification(
+    @Body() dto: StartAccessVerificationDTO,
+    @NestRequest() req: UserRequest,
+  ) {
+    return this.handle(
+      await this.verification.start(
+        req.user.userId,
+        dto.locationId,
+        dto.purpose,
+        dto.requestAccessId,
+      ),
+    );
+  }
+
+  @Post('verification/verify-otp')
+  async verifyOtp(
+    @Body() dto: VerifyAccessOtpDTO,
+    @NestRequest() req: UserRequest,
+  ) {
+    return this.handle(
+      await this.verification.verifyOtp(
+        dto.sessionId,
+        req.user.userId,
+        dto.otp,
+      ),
+    );
+  }
 
   // tạo request access
   @Post()

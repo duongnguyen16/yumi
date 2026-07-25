@@ -10,6 +10,15 @@ function createService(location: Record<string, unknown>) {
       exec: jest.fn().mockResolvedValue(location),
     }),
   };
+  const session = {
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn().mockResolvedValue(undefined),
+    abortTransaction: jest.fn().mockResolvedValue(undefined),
+    endSession: jest.fn().mockResolvedValue(undefined),
+  };
+  const connection = {
+    startSession: jest.fn().mockResolvedValue(session),
+  };
   const service = new VendorLocationsService(
     locationModel as never,
     { create: jest.fn() } as never,
@@ -20,6 +29,7 @@ function createService(location: Record<string, unknown>) {
     { getDistanceMeters: jest.fn() } as never,
     {} as never,
     {} as never,
+    connection as never,
   );
   return { service, locationModel };
 }

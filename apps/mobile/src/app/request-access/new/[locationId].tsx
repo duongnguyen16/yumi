@@ -1,4 +1,9 @@
-import { createAccess } from "@/service/requestAccessService";
+import {
+  createAccess,
+  startAccessVerification,
+  verifyAccessOtp,
+} from "@/service/requestAccessService";
+import { getAccessVerificationState } from "@/navigation/request-access-verification";
 import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
   AppText,
@@ -11,6 +16,7 @@ import {
   Page,
   PageContent,
   TextArea,
+  TextField,
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
 import { colors } from "@/ui/tokens";
@@ -22,7 +28,7 @@ import {
   useLocalSearchParams,
   useRouter,
 } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Proof = {
   uri: string;
@@ -45,6 +51,50 @@ export default function NewAccessScreen() {
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (!locationId) return;
+
+    startAccessVerification(locationId, "CREATE").then((response) => {
+      if (!active) return;
+      if (!response.success || !response.sessionId) {
+        setMessage(response.message || "Không thể bắt đầu xác minh.");
+        return;
+      }
+      setSessionId(response.sessionId);
+      setOtpRequired(response.otpRequired === true);
+      setOtpVerified(response.otpRequired !== true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [locationId]);
+
+  const verificationState = getAccessVerificationState({
+    sessionId,
+    otpRequired,
+    otpVerified,
+    submitting: loading,
+  });
+
+  const verifyOtp = async () => {
+    if (!sessionId || otp.length !== 6) return;
+    setLoading(true);
+    setMessage("");
+    const response = await verifyAccessOtp(sessionId, otp);
+    setLoading(false);
+    if (!response.success) {
+      setMessage(response.message || "Không thể xác minh OTP.");
+      return;
+    }
+    setOtpVerified(true);
+  };
 
   const takeProof = async () => {
     if (proofs.length >= 5) return;
@@ -74,7 +124,7 @@ export default function NewAccessScreen() {
   };
 
   const submit = async () => {
-    if (!locationId || proofs.length === 0) return;
+    if (!locationId || !sessionId || verificationState !== "READY" || proofs.length === 0) return;
 
     setLoading(true);
     setMessage("");
@@ -108,6 +158,7 @@ export default function NewAccessScreen() {
         locationId,
         reason.trim() || undefined,
         evidenceFiles,
+        sessionId,
       );
       if (!response.success) {
         setMessage(response.message || "Không thể gửi yêu cầu.");
@@ -158,6 +209,26 @@ export default function NewAccessScreen() {
             supportingText="Chụp từ 1 đến 5 ảnh tại địa điểm; ảnh được gửi kèm vị trí hiện tại."
             title="Bằng chứng tại địa điểm"
           />
+          {otpRequired && !otpVerified ? (
+            <>
+              <TextField
+                keyboardType="number-pad"
+                label="Mã OTP"
+                maxLength={6}
+                onChangeText={(value) =>
+                  setOtp(value.replace(/\D/g, "").slice(0, 6))
+                }
+                value={otp}
+              />
+              <Button
+                disabled={loading || otp.length !== 6}
+                label="Xác minh OTP"
+                loading={loading}
+                onPress={verifyOtp}
+                width="full"
+              />
+            </>
+          ) : null}
           <AppText style={{ color: colors.textSecondary }} variant="caption">
             Nếu chủ không phản hồi sau 3 ngày, hệ thống sẽ yêu cầu xác minh lại
             trước khi chuyển quyền.
@@ -166,7 +237,7 @@ export default function NewAccessScreen() {
       </PageContent>
       <BottomActionBar>
         <Button
-          disabled={loading || proofs.length === 0}
+          disabled={loading || verificationState !== "READY" || proofs.length === 0}
           label="Gửi yêu cầu"
           loading={loading}
           onPress={submit}

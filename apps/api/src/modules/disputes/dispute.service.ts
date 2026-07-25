@@ -142,10 +142,35 @@ export class DisputeService {
       .populate('locationId', 'name address ownerId holdExpiresAt')
       .populate('vendorAId', 'fullName email phone trustLevel')
       .populate('vendorBId', 'fullName email phone trustLevel')
+      .populate(
+        'requestAccessId',
+        'requestReason responseReason createdAt respondedAt',
+      )
+      .populate('appealId', 'argument createdAt')
       .lean()
       .exec();
     if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
-    return { success: true, dispute: item };
+    const requestAccess =
+      item.requestAccessId && typeof item.requestAccessId === 'object'
+        ? (item.requestAccessId as unknown as Record<string, unknown>)
+        : null;
+    const appeal =
+      item.appealId && typeof item.appealId === 'object'
+        ? (item.appealId as unknown as Record<string, unknown>)
+        : null;
+    return {
+      success: true,
+      dispute: {
+        ...item,
+        context: {
+          requestReason: requestAccess?.requestReason,
+          ownerResponseReason: requestAccess?.responseReason,
+          appealArgument: appeal?.argument,
+          requestedAt: requestAccess?.createdAt,
+          rejectedAt: requestAccess?.respondedAt,
+        },
+      },
+    };
   }
 
   async resolve(id: string, adminId: string, dto: ResolveDisputeDTO) {

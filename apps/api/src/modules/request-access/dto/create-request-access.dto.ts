@@ -15,6 +15,9 @@ export class CreateRequestAccessDTO {
   @IsMongoId()
   locationId!: string;
 
+  @IsMongoId()
+  verificationSessionId!: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(500)

@@ -101,6 +101,22 @@ export class AdminLocationController {
     );
   }
 
+  @Patch(':id/confirm-duplicate')
+  async confirmDuplicate(
+    @Param('id') id: string,
+    @Body() body: ConfirmDuplicateLocationDTO,
+    @NestRequest() req: AuthenticatedRequest,
+  ) {
+    return this.handle(
+      await this.service.confirmDuplicateRequest(
+        id,
+        req.user.userId,
+        body.reason,
+        body.duplicateOfLocationId,
+      ),
+    );
+  }
+
   private handle<T extends ServiceResponse>(r: T) {
     if (!r.success) {
       if (r.statusCode === 400) throw new BadRequestException(r.message);

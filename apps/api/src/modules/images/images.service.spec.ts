@@ -153,4 +153,22 @@ describe('ImagesService', () => {
       } as Express.Multer.File),
     ).rejects.toThrow('Ảnh sản phẩm phải nhỏ hơn hoặc bằng 5MB');
   });
+
+  it('accepts only location media owned by the expected user in the configured bucket', () => {
+    const service = createService();
+
+    expect(() =>
+      service.assertOwnedLocationMediaUrl(
+        'user-id',
+        'https://project.supabase.co/storage/v1/object/public/images/locations/user-id/proof.jpg',
+      ),
+    ).not.toThrow();
+
+    expect(() =>
+      service.assertOwnedLocationMediaUrl(
+        'user-id',
+        'https://project.supabase.co/storage/v1/object/public/images/locations/other-user/proof.jpg',
+      ),
+    ).toThrow('không thuộc người dùng');
+  });
 });

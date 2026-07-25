@@ -461,6 +461,7 @@ export class VendorLocationsService {
             status: LocationRequestStatus.PENDING,
             submittedBy: new Types.ObjectId(userId),
             locationId: location[0]._id,
+            ownershipRequested: true,
             newData: {
               ...locationDataParsed,
             },

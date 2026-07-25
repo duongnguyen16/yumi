@@ -181,6 +181,58 @@ describe('Kiểm thử AdminLocationService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
+  it('gán người gửi làm owner khi duyệt đăng ký có sở hữu', async () => {
+    const { service, reqModel, locModel } = createService();
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      ownershipRequested: true,
+      verificationProof: { proofUrls: ['https://storage/proof.mp4'] },
+      newData: {},
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      status: LocationStatus.SUBMITTED,
+      ownerId: undefined,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.approve(String(request._id), String(adminId));
+
+    expect(result.success).toBe(true);
+    expect(location.ownerId).toEqual(request.submittedBy);
+  });
+
+  it('không gán owner khi duyệt đóng góp cộng đồng', async () => {
+    const { service, reqModel, locModel } = createService();
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      ownershipRequested: false,
+      newData: {},
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      status: LocationStatus.SUBMITTED,
+      ownerId: undefined,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    await service.approve(String(request._id), String(adminId));
+
+    expect(location.ownerId).toBeUndefined();
+  });
+
   it('từ chối lý do từ chối rỗng trước khi thay đổi dữ liệu', async () => {
     const { service, reqModel, locModel } = createService();
     const request = {
@@ -248,5 +300,40 @@ describe('Kiểm thử AdminLocationService', () => {
         refId: String(locationId),
       }),
     );
+  });
+
+  it('đóng phiếu khi admin xác nhận địa điểm trùng', async () => {
+    const { service, reqModel, locModel } = createService();
+    const originalLocationId = new Types.ObjectId();
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      name: 'Quan nghi trung',
+      submittedBy: submitterId,
+      status: LocationStatus.SUBMITTED,
+      isDuplicate: false,
+      isSuspectedDuplicate: true,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.confirmDuplicateRequest(
+      String(request._id),
+      String(adminId),
+      'Trùng địa điểm đã tồn tại',
+      String(originalLocationId),
+    );
+
+    expect(result.success).toBe(true);
+    expect(request.status).toBe(LocationRequestStatus.REJECTED);
+    expect(location.status).toBe(LocationStatus.HIDDEN);
+    expect(location.isDuplicate).toBe(true);
   });
 });

@@ -2,7 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Location } from 'src/common/schemas/location.schema';
 
 export type HoldAction =
-  'HIDE_LOCATION' | 'BULK_DELETE_PRODUCTS' | 'EDIT_CORE_INFO';
+  'HIDE_LOCATION' | 'BULK_DELETE_PRODUCTS' | 'EDIT_CORE_INFO' | 'DELETE_PRODUCT';
 
 export function isUnderHold(
   loc: Pick<Location, 'holdExpiresAt'>,
