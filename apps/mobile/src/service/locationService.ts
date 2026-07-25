@@ -10,15 +10,27 @@ const getCurrentLocation = async () => {
   try {
     const hasPermission = await checkPermission();
     if (!hasPermission) {
-      throw new Error("Permission to access location was denied");
+      return {
+        success: false,
+        message:
+          "Ứng dụng không có quyền truy cập vị trí. Vui lòng cấp quyền để sử dụng tính năng này.",
+        locationData: null,
+      };
     }
     const locationWatch = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.High,
     });
-    return locationWatch;
+    return {
+      success: true,
+      locationData: locationWatch,
+    };
   } catch (error) {
     console.error("Error starting location watch:", error);
-    return null;
+    return {
+      success: false,
+      message: "Không lấy được vị trí hiện tại.",
+      locationData: null,
+    };
   }
 };
 

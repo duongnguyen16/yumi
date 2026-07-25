@@ -59,7 +59,7 @@ These are **not** standalone features; they are **shared services**. Do not reim
 
 | ID | Service | Built in ticket | Callers |
 |---|---|---|---|
-| **M1** | Duplicate detection (string similarity + Haversine < 50m) | **F14 / WDP-18** | F13 (submit), F25 (vendor register) |
+| **M1** | Duplicate detection (string similarity + Haversine < 50m) | **F14 / WDP-18** | F13 (submit), F25 (ownership register) |
 | **M2** | Trust engine (TrustEvent + scoring + level + gating) | **F29 / WDP-33** | F15, F19, F22, F27, F31 (everywhere content/ownership is resolved) |
 | **M3** | Notification (email + SMS/OTP + in-app) | **F03 / WDP-7** | F04, F06, F15, F22, F23, F24, F26, F27, F28, F31 |
 | **M4** | Location handling (fused location + accuracy + manual pin + reverse geocode) | shared inside **F08/F13** | F13, F25 (record pin<->device distance) |
@@ -93,13 +93,14 @@ This is the section **agents violate most often**. Read carefully. One violation
 | I2 | **Only `PUBLISHED`** appears publicly / in search / share / trending. | BR-11 | a query that forgets the status filter |
 | I3 | **Guests are read-only.** Every write action (bookmark/review/report/claim/submit) -> require login. | BR-21 | a write endpoint with no auth guard |
 | I4 | **Every Admin action writes an AuditLog** (who/what/when/why); logs are immutable. | BR-43 | resolving a report / banning without logging |
-| I5 | **"Creating data != ownership".** Submit/contribute does **not** assign an owner. Ownership comes only from claim/register-with-proof/transfer. | §3, BR-60 | setting `owner` when a Customer submits |
+| I5 | **"Creating data != ownership".** The ordinary contribution flow does **not** assign an owner. Ownership comes only from an Admin-approved claim/register-with-proof/transfer. | §3, BR-60 | setting `owner` for a Customer's community-only contribution |
 | I6 | **1 location = 1 owner; 1 PENDING slot** (claim **or** request-access) at a time. | BR-28, BR-61 | two PENDING claims in parallel |
 | I7 | **Every price field** carries a locked "Reference price" disclaimer. | BR-16 | rendering a bare price |
 | I8 | **All ownership/content changes emit a TrustEvent via M2**; never add/subtract points ad hoc. | §10 | `user.trust_score += 5` in a controller |
 | I9 | **Locations outside the Hòa Lạc radius are rejected.** | BR-40 (M5) | creating a location without validating coordinates |
 | I10 | **Vendors cannot delete customer reviews**; only Admin removes. Vendors **cannot** review their own location. | BR-18, BR-48 | an endpoint letting a vendor delete a review |
-| I11 | **Creating a new review requires on-site proof**: GPS/fused location ≤50m with accuracy ≤50m, or valid on-site photo proof; no manual pin. | BR-68, BR-69 | creating a remote review or changing `locationId` on edit |
+| I11 | **Creating a new review requires a presence check**: current GPS/fused location must be within 100m of the location with accuracy ≤50m; no manual pin or photo substitute. Editing an existing review does not rerun the distance check. | BR-68, BR-69 | creating outside 100m or changing `locationId` on edit |
+| I12 | **A Customer may request ownership after phone verification.** Admin approval of a new-location ownership registration or claim must assign the owner and change `CUSTOMER -> VENDOR` in one transaction; rejection does not change the role. | BR-02, BR-29, BR-45, BR-70 | assigning ownership while leaving the owner as Customer, or promoting before approval |
 
 > **Reversibility (founding principle #4):** every destructive action must be reversible + leave a trace. When unsure "delete or hide?" -> **always hide (soft)**.
 
@@ -124,9 +125,9 @@ F29 (trust M2, WDP-33) ─── shared service, build early in S2 -> called by 
 F14 (dedup M1, WDP-18) ─── shared service -> called by F13,F25
 
 F13 (submit) -> needs F14 (M1) + F08 (pin/map) -> creates SUBMITTED -> F15 (admin approve)
-F19 (review) -> needs location/detail + F08/M4 on-site proof + F29 (trust +2)
+F19 (review) -> needs location/detail + F08/M4 GPS presence check within 100m + F29 (trust +2)
 F23 (claim) -> needs F03 (OTP) + code issuance -> F24 (admin review claim)
-F25 (vendor register) -> needs F13(form) + F23 proof mechanism + F15(approve)
+F25 (ownership register) -> needs F13(form) + F03 (phone verification) + F23 proof mechanism + F15(approve)
 F26 (request-access) -> needs ownership to exist (F24/F25) + F03
 F27 (dispute) -> only needs F26 (RequestAccess rejected/refused + B appeal) + F03
 F28 (appeal) -> needs the decisions it can appeal: F26,F16,F24,F15,F27,F22,F31  (build last)
@@ -180,9 +181,9 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **Goal:** Two-role form; **Vendor must verify phone** (OTP); email unique; password hashed.
 - **Depends:** F03 (OTP), F01.
 - **Touches:** `api` (Auth), `mobile`.
-- **Rules:** BR-01 (email unique), BR-02 (Vendor verifies phone, Customer optional), BR-03 (OTP 5min/5 attempts), BR-04 (hash password).
-- **Notes:** a Vendor **without OTP cannot create an account**. A Customer who skips phone -> skips OTP (AF01.1).
-- **DoD:** both account types can be created; a Vendor missing OTP is rejected.
+- **Rules:** BR-01 (email unique), BR-02 (Vendor verifies phone; Customer phone is optional for ordinary features but must be verified before ownership registration/claim), BR-03 (OTP 5min/5 attempts), BR-04 (hash password).
+- **Notes:** a Vendor **without OTP cannot create an account**. A Customer may omit a phone during account registration, but must add and verify one before entering F23/F25 (AF01.1).
+- **DoD:** both account types can be created; a Vendor missing OTP is rejected; a Customer with an unverified phone can use ordinary features but is blocked from ownership registration/claim.
 - **Avoid:** storing plaintext passwords.
 
 #### WDP-9 · F05 — Login / Logout  `Done` · owner: Minh · **Core**
@@ -263,12 +264,12 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **DoD:** approval changes status correctly; submitter notified; audit written; trust updated.
 
 #### WDP-23 · F19 — Review  `To Do` · owner: Long · **Core**
-- **Goal:** Create/edit/delete; rating 1-5 + content + <= 3 photos; **new reviews require on-site proof**; **1 review/user/location**; block reviewing your own location; recompute avg rating.
+- **Goal:** Create/edit/delete; rating 1-5 + content + <= 3 photos; **new reviews require the current device position to be within 100m of the location**; **1 review/user/location**; block reviewing your own location; recompute avg rating.
 - **Depends:** F10 (detail), F08/M4 (GPS/fused location + accuracy), F29 (trust +2), F04.
-- **Rules:** BR-17 (1/user/location, update not duplicate), BR-18 (Vendor can't review own location — **I10**), BR-19 (surviving review -> M2 +2), BR-48 (Vendor can't delete customer reviews), **BR-68** (new review needs GPS/fused ≤50m with accuracy ≤50m or valid on-site photo proof; no manual pin), **BR-69** (remote edit of an old review is allowed, but cannot change `locationId` or create a new review).
-- **Notes:** check presence before creating a review; if GPS fails, require valid on-site photo proof. Editing/deleting an old review does not require new proof. Author delete -> `DELETED` + recompute rating; Admin remove -> `REMOVED_BY_ADMIN`.
-- **DoD:** creating is blocked without valid GPS and without photo proof; remote edit of an old review still works; avg rating updates on add/edit/delete.
-- **Avoid:** creating remote reviews via manual pin; letting a Vendor delete customer reviews; reviewing your own location; changing `locationId` on edit.
+- **Rules:** BR-17 (1/user/location, update not duplicate), BR-18 (Vendor can't review own location — **I10**), BR-19 (surviving review -> M2 +2), BR-48 (Vendor can't delete customer reviews), **BR-68** (a new review needs the current GPS/fused position within 100m with accuracy ≤50m; no manual pin or photo substitute), **BR-69** (remote edit of an old review is allowed without rerunning the distance check, but cannot change `locationId` or create a new review).
+- **Notes:** on create, capture the device position at submission time and calculate Haversine distance before saving. Block when no valid position is available, accuracy is >50m, or distance is >100m. Editing/deleting an old review does not request location again. Author delete -> `DELETED` + recompute rating; Admin remove -> `REMOVED_BY_ADMIN`.
+- **DoD:** creation succeeds only with valid GPS/fused location, accuracy ≤50m, and distance ≤100m; it is blocked outside the radius or without location even when photos exist; remote edit of an old review still works; avg rating updates on add/edit/delete.
+- **Avoid:** creating remote reviews via manual pin or photo proof; letting a Vendor delete customer reviews; reviewing your own location; changing `locationId` on edit; applying the distance check to edits of existing reviews.
 
 #### WDP-33 · F29 — Trust engine (M2)  `In Progress` · owner: Trung · **Core**
 - **Goal:** `TrustEvent` + scoring (**+15 / +5 / +2, -10 / -10**); levels `RESTRICTED/NEW/TRUSTED` (T=30); gating: block submit when RESTRICTED, fast-track when TRUSTED. *(HF-9)*
@@ -310,29 +311,29 @@ F35 (audit+dashboard) -> audit LOGGING shared from S1; dashboard VIEW in S4
 - **Notes:** remove review -> `REMOVED_BY_ADMIN` + recompute rating. Correct report -> +5 reporter; malicious -> -10. A "wrong owner" report can **REJECT_REPORT**, **APPROVE_REPORT_NO_REVOKE**, or **REVOKE_OWNER**; if approved/revoked, notify the affected vendor with an appeal button. Do not create F27 Dispute from a report.
 - **DoD:** status changes correctly; "wrong owner" reports do not open Dispute; trust updates; audit written.
 
-#### WDP-27 · F23 — Claim location + verification  `To Do` · owner: Dương · **Core**
-- **Goal:** **OTP to listing phone** + system-**issued one-time code** + upload **geotagged on-site proof** (signboard + code + timestamp) + optional license; block when a PENDING request already exists. *(HF-3)*
-- **Depends:** **F03 (OTP)**, F10, F04.
+#### WDP-27 · F23 — Customer/Vendor claim location + verification  `To Do` · owner: Dương · **Core**
+- **Goal:** Let a Customer or Vendor with a verified account phone claim an unowned location; **OTP to listing phone** + system-**issued one-time code** + upload **geotagged on-site proof** (signboard + code + timestamp) + optional license; block when a PENDING request already exists. *(HF-3)*
+- **Depends:** **F03 (verified account phone)**, F10, F04.
 - **Touches:** `api` (Claim), `mobile`.
-- **Rules:** BR-14 (OTP to listing phone when one exists + on-site proof **mandatory**), BR-15 (license optional, verification = physical control), **BR-61/I6 (1 PENDING slot)**, BR-02 (Vendor verified).
-- **Notes:** the main proof factors are **geotag + timestamp + one-time code**; OTP is mandatory when the listing has a phone. Listing with no phone yet -> skip OTP, rely on on-site proof + closer Admin scrutiny. Already owned -> block claim and send the Vendor to **RequestAccess F26**; if the owner looks fraudulent, they can file a "wrong owner" report via F21.
-- **DoD:** a listing with a phone requires OTP + on-site proof; a listing without a phone requires strong proof; a duplicate PENDING slot is blocked.
+- **Rules:** BR-14 (requester must verify the account phone; OTP to listing phone when one exists + on-site proof **mandatory**), BR-15 (license optional, verification = physical control), **BR-61/I6 (1 PENDING slot)**, BR-02.
+- **Notes:** an unverified Customer is blocked and directed to F03. The main proof factors are **geotag + timestamp + one-time code**; listing-phone OTP is mandatory when the listing has a phone. If the listing has no phone, skip listing OTP but still require a verified account phone, on-site proof, and closer Admin scrutiny. If already owned, a Customer cannot request access; an existing Vendor goes to **RequestAccess F26**. Suspected fraud can be reported as "wrong owner" through F21.
+- **DoD:** only a Customer/Vendor with a verified account phone can submit a claim; a listing with a phone requires listing OTP + on-site proof; a listing without a phone requires strong proof; a duplicate PENDING slot is blocked.
 - **Avoid:** allowing a claim missing proof. Assigning owner at this step (owner is set in F24). Opening Dispute from a claim on an already-owned location.
 
 #### WDP-28 · F24 — Admin review claim  `To Do` · owner: Dương · **High**
-- **Goal:** Cross-check OTP + on-site proof; **approve -> assign owner + badge**; reject -> new claim without overwrite; allow requesting more evidence.
+- **Goal:** Cross-check account-phone verification + listing OTP + on-site proof; **approve -> assign owner + badge and, when the requester is a Customer, change the role to Vendor in the same transaction**; reject -> preserve the role and allow a new claim without overwrite; allow requesting more evidence.
 - **Depends:** F23, **F03**.
-- **Rules:** BR-45 (approve only when OTP verified + proof matches), BR-46 (reject -> new claim, **no overwrite**), BR-29 (assign owner), BR-43 (I4).
-- **Notes:** approve -> set `owner` + "Verified" badge + M3. If a different owner exists at review time, do not approve an overlapping claim; stop/reject with a reason and direct the Vendor to **RequestAccess F26**. A Dispute only opens after RequestAccess is rejected/refused by the owner and B appeals. License -> fast-track.
-- **DoD:** approve sets the owner; reject opens a new claim (old record preserved).
+- **Rules:** BR-45 (approve only when account phone is verified + listing OTP requirements pass + proof matches), BR-46 (reject -> new claim, **no overwrite**), BR-29 (assign owner), BR-70/I12 (Customer -> Vendor on approval), BR-43 (I4).
+- **Notes:** approval must transactionally set `owner`, change `CUSTOMER -> VENDOR` when needed, add the "Verified" badge, and emit M3. If a different owner exists at review time, do not approve an overlapping claim; stop/reject with a reason; only a requester who is already a Vendor can proceed to **RequestAccess F26**. A Dispute only opens after RequestAccess is rejected/refused by the owner and B appeals. License -> fast-track.
+- **DoD:** approval assigns ownership; a Customer requester becomes Vendor in the same transaction; an existing Vendor keeps the role; rejection does not change the role and allows a new claim (old record preserved).
 
-#### WDP-29 · F25 — Vendor register new location (auto-own)  `To Do` · owner: Minh · **High**
-- **Goal:** Form like F13 + **mandatory on-site proof** to auto-own after approval; **no proof -> falls back to no-owner**, must claim later. *(HF-2)*
-- **Depends:** F13 (form), F23 (proof mechanism), **F14 (M1)**, F15 (approve).
-- **Rules:** **BR-60/I5 (this is the closed "registering = owning" loophole)**, BR-29 (approve -> assign owner), BR-13 (dedup).
-- **Notes:** with proof -> after Admin approval, **auto-own**. Without proof -> created at tier B (no-owner), Vendor must claim (F23) later. Duplicate of an unowned location -> suggest using claim (AF14.1).
-- **DoD:** with proof -> auto-own after Admin approval; without proof -> no-owner.
-- **Avoid:** **do not** auto-own without on-site proof (this is the "dodge claiming by registering new" attack).
+#### WDP-29 · F25 — Customer/Vendor register a new location with ownership (auto-own)  `To Do` · owner: Minh · **High**
+- **Goal:** Let a Customer or Vendor with a verified phone use the F13 form plus **mandatory on-site proof** to auto-own after approval; an approved Customer becomes Vendor; **no proof -> falls back to no-owner**, keeps the current role, and must claim later. *(HF-2)*
+- **Depends:** F03 (verified account phone), F13 (form), F23 (proof mechanism), **F14 (M1)**, F15 (approve).
+- **Rules:** **BR-60/I5 (this is the closed "registering = owning" loophole)**, BR-29 (approve -> assign owner), BR-70/I12 (Customer -> Vendor on approval), BR-13 (dedup).
+- **Notes:** with proof, Admin approval must transactionally publish, assign the requester as owner, add the badge, and change Customer -> Vendor when needed. Without proof, create only tier B (no-owner), do not change the role, and require a later F23 claim. A duplicate unowned location should suggest claim instead (AF14.1).
+- **DoD:** Customer/Vendor can submit an ownership registration only with a verified account phone; with proof it auto-owns after approval and a Customer becomes Vendor; without proof it remains no-owner with no role change; rejection does not change the role.
+- **Avoid:** **do not** auto-own without on-site proof; do not change the role before Admin approval; do not let owner and role updates diverge.
 
 #### WDP-30 · F26 — Request-access + transfer + hold  `To Do` · owner: Dương · **Core**
 - **Goal:** **1 PENDING slot per location** (others blocked); notify owner, **3-day deadline (lazy-check)**; grant / reject->appeal / silence->verify-to-claim; **7-day hold** when granted without Admin. *(HF-4)*

@@ -261,48 +261,6 @@ const fixtureLocations = () => {
 };
 
 const fixtureCollections = () => ({
-  vendorprofiles: [
-    {
-      _id: id('66b000000000000000000101'),
-      user_id: IDS.vendorOwner,
-      business_name: 'Com Nha Hoa Lac',
-      business_phone: '0900000011',
-      business_address: 'Hoa Lac',
-      verification_status: 'approved',
-    },
-    {
-      _id: id('66b000000000000000000102'),
-      user_id: IDS.vendorClaimant,
-      business_name: 'Quan an Dang Claim',
-      business_phone: '0900000012',
-      business_address: 'Hoa Lac',
-      verification_status: 'approved',
-    },
-    {
-      _id: id('66b000000000000000000103'),
-      user_id: IDS.vendorPending,
-      business_name: 'Quan moi cho duyet',
-      business_phone: '0900000014',
-      business_address: 'Hoa Lac',
-      verification_status: 'pending',
-    },
-    {
-      _id: id('66f100000000000000000004'),
-      user_id: IDS.vendorTransfer,
-      business_name: 'Doanh nghiep nhan ban giao',
-      business_phone: '0900000015',
-      business_address: 'Hoa Lac',
-      verification_status: 'approved',
-    },
-    {
-      _id: id('66f100000000000000000005'),
-      user_id: IDS.vendorDisputed,
-      business_name: 'Doanh nghiep tranh chap',
-      business_phone: '0900000016',
-      business_address: 'Hoa Lac',
-      verification_status: 'approved',
-    },
-  ],
   claim_requests: [
     {
       _id: IDS.claimPending,

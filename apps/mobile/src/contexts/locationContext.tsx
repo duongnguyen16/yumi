@@ -10,6 +10,7 @@ export default function LocationContextProvider({
 }) {
   const [location, setLocation] = useState([105.83991, 21.028]);
   const [permission, setPermission] = useState(false);
+  const [locationError, setLocationError] = useState("");
 
   useEffect(() => {
     let watch;
@@ -17,8 +18,13 @@ export default function LocationContextProvider({
       try {
         const hasPermission = await checkPermission();
         if (!hasPermission) {
-          throw new Error("Permission to access location was denied");
+          setLocationError(
+            "Ứng dụng chưa được cấp quyền vị trí. Một số tính năng bản đồ sẽ bị hạn chế.",
+          );
+          return;
         }
+        setPermission(true);
+        setLocationError("");
         watch = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
@@ -30,6 +36,7 @@ export default function LocationContextProvider({
         );
       } catch (error) {
         console.error("Error starting location watch:", error);
+        setLocationError("Không thể theo dõi vị trí hiện tại.");
       }
     };
     watchLocation();
@@ -42,6 +49,8 @@ export default function LocationContextProvider({
         setLocation,
         permission,
         setPermission,
+        locationError,
+        clearLocationError: () => setLocationError(""),
       }}
     >
       {children}

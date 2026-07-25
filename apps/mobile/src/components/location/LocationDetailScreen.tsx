@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { Keyboard, Pressable, Share, TouchableWithoutFeedback, useWindowDimensions, View } from "react-native";
 import { Image } from "expo-image";
 import { Icon } from "react-native-paper";
@@ -10,7 +10,8 @@ import ReviewTab from "./tabs/ReviewTab";
 import PictureTab from "./tabs/PictureTab";
 import { viewCount } from "@/service/locationService";
 import { getReviewsByLocation, type LocationReview } from "@/service/reviewService";
-import { AppText, IconButton, Inline, Stack } from "@/ui/components";
+import { AppText, IconButton, Inline, NoticeSnackbar, Stack } from "@/ui/components";
+import { getNoticeMessage } from "@/ui/feedback";
 import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
 import { buildDirectionsUrl, getMapLocationPreview } from "@/common/map-location";
 import { userContext } from "@/contexts/userContext";
@@ -30,11 +31,13 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [reviewImageUrls, setReviewImageUrls] = useState<string[]>([]);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!locationId || !canBookmark) return;
     checkBookmark(locationId).then((res) => {
       if (res.success) setIsBookmarked(res.isBookmarked);
+      else setMessage("Không thể kiểm tra trạng thái đã lưu.");
     });
   }, [locationId, canBookmark]);
 
@@ -43,10 +46,16 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
     setBookmarkLoading(true);
     if (isBookmarked) {
       const res = await removeBookmark(locationId);
-      if (res.success) setIsBookmarked(false);
+      if (res.success) {
+        setIsBookmarked(false);
+        setMessage("Đã bỏ lưu địa điểm.");
+      } else setMessage(res.message || "Không thể bỏ lưu địa điểm.");
     } else {
       const res = await addBookmark(locationId);
-      if (res.success) setIsBookmarked(true);
+      if (res.success) {
+        setIsBookmarked(true);
+        setMessage("Đã lưu địa điểm.");
+      } else setMessage(res.message || "Không thể lưu địa điểm.");
     }
     setBookmarkLoading(false);
   };
@@ -57,7 +66,7 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
   );
   const coverImage = imageUrls[0] ?? null;
 
-  const refreshReviewImages = async () => {
+  const refreshReviewImages = useCallback(async () => {
     if (!locationId) {
       setReviewImageUrls([]);
       return;
@@ -69,8 +78,8 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
       return;
     }
 
-    console.log("[LocationDetail][review-images]", response.message);
-  };
+    setMessage(response.message || "Không thể tải ảnh đánh giá.");
+  }, [locationId]);
 
   const handleShare = async () => {
     if (!locationId) return;
@@ -83,13 +92,21 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
         url,
       });
     } catch (error) {
-      console.log("Error sharing location:", error);
+      setMessage(getNoticeMessage(error, "Không thể chia sẻ địa điểm."));
     }
   };
 
-  const handleDirections = () => {
+  const handleDirections = async () => {
     const preview = getMapLocationPreview(location);
-    if (preview) void Linking.openURL(buildDirectionsUrl(preview));
+    if (!preview) {
+      setMessage("Địa điểm chưa có tọa độ để chỉ đường.");
+      return;
+    }
+    try {
+      await Linking.openURL(buildDirectionsUrl(preview));
+    } catch (error) {
+      setMessage(getNoticeMessage(error, "Không thể mở ứng dụng chỉ đường."));
+    }
   };
 
   useEffect(() => {
@@ -103,8 +120,8 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
   }, [locationId]);
 
   useEffect(() => {
-    void refreshReviewImages();
-  }, [locationId]);
+    void Promise.resolve().then(refreshReviewImages);
+  }, [refreshReviewImages]);
 
   const renderHeader = () => {
     return (
@@ -228,12 +245,19 @@ export default function LocationDetailScreen({ data, productData, onRefresh }) {
           onDismiss={() => setPreviewIndex(null)}
           visible={previewIndex !== null}
         />
+        <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
       </View>
     </TouchableWithoutFeedback>
   );
 }
 
-function getLocationImageUrls(location: any) {
+type LocationImageSource = {
+  imagesUrls?: Array<{ isCover?: boolean; url?: string }>;
+  imageUrls?: string[];
+  imageUrl?: string;
+};
+
+function getLocationImageUrls(location?: LocationImageSource | null) {
   const detailedImages = [...(location?.imagesUrls ?? [])]
     .sort((a, b) => Number(Boolean(b?.isCover)) - Number(Boolean(a?.isCover)))
     .map((image) => image?.url);

@@ -2,7 +2,10 @@ import LocationBasicFields from "@/components/location-form/location-basic-field
 import LocationCategoryFields from "@/components/location-form/location-category-fields";
 import LocationContactFields from "@/components/location-form/location-contact-fields";
 import LocationScheduleFields from "@/components/location-form/location-schedule-fields";
-import { type EditField } from "@/components/location-form/edit-location-model";
+import {
+  getEditSelectionChipIcon,
+  type EditField,
+} from "@/components/location-form/edit-location-model";
 import {
   useEditLocationForm,
   type EditableLocation,
@@ -13,6 +16,7 @@ import {
   Chip,
   FormSection,
   MediaPicker,
+  NoticeSnackbar,
   PageContent,
   Stack,
   TextArea,
@@ -82,6 +86,8 @@ export default function EditLocationScreen({
       >
         {form.selectedFields.map((field) => (
           <Chip
+            icon={getEditSelectionChipIcon(true, true)}
+            iconColor={colors.textInverse}
             key={field}
             label={labels[field]}
             onPress={() => setSelectedChip(field)}
@@ -107,6 +113,7 @@ export default function EditLocationScreen({
           )
           .map((field) => (
             <Chip
+              icon={getEditSelectionChipIcon(false, true)}
               key={field}
               label={labels[field]}
               onPress={() => setSelectedChip(field)}
@@ -183,6 +190,15 @@ export default function EditLocationScreen({
               { value: "NON_EXISTENT", label: "Không tồn tại" },
             ].map((option) => (
               <Chip
+                icon={getEditSelectionChipIcon(
+                  form.flagValue === option.value,
+                  true,
+                )}
+                iconColor={
+                  form.flagValue === option.value
+                    ? colors.textInverse
+                    : undefined
+                }
                 key={option.value}
                 label={option.label}
                 onPress={() =>
@@ -206,6 +222,7 @@ export default function EditLocationScreen({
           selectedSubCategoryIds={
             form.selectedSubCategories[form.selectedCategory] || []
           }
+          showSelectionIcons
           subCategories={form.subCategories}
         />
       ) : null}
@@ -272,6 +289,10 @@ export default function EditLocationScreen({
         visible={form.visible}
         // locationName={form.name}
         // categoryId={form.selectedCategory}
+      />
+      <NoticeSnackbar
+        message={form.message}
+        onDismiss={form.dismissMessage}
       />
     </PageContent>
   );

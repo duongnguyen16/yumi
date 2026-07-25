@@ -14,7 +14,6 @@ import { UserRole, UserStatus } from 'src/common/schemas/common.enums';
 import { UserDocument } from 'src/common/schemas/user.schema';
 import { JwtPayLoad } from '../../types/jwt.types';
 import { PendingVendorRegistrationDocument } from '../vendors/schemas/pending-vendor-registration.schema';
-import { VendorProfileDocument } from '../vendors/schemas/vendor-profile.schema';
 import { RegisterDTO } from './dto/register.dto';
 import { RequestVendorOtpDTO } from './dto/request-vendor-otp.dto';
 import { VerifyVendorOtpDTO } from './dto/verify-vendor-otp.dto';
@@ -46,8 +45,6 @@ export default class AuthService {
 
   constructor(
     @InjectModel('User') private readonly userModel: Model<UserDocument>,
-    @InjectModel('VendorProfile')
-    private readonly vendorProfileModel: Model<VendorProfileDocument>,
     @InjectModel('PendingVendorRegistration')
     private readonly pendingVendorModel: Model<PendingVendorRegistrationDocument>,
     @InjectModel('PasswordResetCode')
@@ -232,9 +229,6 @@ export default class AuthService {
           phone: dto.phone,
           password_hash: passwordHash,
           name: dto.name,
-          business_name: dto.business_name,
-          business_phone: dto.business_phone,
-          business_address: dto.business_address ?? null,
           otp_hash: otpHash,
           attempts: 0,
           expires_at: expiresAt,
@@ -313,14 +307,6 @@ export default class AuthService {
         phoneVerified: true,
         role: UserRole.VENDOR,
         status: UserStatus.ACTIVE,
-      });
-
-      await this.vendorProfileModel.create({
-        user_id: newUser._id,
-        business_name: pending.business_name,
-        business_phone: pending.business_phone,
-        business_address: pending.business_address,
-        verification_status: 'pending',
       });
 
       await this.pendingVendorModel.deleteOne({ email: pending.email });

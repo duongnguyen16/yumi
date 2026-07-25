@@ -2,7 +2,7 @@ import { getAllCategories } from "@/service/categoryService";
 import React, { useEffect, useState } from "react";
 import { FlatList } from "react-native";
 import { Modal, Portal, RadioButton } from "react-native-paper";
-import { AppText, IconButton, Inline, Stack } from "@/ui/components";
+import { AppText, IconButton, Inline, NoticeSnackbar, Stack } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 
 export default function Category({
@@ -12,6 +12,7 @@ export default function Category({
   selectedCategory,
 }) {
   const [category, setCategory] = useState([]);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const fetchCategory = async () => {
@@ -20,9 +21,9 @@ export default function Category({
 
         if (response.success) {
           setCategory(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+        } else setMessage(response.message || "Không thể tải danh mục.");
+      } catch {
+        setMessage("Không thể tải danh mục.");
       }
     };
 
@@ -70,6 +71,7 @@ export default function Category({
         </RadioButton.Group>
         </Stack>
       </Modal>
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Portal>
   );
 }

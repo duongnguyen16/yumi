@@ -7,7 +7,3 @@ export function getTabBarBottomInset(safeAreaBottom: number) {
 export function getTabContentBottomPadding(safeAreaBottom: number) {
   return getTabBarBottomInset(safeAreaBottom) + spacing[4];
 }
-
-export function getTabSnackbarBottomOffset(safeAreaBottom: number) {
-  return getTabBarBottomInset(safeAreaBottom) - safeAreaBottom;
-}

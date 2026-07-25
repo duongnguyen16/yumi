@@ -171,9 +171,6 @@ const requestVendorOtp = async (payload: {
   password: string;
   name: string;
   phone: string;
-  business_name: string;
-  business_phone: string;
-  business_address?: string;
 }) => {
   try {
     const response = await api.post("/auth/register/vendor/request-otp", payload);

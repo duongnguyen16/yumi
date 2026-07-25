@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { UserStatus } from 'src/common/schemas/common.enums';
+import { UserRole, UserStatus } from 'src/common/schemas/common.enums';
 import AuthService from './auth.service';
 
 describe('AuthService appeal sessions', () => {
@@ -17,7 +17,6 @@ describe('AuthService appeal sessions', () => {
   };
   const service = new AuthService(
     userModel as never,
-    {} as never,
     {} as never,
     {} as never,
     jwtService as never,
@@ -105,6 +104,115 @@ describe('AuthService appeal sessions', () => {
       2,
       { userId: 'user-1', scope: 'appeal' },
       expect.any(Object),
+    );
+  });
+});
+
+describe('AuthService vendor registration', () => {
+  const userModel = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+  };
+  const pendingVendorModel = {
+    findOneAndUpdate: jest.fn(),
+    findOne: jest.fn(),
+    deleteOne: jest.fn(),
+  };
+  const jwtService = {
+    sign: jest.fn((payload: object) => JSON.stringify(payload)),
+  };
+  const configService = {
+    get: jest.fn((key: string) => `${key}-value`),
+  };
+  const smsService = {
+    sendOtp: jest.fn(),
+  };
+  const service = new AuthService(
+    userModel as never,
+    pendingVendorModel as never,
+    {} as never,
+    jwtService as never,
+    configService as never,
+    smsService as never,
+    {} as never,
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('stores only account and phone data while waiting for vendor OTP', async () => {
+    userModel.findOne.mockResolvedValue(null);
+    pendingVendorModel.findOneAndUpdate.mockResolvedValue({});
+    smsService.sendOtp.mockResolvedValue(undefined);
+
+    const result = await service.requestVendorOtp({
+      email: 'Vendor@Example.com',
+      password: 'secret123',
+      name: 'Vendor User',
+      phone: '0900000001',
+    });
+
+    expect(result).toMatchObject({ success: true });
+    const [, pendingUpdate] = pendingVendorModel.findOneAndUpdate.mock.calls[0];
+    expect(pendingUpdate).not.toHaveProperty('business_name');
+    expect(pendingUpdate).not.toHaveProperty('business_phone');
+    expect(pendingUpdate).not.toHaveProperty('business_address');
+  });
+
+  it('creates the vendor user directly after OTP verification', async () => {
+    const pending = {
+      email: 'vendor@example.com',
+      password_hash: await bcrypt.hash('secret123', 4),
+      name: 'Vendor User',
+      phone: '0900000001',
+      otp_hash: await bcrypt.hash('123456', 4),
+      attempts: 0,
+      save: jest.fn(),
+    };
+    const createdUser = {
+      _id: 'vendor-1',
+      email: pending.email,
+      fullName: pending.name,
+      phone: pending.phone,
+      phoneVerified: true,
+      role: UserRole.VENDOR,
+      status: UserStatus.ACTIVE,
+      toObject: () => ({
+        _id: 'vendor-1',
+        email: pending.email,
+        fullName: pending.name,
+        phone: pending.phone,
+        phoneVerified: true,
+        role: UserRole.VENDOR,
+        status: UserStatus.ACTIVE,
+      }),
+    };
+    pendingVendorModel.findOne.mockResolvedValue(pending);
+    userModel.findOne.mockResolvedValue(null);
+    userModel.create.mockResolvedValue(createdUser);
+    pendingVendorModel.deleteOne.mockResolvedValue({});
+
+    const result = await service.verifyVendorOtp({
+      email: 'vendor@example.com',
+      otp: '123456',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      user: {
+        role: UserRole.VENDOR,
+        phone: '0900000001',
+        phoneVerified: true,
+      },
+    });
+    expect(userModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'vendor@example.com',
+        phone: '0900000001',
+        phoneVerified: true,
+        role: UserRole.VENDOR,
+      }),
     );
   });
 });

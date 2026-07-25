@@ -116,6 +116,7 @@ export function VendorReviewReplyDialog({
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              style={{ flexShrink: 1 }}
             >
               <Inline style={{ alignItems: "flex-start" }}>
                 {avatarUrl ? (
@@ -260,27 +261,39 @@ export function VendorReviewReplyDialog({
                     >
                       {draft.length}/1000
                     </AppText>
-                    <Inline style={{ justifyContent: "flex-end" }}>
-                      <Button
-                        disabled={saving}
-                        label="Hủy"
-                        onPress={mode === "edit" ? onCancelEdit : dismiss}
-                        variant="tertiary"
-                      />
-                      <Button
-                        disabled={saving}
-                        icon={mode === "edit" ? "content-save" : "send"}
-                        label={
-                          mode === "edit" ? "Lưu thay đổi" : "Gửi phản hồi"
-                        }
-                        loading={saving}
-                        onPress={onSubmit}
-                      />
-                    </Inline>
                   </Stack>
                 ) : null}
               </View>
             </ScrollView>
+
+            {visibility.showComposer ? (
+              <View
+                style={{
+                  borderTopColor: colors.borderSubtle,
+                  borderTopWidth: 1,
+                  marginTop: spacing[3],
+                  paddingTop: spacing[3],
+                }}
+              >
+                <Inline style={{ justifyContent: "flex-end" }}>
+                  <Button
+                    disabled={saving}
+                    label="Hủy"
+                    onPress={mode === "edit" ? onCancelEdit : dismiss}
+                    variant="tertiary"
+                  />
+                  <Button
+                    disabled={saving}
+                    icon={mode === "edit" ? "content-save" : "send"}
+                    label={
+                      mode === "edit" ? "Lưu thay đổi" : "Gửi phản hồi"
+                    }
+                    loading={saving}
+                    onPress={onSubmit}
+                  />
+                </Inline>
+              </View>
+            ) : null}
           </Surface>
         </Modal>
       </KeyboardAvoidingView>

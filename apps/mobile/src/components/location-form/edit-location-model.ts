@@ -36,6 +36,14 @@ export function getAllowedEditFields(isOwner: boolean) {
   return isOwner ? ownerFields : publicFields;
 }
 
+export function getEditSelectionChipIcon(
+  selected: boolean,
+  showSelectionIcons = false,
+) {
+  if (!showSelectionIcons) return undefined;
+  return selected ? ("check" as const) : ("plus" as const);
+}
+
 export function buildSuggestionChanges({
   selectedFields,
   openingHours,

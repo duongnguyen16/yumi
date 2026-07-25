@@ -62,3 +62,7 @@ coverage/
 
 # Android build output
 android/
+
+
+.env
+apps/mobile/.env

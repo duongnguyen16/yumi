@@ -5,8 +5,26 @@ import {
   validatePhoneOtpRequest,
   validatePhoneOtpVerification,
 } from "./edit-location-model";
+import * as editLocationModel from "./edit-location-model";
+
+type EditSelectionChipIconResolver = (
+  selected: boolean,
+  showSelectionIcons?: boolean,
+) => "check" | "plus" | undefined;
 
 describe("edit location form model", () => {
+  it("maps edit selection state to opt-in chip icons", () => {
+    const resolver = (
+      editLocationModel as typeof editLocationModel & {
+        getEditSelectionChipIcon?: EditSelectionChipIconResolver;
+      }
+    ).getEditSelectionChipIcon;
+
+    expect(resolver?.(false, true)).toBe("plus");
+    expect(resolver?.(true, true)).toBe("check");
+    expect(resolver?.(true)).toBeUndefined();
+  });
+
   it("limits editable fields by ownership", () => {
     expect(getAllowedEditFields(true)).toEqual(["name", "address", "openingHours", "description", "phone", "category"]);
     expect(getAllowedEditFields(false)).toEqual(["address", "openingHours", "phone", "flag"]);

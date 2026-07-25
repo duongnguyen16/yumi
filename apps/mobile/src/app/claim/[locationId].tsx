@@ -230,7 +230,8 @@ export default function ClaimLocationScreen() {
         }
         currentStep={step}
         loading={loading}
-        onBack={() => router.back()}
+        onExit={() => router.back()}
+        onStepBack={() => router.back()}
         onContinue={continueAction}
         showFooterBack={false}
         showProgress={false}

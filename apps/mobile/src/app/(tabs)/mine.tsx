@@ -1,6 +1,6 @@
 import { listBookmarks, removeBookmark, type BookmarkedLocation } from "@/service/bookmarkService";
 import { getTabContentBottomPadding } from "@/navigation/tab-content-inset";
-import { Button, EmptyState, LoadingState, Page, PageHeader } from "@/ui/components";
+import { Button, EmptyState, LoadingState, NoticeSnackbar, Page, PageHeader } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -14,14 +14,22 @@ export default function MineScreen() {
   const [bookmarks, setBookmarks] = useState<BookmarkedLocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [message, setMessage] = useState("");
 
   const fetchBookmarks = useCallback(async () => {
     const res = await listBookmarks();
-    if (res.success) setBookmarks(res.data);
+    if (res.success) {
+      setBookmarks(res.data);
+      return true;
+    }
+    setMessage("Không thể tải danh sách địa điểm đã lưu.");
+    return false;
   }, []);
 
   useEffect(() => {
-    fetchBookmarks().finally(() => setLoading(false));
+    void Promise.resolve()
+      .then(fetchBookmarks)
+      .finally(() => setLoading(false));
   }, [fetchBookmarks]);
 
   const handleRefresh = async () => {
@@ -34,6 +42,9 @@ export default function MineScreen() {
     const res = await removeBookmark(locationId);
     if (res.success) {
       setBookmarks((prev) => prev.filter((b) => b.location._id !== locationId));
+      setMessage("Đã bỏ lưu địa điểm.");
+    } else {
+      setMessage(res.message || "Không thể bỏ lưu địa điểm.");
     }
   };
 
@@ -83,6 +94,7 @@ export default function MineScreen() {
               }}
             >
               <Image
+                alt={`Ảnh ${loc.name}`}
                 source={{
                   uri: coverImage || "https://placehold.co/800x300/F4EFE8/5F574F?text=No+image",
                 }}
@@ -108,6 +120,7 @@ export default function MineScreen() {
           );
         }}
       />
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );
 }

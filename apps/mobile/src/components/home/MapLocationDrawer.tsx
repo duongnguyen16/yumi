@@ -18,7 +18,8 @@ import { getLocationReportAction } from "@/components/location/location-report";
 import { userContext } from "@/contexts/userContext";
 import { getLocationById } from "@/service/locationService";
 import { toAbsoluteUrl } from "@/service/url";
-import { AppText, Button, IconButton, Inline, Stack } from "@/ui/components";
+import { AppText, Button, IconButton, Inline, NoticeSnackbar, Stack } from "@/ui/components";
+import { getNoticeMessage } from "@/ui/feedback";
 import { colors, radius, spacing } from "@/ui/tokens";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
@@ -74,6 +75,7 @@ export function MapLocationDrawer({
   const [details, setDetails] = useState<LocationDetails | null>(null);
   const [detent, setDetent] = useState<DrawerDetent>("half");
   const [reportVisible, setReportVisible] = useState(false);
+  const [message, setMessage] = useState("");
   const halfHeight = getDrawerDetentHeight("half", windowHeight, insets.top);
   const fullHeight = getDrawerDetentHeight("full", windowHeight, insets.top);
   const halfOffset = fullHeight - halfHeight;
@@ -99,8 +101,11 @@ export function MapLocationDrawer({
 
   const refreshDetails = useCallback(async () => {
     const response = await getLocationById(location.id);
-    if (response?.success && response.data)
+    if (response?.success && response.data) {
       setDetails(response.data as LocationDetails);
+      return;
+    }
+    setMessage(response?.message || "Không thể làm mới chi tiết địa điểm.");
   }, [location.id]);
 
   useEffect(() => {
@@ -108,6 +113,8 @@ export function MapLocationDrawer({
     getLocationById(location.id).then((response) => {
       if (active && response?.success && response.data)
         setDetails(response.data as LocationDetails);
+      else if (active)
+        setMessage(response?.message || "Không thể tải chi tiết địa điểm.");
     });
     return () => {
       active = false;
@@ -134,6 +141,13 @@ export function MapLocationDrawer({
 
   const toggleDetent = () =>
     setDrawerDetent(detent === "half" ? "full" : "half");
+  const openDirections = async () => {
+    try {
+      await Linking.openURL(buildDirectionsUrl(current));
+    } catch (error) {
+      setMessage(getNoticeMessage(error, "Không thể mở ứng dụng chỉ đường."));
+    }
+  };
   const panGesture = Gesture.Pan()
     .activeOffsetY([-6, 6])
     .onBegin(() => {
@@ -276,7 +290,7 @@ export function MapLocationDrawer({
           <Button
             icon="navigation-variant-outline"
             label="Chỉ đường"
-            onPress={() => void Linking.openURL(buildDirectionsUrl(current))}
+            onPress={() => void openDirections()}
           />
           {reportAction !== "hidden" ? (
             <Button
@@ -330,6 +344,7 @@ export function MapLocationDrawer({
           onDismiss={() => setReportVisible(false)}
           visible={reportVisible}
         />
+        <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
       </Surface>
     </Animated.View>
   );
