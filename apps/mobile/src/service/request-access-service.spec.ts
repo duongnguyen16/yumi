@@ -2,11 +2,16 @@ jest.mock("./aixos", () => ({
   __esModule: true,
   default: {
     post: jest.fn(),
+    patch: jest.fn(),
   },
 }));
 
 import api from "./aixos";
-import { createAccess, type AccessEvidence } from "./requestAccessService";
+import {
+  createAccess,
+  startAccessVerification,
+  type AccessEvidence,
+} from "./requestAccessService";
 
 describe("createAccess", () => {
   it("gửi bằng chứng tại chỗ ngay khi tạo yêu cầu", async () => {
@@ -23,14 +28,34 @@ describe("createAccess", () => {
       locationId: string,
       reason: string | undefined,
       evidenceFiles: AccessEvidence[],
+      verificationSessionId: string,
     ) => Promise<unknown>;
 
-    await create("location-1", "Tôi đang vận hành địa điểm", evidenceFiles);
+    await create(
+      "location-1",
+      "Tôi đang vận hành địa điểm",
+      evidenceFiles,
+      "session-1",
+    );
 
     expect(api.post).toHaveBeenCalledWith("/request-access", {
       locationId: "location-1",
       reason: "Tôi đang vận hành địa điểm",
       evidenceFiles,
+      verificationSessionId: "session-1",
+    });
+  });
+
+  it("bắt đầu phiên xác minh request-access", async () => {
+    (api.post as jest.Mock).mockResolvedValue({
+      data: { success: true, sessionId: "session-1", otpRequired: true },
+    });
+
+    await startAccessVerification("location-1", "CREATE");
+
+    expect(api.post).toHaveBeenCalledWith("/request-access/verification/start", {
+      locationId: "location-1",
+      purpose: "CREATE",
     });
   });
 });

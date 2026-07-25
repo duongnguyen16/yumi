@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   BackHandler,
   Keyboard,
@@ -73,12 +79,8 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
 type CategoryOption = { _id: string; name: string; isActive?: boolean };
 
 export default function MapScreen() {
-  const {
-    clearLocationError,
-    location,
-    locationError,
-    setLocation,
-  } = useLocationContext();
+  const { clearLocationError, location, locationError, setLocation } =
+    useLocationContext();
   const { locationId } = useLocalSearchParams<{ locationId?: string }>();
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,8 +223,6 @@ export default function MapScreen() {
   }, []);
 
   const focusLocation = useCallback((preview: MapLocationPreview) => {
-    searchInputRef.current?.blur();
-    Keyboard.dismiss();
     setSearchQuery("");
     setSearchScreen(false);
     setSelectedLocation(preview);
@@ -280,9 +280,7 @@ export default function MapScreen() {
   const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
     if (!currentLocation?.success || !currentLocation.locationData) {
-      setMessage(
-        currentLocation?.message || "Không thể lấy vị trí hiện tại.",
-      );
+      setMessage(currentLocation?.message || "Không thể lấy vị trí hiện tại.");
       return;
     }
     setSelectedLocation(null);
@@ -581,8 +579,11 @@ export default function MapScreen() {
             initialCategoryId={searchCategoryId}
             onSelectLocation={(item) => {
               const preview = getMapLocationPreview(item);
-              if (preview) focusLocation(preview);
-              else if (item?._id) router.push(`/location/${item._id}` as never);
+              if (preview) {
+                console.log("focusLocation", preview);
+                focusLocation(preview);
+              } else if (item?._id)
+                router.push(`/location/${item._id}` as never);
             }}
             searchQuery={searchQuery}
           />

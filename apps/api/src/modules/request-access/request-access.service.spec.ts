@@ -1,8 +1,10 @@
 import { Model, Types } from 'mongoose';
+import { UnprocessableEntityException } from '@nestjs/common';
 import { NotificationPort } from 'src/common/contracts/notification.port';
 import { AuditLogDocument } from 'src/common/schemas/audit-log.schema';
 import { ClaimRequestDocument } from 'src/common/schemas/claim-request.schema';
 import {
+  DisputeStatus,
   LocationStatus,
   RequestAccessStatus,
   UserRole,
@@ -10,6 +12,7 @@ import {
 } from 'src/common/schemas/common.enums';
 import { LocationDocument } from 'src/common/schemas/location.schema';
 import { RequestAccessDocument } from 'src/common/schemas/request-access.schema';
+import { DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { RespondAction } from './dto/respond-request-access.dto';
 import { RequestAccessService } from './request-access.service';
 
@@ -43,6 +46,16 @@ describe('Kiểm thử RequestAccessService', () => {
       ),
     };
     const notify = { notify: jest.fn().mockResolvedValue(undefined) };
+    const evidenceVerifier = {
+      assertValid: jest.fn(),
+    };
+    const disputeModel = { exists: jest.fn().mockResolvedValue(null) };
+    const verification = {
+      consume: jest.fn().mockResolvedValue({
+        success: true,
+        otpVerified: true,
+      }),
+    };
     const service = new RequestAccessService(
       reqModel as unknown as Model<RequestAccessDocument>,
       locModel as unknown as Model<LocationDocument>,
@@ -50,6 +63,9 @@ describe('Kiểm thử RequestAccessService', () => {
       logModel as unknown as Model<AuditLogDocument>,
       notify as NotificationPort,
       userModel as never,
+      evidenceVerifier as never,
+      verification as never,
+      disputeModel as unknown as Model<DisputeDocument>,
     );
     return {
       service,
@@ -59,6 +75,9 @@ describe('Kiểm thử RequestAccessService', () => {
       logModel,
       userModel,
       notify,
+      evidenceVerifier,
+      verification,
+      disputeModel,
     };
   }
 
@@ -141,10 +160,16 @@ describe('Kiểm thử RequestAccessService', () => {
   });
 
   it('yêu cầu bằng chứng tại chỗ ngay khi tạo yêu cầu chuyển quyền', async () => {
-    const { service, locModel, claimModel, reqModel } = setup();
+    const { service, locModel, claimModel, reqModel, evidenceVerifier } =
+      setup();
     locModel.findById.mockReturnValue(query(location()));
     claimModel.exists.mockResolvedValue(null);
     reqModel.exists.mockResolvedValue(null);
+    evidenceVerifier.assertValid.mockImplementation(() => {
+      throw new UnprocessableEntityException(
+        'Cần ảnh tại chỗ có vị trí và thời gian chụp',
+      );
+    });
 
     const result = await service.createRequest(String(userId), {
       locationId: String(locId),
@@ -165,6 +190,7 @@ describe('Kiểm thử RequestAccessService', () => {
 
     const result = await service.createRequest(String(userId), {
       locationId: String(locId),
+      verificationSessionId: new Types.ObjectId().toHexString(),
       reason: 'Tôi đang vận hành địa điểm',
       evidenceFiles: [
         {
@@ -181,11 +207,73 @@ describe('Kiểm thử RequestAccessService', () => {
       expect.objectContaining({
         requesterId: userId,
         currentOwnerId: ownerId,
+        otpVerified: true,
         requestReason: 'Tôi đang vận hành địa điểm',
         status: RequestAccessStatus.PENDING,
       }),
     );
     expect(notify.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('consume phiên xác minh CREATE trước khi tạo yêu cầu chuyển quyền', async () => {
+    const { service, locModel, claimModel, reqModel, verification } = setup();
+    const sessionId = new Types.ObjectId().toHexString();
+    locModel.findById.mockReturnValue(query(location()));
+    claimModel.exists.mockResolvedValue(null);
+    reqModel.exists.mockResolvedValue(null);
+    reqModel.create.mockResolvedValue(request());
+
+    const result = await service.createRequest(String(userId), {
+      locationId: String(locId),
+      verificationSessionId: sessionId,
+      evidenceFiles: [
+        {
+          url: `https://project.supabase.co/storage/v1/object/public/images/locations/${userId}/proof.jpg`,
+          fileType: 'IMAGE',
+          geo: { type: 'Point', coordinates: [105.8, 21] },
+          accuracyMeters: 10,
+          capturedAt: new Date(),
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(verification.consume).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId,
+        userId: String(userId),
+        locationId: String(locId),
+        purpose: 'CREATE',
+      }),
+    );
+  });
+
+  it('chặn tạo request-access khi địa điểm đang có ownership workflow lock', async () => {
+    const { service, locModel, claimModel, reqModel, disputeModel } = setup();
+    locModel.findById.mockReturnValue(query(location()));
+    claimModel.exists.mockResolvedValue(null);
+    reqModel.exists.mockResolvedValue(null);
+    disputeModel.exists.mockResolvedValue({
+      _id: new Types.ObjectId(),
+      status: DisputeStatus.OPEN,
+    });
+
+    const result = await service.createRequest(String(userId), {
+      locationId: String(locId),
+      verificationSessionId: new Types.ObjectId().toHexString(),
+      evidenceFiles: [
+        {
+          url: `https://project.supabase.co/storage/v1/object/public/images/locations/${userId}/proof.jpg`,
+          fileType: 'IMAGE',
+          geo: { type: 'Point', coordinates: [105.8, 21] },
+          accuracyMeters: 10,
+          capturedAt: new Date(),
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+    expect(reqModel.create).not.toHaveBeenCalled();
   });
 
   it('liệt kê yêu cầu đến kèm trạng thái hiệu lực', async () => {
@@ -279,6 +367,7 @@ describe('Kiểm thử RequestAccessService', () => {
     reqModel.findById.mockReturnValue(query(request()));
 
     const result = await service.verifyTakeover(String(reqId), String(userId), {
+      verificationSessionId: new Types.ObjectId().toHexString(),
       evidenceFiles: [
         {
           url: 'https://example.com/proof.jpg',
@@ -300,6 +389,7 @@ describe('Kiểm thử RequestAccessService', () => {
     locModel.findById.mockReturnValue(query(loc));
 
     const result = await service.verifyTakeover(String(reqId), String(userId), {
+      verificationSessionId: new Types.ObjectId().toHexString(),
       evidenceFiles: [
         {
           url: 'https://example.com/proof.jpg',

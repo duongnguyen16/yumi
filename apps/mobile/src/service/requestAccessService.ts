@@ -55,16 +55,61 @@ type ApiResult = {
   message?: string;
 };
 
+export type AccessVerificationPurpose = "CREATE" | "TAKEOVER";
+
+export type AccessVerificationResult = ApiResult & {
+  sessionId?: string;
+  otpRequired?: boolean;
+  expiresAt?: string;
+  otpVerified?: boolean;
+};
+
+export async function startAccessVerification(
+  locationId: string,
+  purpose: AccessVerificationPurpose,
+  requestAccessId?: string,
+): Promise<AccessVerificationResult> {
+  try {
+    const res = await api.post("/request-access/verification/start", {
+      locationId,
+      purpose,
+      ...(requestAccessId ? { requestAccessId } : {}),
+    });
+    return res.data as AccessVerificationResult;
+  } catch (err) {
+    const message = getNoticeMessage(err, "Không thể bắt đầu xác minh.");
+    return { success: false, message };
+  }
+}
+
+export async function verifyAccessOtp(
+  sessionId: string,
+  otp: string,
+): Promise<AccessVerificationResult> {
+  try {
+    const res = await api.post("/request-access/verification/verify-otp", {
+      sessionId,
+      otp,
+    });
+    return res.data as AccessVerificationResult;
+  } catch (err) {
+    const message = getNoticeMessage(err, "Không thể xác minh OTP.");
+    return { success: false, message };
+  }
+}
+
 export async function createAccess(
   locationId: string,
   reason: string | undefined,
   evidenceFiles: AccessEvidence[],
+  verificationSessionId: string,
 ) {
   try {
     const res = await api.post("/request-access", {
       locationId,
       reason,
       evidenceFiles,
+      verificationSessionId,
     });
     return res.data as ApiResult & {
       request?: { id: string; status: string; timeoutAt: string };
@@ -122,10 +167,12 @@ export async function respondAccess(
 export async function verifyAccess(
   id: string,
   evidenceFiles: AccessEvidence[],
+  verificationSessionId: string,
 ) {
   try {
     const res = await api.patch(`/request-access/${id}/verify-takeover`, {
       evidenceFiles,
+      verificationSessionId,
     });
     return res.data as ApiResult;
   } catch (err) {

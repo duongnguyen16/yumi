@@ -20,6 +20,12 @@ export class Dispute {
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
+    ref: 'Appeal',
+  })
+  appealId?: Types.ObjectId;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
     ref: 'Location',
     required: true,
     index: true,

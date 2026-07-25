@@ -12,9 +12,11 @@ import {
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { DetailDrawer } from '@/components/admin/DetailDrawer';
 import { ActionButton } from '@/components/admin/ActionButton';
+import { getOwnershipVerificationView } from '@/components/admin/ownership-verification';
 import {
   humanizeAdminValue,
   locationFieldLabel,
@@ -64,6 +66,7 @@ export function LocationRequestDetailDrawer({
       ? request.submittedBy
       : null;
   const flags = request?.flags;
+  const verification = getOwnershipVerificationView(request);
   const snapshot = request?.newData ?? {};
   const snapName = typeof snapshot.name === 'string' ? snapshot.name : null;
   const snapAddress =
@@ -152,7 +155,11 @@ export function LocationRequestDetailDrawer({
             disabled={submitting}
             sx={{ flex: 1.2, minHeight: 46 }}
           >
-            {submitting ? 'Đang xử lý...' : 'Duyệt địa điểm'}
+            {submitting
+              ? 'Đang xử lý...'
+              : flags?.ownershipRegistration
+                ? 'Duyệt và gán quyền'
+                : 'Duyệt địa điểm'}
           </ActionButton>
         </>
       );
@@ -328,6 +335,30 @@ export function LocationRequestDetailDrawer({
             value={locationStatusLabel(loc?.status)}
           />
         </Section>
+
+        {verification ? (
+          <Section
+            title="Bằng chứng đăng ký sở hữu"
+            icon={<VerifiedUserOutlinedIcon />}
+          >
+            <MetaRow
+              label="Mã hệ thống"
+              value={verification.systemCode ?? '—'}
+            />
+            <Divider />
+            <MetaRow
+              label="Thời điểm ghi nhận"
+              value={formatDate(verification.capturedAt)}
+            />
+            <Divider />
+            <EvidenceLinks
+              title="Ảnh/video tại chỗ"
+              urls={verification.proofUrls}
+            />
+            <Divider />
+            <EvidenceLinks title="Giấy phép" urls={verification.licenseUrls} />
+          </Section>
+        ) : null}
 
         {readOnly ? (
           <Section
@@ -521,6 +552,59 @@ function MetaRow({ label, value }: { label: string; value: string }) {
       </Typography>
     </Box>
   );
+}
+
+function EvidenceLinks({ title, urls }: { title: string; urls: string[] }) {
+  return (
+    <Box sx={{ px: 0.25, py: 1.25 }}>
+      <Typography variant="overline" sx={{ color: tokens.color.textMuted }}>
+        {title}
+      </Typography>
+      {urls.length > 0 ? (
+        <Stack spacing={0.75} sx={{ mt: 0.75 }}>
+          {urls.map((url, index) => (
+            <Typography
+              key={`${url}-${index}`}
+              component="a"
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              sx={{
+                color: tokens.color.green,
+                fontSize: 13,
+                lineHeight: 1.55,
+                overflowWrap: 'anywhere',
+                textDecoration: 'none',
+                '&:hover': { textDecoration: 'underline' },
+              }}
+            >
+              {url}
+            </Typography>
+          ))}
+        </Stack>
+      ) : (
+        <Typography
+          sx={{
+            color: tokens.color.textPrimary,
+            fontSize: 13,
+            lineHeight: 1.55,
+            mt: 0.75,
+          }}
+        >
+          Không có dữ liệu
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+function formatDate(value?: string): string {
+  if (!value) return '—';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+
+  return date.toLocaleString('vi-VN');
 }
 
 function renderValue(value: unknown): string {

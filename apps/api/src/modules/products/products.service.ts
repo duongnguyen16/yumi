@@ -12,6 +12,7 @@ import {
 } from 'src/common/schemas/location.schema';
 import { LocationStatus } from 'src/common/schemas/common.enums';
 import { Product, ProductDocument } from 'src/common/schemas/product.schema';
+import { assertNotUnderHold } from 'src/common/ownership/hold.util';
 import { ImagesService } from '../images/images.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -205,7 +206,11 @@ export class ProductsService {
 
   async remove(productId: string, userId: string) {
     const product = await this.findProduct(productId);
-    await this.findOwnedLocation(String(product.locationId), userId);
+    const location = await this.findOwnedLocation(
+      String(product.locationId),
+      userId,
+    );
+    assertNotUnderHold(location, 'DELETE_PRODUCT');
     if (product.imagePath) {
       await this.imagesService.deleteProductImage(product.imagePath);
     }

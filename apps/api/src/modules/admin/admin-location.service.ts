@@ -59,6 +59,13 @@ type LocationRequestQueueItem = {
   isPotentialDuplicate?: boolean;
   suspectedDuplicateLocationIds?: Types.ObjectId[];
   deviceDistanceMeters?: number | null;
+  ownershipRequested?: boolean;
+  verificationProof?: {
+    proofUrls?: string[];
+    licenseUrls?: string[];
+    systemCode?: string;
+    capturedAt?: Date;
+  };
   [key: string]: unknown;
 };
 
@@ -138,6 +145,7 @@ export class AdminLocationService {
             suspectedDuplicateLocationIds:
               request.suspectedDuplicateLocationIds ?? [],
             farPin,
+            ownershipRegistration: this.isOwnershipRegistration(request),
           },
         };
       });
@@ -271,6 +279,134 @@ export class AdminLocationService {
     }
   }
 
+  async confirmDuplicateRequest(
+    requestId: string,
+    adminId: string,
+    reason: string,
+    duplicateOfLocationId?: string,
+  ) {
+    try {
+      if (!Types.ObjectId.isValid(requestId)) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'ID phiếu không hợp lệ',
+        };
+      }
+
+      const decisionReason = reason?.trim();
+      if (!decisionReason || decisionReason.length < 5) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'Lý do xác nhận trùng lặp phải có ít nhất 5 ký tự',
+        };
+      }
+
+      if (
+        duplicateOfLocationId &&
+        !Types.ObjectId.isValid(duplicateOfLocationId)
+      ) {
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'ID địa điểm gốc không hợp lệ',
+        };
+      }
+
+      const req = await this.reqModel.findById(requestId).exec();
+      if (!req) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Không tìm thấy phiếu duyệt',
+        };
+      }
+
+      if (!REVIEWABLE_STATUSES.includes(req.status)) {
+        return {
+          success: false,
+          statusCode: 409,
+          message: `Phiếu đang ở trạng thái ${req.status}, không thể xử lý`,
+        };
+      }
+
+      const location = await this.locModel.findById(req.locationId).exec();
+      if (!location) {
+        return {
+          success: false,
+          statusCode: 404,
+          message: 'Không tìm thấy địa điểm liên kết',
+        };
+      }
+
+      const fromReqStatus = req.status;
+      const fromLocStatus = location.status;
+      const previousDuplicate = location.isDuplicate;
+      const previousSuspected = location.isSuspectedDuplicate;
+      const note = duplicateOfLocationId
+        ? `${decisionReason} (trùng với địa điểm ${duplicateOfLocationId})`
+        : decisionReason;
+
+      req.status = LocationRequestStatus.REJECTED;
+      req.reviewerId = new Types.ObjectId(adminId);
+      req.reviewedAt = new Date();
+      req.reviewNote = note;
+
+      location.status = LocationStatus.HIDDEN;
+      location.isDuplicate = true;
+      location.isSuspectedDuplicate = false;
+
+      await req.save();
+      await location.save();
+
+      await this.logModel.create({
+        actorId: new Types.ObjectId(adminId),
+        action: 'LOCATION_REQUEST_CONFIRM_DUPLICATE',
+        targetCollection: 'location_requests',
+        targetId: req._id,
+        reason: note,
+        diff: {
+          duplicateOfLocationId,
+          requestStatus: {
+            from: fromReqStatus,
+            to: LocationRequestStatus.REJECTED,
+          },
+          locationStatus: { from: fromLocStatus, to: LocationStatus.HIDDEN },
+          isDuplicate: { from: previousDuplicate, to: true },
+          isSuspectedDuplicate: { from: previousSuspected, to: false },
+        },
+      });
+
+      await this.notification.notify({
+        userId: String(req.submittedBy),
+        type: 'LOCATION_REJECTED',
+        title: 'Địa điểm của bạn bị từ chối',
+        body: `"${location.name}" bị từ chối vì trùng lặp. Lý do: ${note}`,
+        refCollection: 'location_requests',
+        refId: String(req._id),
+      });
+
+      return {
+        success: true,
+        message: 'Đã xác nhận trùng lặp và đóng phiếu duyệt',
+        request: { id: req._id, status: req.status },
+        location: {
+          id: location._id,
+          status: location.status,
+          isDuplicate: location.isDuplicate,
+        },
+      };
+    } catch (err) {
+      console.log(`confirm duplicate request err: ${err}`);
+      return {
+        success: false,
+        statusCode: 500,
+        message: 'Lỗi khi xác nhận phiếu trùng lặp',
+      };
+    }
+  }
+
   private async decide(
     requestId: string,
     adminId: string,
@@ -348,9 +484,25 @@ export class AdminLocationService {
       // cập nhật trạng thái req và location
 
       if (action === 'APPROVE') {
+        const ownershipRegistration = this.isOwnershipRegistration(req);
+        if (
+          ownershipRegistration &&
+          location.ownerId &&
+          !location.ownerId.equals(req.submittedBy)
+        ) {
+          return {
+            success: false,
+            statusCode: 409,
+            message: 'Địa điểm đã có chủ sở hữu khác',
+          };
+        }
+
         req.status = LocationRequestStatus.APPROVED;
         req.reviewNote = null;
         this.applySnapshot(location, req.newData);
+        if (ownershipRegistration) {
+          location.ownerId = req.submittedBy;
+        }
         location.status = LocationStatus.PUBLISHED;
       } else {
         const note = duplicateOfLocationId
@@ -524,5 +676,14 @@ export class AdminLocationService {
         }
       }
     }
+  }
+
+  private isOwnershipRegistration(
+    req: Pick<Partial<LocationRequest>, 'ownershipRequested' | 'verificationProof'>,
+  ) {
+    return (
+      req.ownershipRequested === true ||
+      Boolean(req.verificationProof?.proofUrls?.length)
+    );
   }
 }

@@ -27,7 +27,7 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import {
   approveLocationRequest,
-  confirmDuplicateLocation,
+  confirmDuplicateLocationRequest,
   getLocationRequestQueue,
   rejectLocationRequest,
   type AdminLocationRequest,
@@ -67,12 +67,6 @@ function getPageAfterRemoval(itemCount: number, currentPage: number) {
     return currentPage - 1;
   }
   return currentPage;
-}
-
-function getLocationId(value: AdminLocationRequest['locationId']) {
-  if (typeof value === 'string') return value;
-  if (value && typeof value === 'object') return value._id;
-  return null;
 }
 
 function getSubmitterLabel(
@@ -218,15 +212,14 @@ export default function LocationRequestsPage() {
     duplicateOfLocationId?: string,
   ) {
     if (!selected) return;
-    const locationId = getLocationId(selected.locationId);
-    if (!locationId) {
-      setDrawerError('Không tìm thấy địa điểm để xác nhận trùng lặp');
-      return;
-    }
     setSubmitting(true);
     setDrawerError(null);
     try {
-      await confirmDuplicateLocation(locationId, reason, duplicateOfLocationId);
+      await confirmDuplicateLocationRequest(
+        selected._id,
+        reason,
+        duplicateOfLocationId,
+      );
       setDrawerOpen(false);
       const nextPage = getPageAfterRemoval(items.length, page);
       await fetchQueue(nextPage, view);
@@ -238,11 +231,6 @@ export default function LocationRequestsPage() {
   }
 
   async function handleQuickConfirmDuplicate(req: AdminLocationRequest) {
-    const locationId = getLocationId(req.locationId);
-    if (!locationId) {
-      setError('Không tìm thấy địa điểm để xác nhận trùng lặp');
-      return;
-    }
     const reason = window.prompt('Nhập lý do xác nhận địa điểm trùng lặp');
     if (!reason || reason.trim().length < 5) return;
     const duplicateInput = window.prompt(
@@ -252,8 +240,8 @@ export default function LocationRequestsPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await confirmDuplicateLocation(
-        locationId,
+      await confirmDuplicateLocationRequest(
+        req._id,
         reason.trim(),
         duplicateOfLocationId,
       );

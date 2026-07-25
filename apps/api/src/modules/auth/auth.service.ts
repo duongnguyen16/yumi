@@ -267,6 +267,15 @@ export default class AuthService {
         };
       }
 
+      if (pending.expires_at.getTime() <= Date.now()) {
+        await this.pendingVendorModel.deleteOne({ _id: pending._id });
+        return {
+          success: false,
+          statusCode: 400,
+          message: 'OTP đã hết hạn, vui lòng yêu cầu mã mới',
+        };
+      }
+
       if (pending.attempts >= MAX_OTP_ATTEMPTS) {
         return {
           success: false,

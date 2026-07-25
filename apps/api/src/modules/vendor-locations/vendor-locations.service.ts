@@ -1,10 +1,8 @@
 import {
   BadRequestException,
   HttpException,
-  Inject,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import bcrypt from 'bcryptjs';
@@ -76,9 +74,12 @@ export class VendorLocationsService {
     userId: string,
     files?: Express.Multer.File[],
   ) {
+    const session = await this.connection.startSession();
+    session.startTransaction();
     try {
       const user = await this.userModel.findById(userId);
       if (!user) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Người dùng không tồn tại',
@@ -87,6 +88,7 @@ export class VendorLocationsService {
       }
       const location = await this.locationModel.findById(id).exec();
       if (!location) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Không tìm thấy địa điểm',
@@ -97,6 +99,7 @@ export class VendorLocationsService {
         !location.ownerId ||
         !location.ownerId.equals(new Types.ObjectId(userId))
       ) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Bạn không có quyền chỉnh sửa địa điểm này',
@@ -110,6 +113,7 @@ export class VendorLocationsService {
         updateData.categoryId !== undefined ||
         updateData.subCategoryIds !== undefined;
       if (isHold && changesCoreInfo) {
+        await session.abortTransaction();
         return {
           success: false,
           message:
@@ -152,6 +156,7 @@ export class VendorLocationsService {
               updateData.pinLongitude ?? 0,
             );
           if (reviewRequiredData.deviceDistanceMeters > 500) {
+            await session.abortTransaction();
             return {
               success: false,
               message:
@@ -189,25 +194,31 @@ export class VendorLocationsService {
         }
         const now = new Date();
         const urls = await this.imagesService.uploadMultiMedia(id, files ?? []);
-        await this.locationRequestModel.create({
-          type: LocationRequestType.UPDATE,
-          submittedBy: userId,
-          locationId: id,
-          status: LocationRequestStatus.PENDING_RE_APPROVAL,
-          oldData,
-          newData: cleanData,
-          deviceLocation: reviewRequiredData.deviceLocation ?? null,
-          pinLocation: reviewRequiredData.geo ?? null,
-          deviceDistanceMeters: reviewRequiredData.deviceDistanceMeters ?? null,
-          verificationProof: {
-            proofUrls: urls.map((url) => url.url),
-            capturedAt: now,
-          },
-          isPotentialDuplicate:
-            reviewRequiredData.isPotentialDuplicate ?? false,
-          suspectedDuplicateLocationIds:
-            reviewRequiredData.suspectedDuplicateLocationIds ?? [],
-        });
+        await this.locationRequestModel.create(
+          [
+            {
+              type: LocationRequestType.UPDATE,
+              submittedBy: userId,
+              locationId: id,
+              status: LocationRequestStatus.PENDING_RE_APPROVAL,
+              oldData,
+              newData: cleanData,
+              deviceLocation: reviewRequiredData.deviceLocation ?? null,
+              pinLocation: reviewRequiredData.geo ?? null,
+              deviceDistanceMeters:
+                reviewRequiredData.deviceDistanceMeters ?? null,
+              verificationProof: {
+                proofUrls: urls.map((url) => url.url),
+                capturedAt: now,
+              },
+              isPotentialDuplicate:
+                reviewRequiredData.isPotentialDuplicate ?? false,
+              suspectedDuplicateLocationIds:
+                reviewRequiredData.suspectedDuplicateLocationIds ?? [],
+            },
+          ],
+          { session: session },
+        );
       }
       const nonReviewData = {
         openingHours: updateData.openingHours ?? null,
@@ -224,6 +235,7 @@ export class VendorLocationsService {
           status: OtpStatus.VERIFIED,
         });
         if (!checkPhoneVerified) {
+          await session.abortTransaction();
           return {
             success: false,
             message: 'Số điện thoại chưa được xác minh',
@@ -237,7 +249,8 @@ export class VendorLocationsService {
         ),
       );
       location.set(cleanNonReviewData);
-      await location.save();
+      await location.save({ session: session });
+      await session.commitTransaction();
       return {
         success: true,
         message: 'Cập nhật địa điểm thành công',
@@ -245,11 +258,14 @@ export class VendorLocationsService {
       };
     } catch (error) {
       console.error('Error occurred at updateLocation:', error);
+      await session.abortTransaction();
       return {
         success: false,
         message: 'Xảy ra lỗi khi cập nhật địa điểm',
         statusCode: 500,
       };
+    } finally {
+      await session.endSession();
     }
   }
 
@@ -299,6 +315,7 @@ export class VendorLocationsService {
         systemCode,
       };
     } catch (error) {
+      console.log('Error in generateSystemCode service:', error);
       return {
         success: false,
         message: 'Xảy ra lỗi khi tạo mã hệ thống',
@@ -317,9 +334,12 @@ export class VendorLocationsService {
       imageFiles?: Express.Multer.File[];
     },
   ) {
+    const session = await this.connection.startSession();
+    session.startTransaction();
     try {
       const user = await this.userModel.findById(userId);
       if (!user) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Không tìm thấy người dùng',
@@ -327,6 +347,7 @@ export class VendorLocationsService {
         };
       }
       if (user.phoneVerified === false) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Số điện thoại chưa được xác minh',
@@ -340,6 +361,7 @@ export class VendorLocationsService {
         expiresAt: { $gt: new Date() },
       });
       if (!checkOtp) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Mã hệ thống không hợp lệ hoặc đã hết hạn',
@@ -351,6 +373,7 @@ export class VendorLocationsService {
         checkOtp.otpHash,
       );
       if (!isMatch) {
+        await session.abortTransaction();
         return {
           success: false,
           message: 'Mã hệ thống không hợp lệ',
@@ -360,17 +383,21 @@ export class VendorLocationsService {
       await this.otpModel.updateOne(
         { _id: checkOtp._id },
         { verifiedAt: new Date(), status: OtpStatus.VERIFIED },
+        { session: session },
       );
-      const deviceDistanceMeters = this.locationGeoService.getDistanceMeters(
-        requestDataParsed.deviceLatitude,
-        requestDataParsed.deviceLongitude,
-        requestDataParsed.pinLatitude,
-        requestDataParsed.pinLongitude,
-      );
-      if (deviceDistanceMeters > 50) {
-        throw new BadRequestException(
-          'Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm',
-        );
+      const deviceDistanceMeters = this.locationGeoService.validatePinDistance({
+        deviceLatitude: requestDataParsed.deviceLatitude,
+        deviceLongitude: requestDataParsed.deviceLongitude,
+        pinLatitude: requestDataParsed.pinLatitude,
+        pinLongitude: requestDataParsed.pinLongitude,
+      });
+      if (!deviceDistanceMeters.withinRange) {
+        await session.abortTransaction();
+        return {
+          success: false,
+          message: 'Bạn phải đứng trong phạm vi 500m mới được đăng ký địa điểm',
+          statusCode: 400,
+        };
       }
       const duplicateCandidates =
         await this.duplicateDetectionService.findPossibleDuplicates(
@@ -395,81 +422,96 @@ export class VendorLocationsService {
         'vendor-verification',
         files?.videoFiles ?? [],
       );
-      const location = await this.locationModel.create({
-        submittedBy: new Types.ObjectId(userId),
-        name: locationDataParsed.name,
-        description: locationDataParsed.description,
-        address: locationDataParsed.address,
-        geo: {
-          type: 'Point',
-          coordinates: [
-            locationDataParsed.longitude,
-            locationDataParsed.latitude,
-          ],
-        },
-        accuracyMeters: locationDataParsed.accuracyMeters,
-        openingHours: locationDataParsed.openingHours,
-        status: LocationStatus.SUBMITTED,
-        source:
-          user.role === UserRole.VENDOR
-            ? LocationSource.VENDOR
-            : LocationSource.CUSTOMER,
-        categoryId: new Types.ObjectId(locationDataParsed.categoryId),
-        subCategoryIds: locationDataParsed.subCategoryIds
-          ? locationDataParsed.subCategoryIds.map(
-              (id) => new Types.ObjectId(id),
-            )
-          : [],
-        submittedAt: new Date(),
-      });
-      await this.locationRequestModel.create({
-        type: LocationRequestType.CREATE,
-        status: LocationRequestStatus.PENDING,
-        submittedBy: new Types.ObjectId(userId),
-        locationId: location._id,
-        newData: {
-          ...locationDataParsed,
-        },
-        isPotentialDuplicate: duplicateCandidates.length > 0,
-        suspectedDuplicateLocationIds: duplicateCandidates.map(
-          (item) => new Types.ObjectId(item.id),
-        ),
-        pinLocation: {
-          type: 'Point',
-          coordinates: [
-            requestDataParsed.pinLongitude,
-            requestDataParsed.pinLatitude,
-          ],
-        },
-        deviceLocation: {
-          type: 'Point',
-          coordinates: [
-            requestDataParsed.deviceLongitude,
-            requestDataParsed.deviceLatitude,
-          ],
-        },
-        deviceDistanceMeters,
-        verificationProof: {
-          proofUrls: [
-            ...uploadedImages.map((url) => url.url),
-            ...uploadedVideoFiles.map((url) => url.url),
-          ],
-          licenseUrls: (uploadedLicenseFiles || []).map((url) => url.url),
-          systemCode: requestDataParsed.systemCode,
-          capturedAt: requestDataParsed.captureAt,
-        },
-      });
+      const location = await this.locationModel.create(
+        [
+          {
+            submittedBy: new Types.ObjectId(userId),
+            name: locationDataParsed.name,
+            description: locationDataParsed.description,
+            address: locationDataParsed.address,
+            geo: {
+              type: 'Point',
+              coordinates: [
+                locationDataParsed.longitude,
+                locationDataParsed.latitude,
+              ],
+            },
+            accuracyMeters: locationDataParsed.accuracyMeters,
+            openingHours: locationDataParsed.openingHours,
+            status: LocationStatus.SUBMITTED,
+            source:
+              user.role === UserRole.VENDOR
+                ? LocationSource.VENDOR
+                : LocationSource.CUSTOMER,
+            categoryId: new Types.ObjectId(locationDataParsed.categoryId),
+            subCategoryIds: locationDataParsed.subCategoryIds
+              ? locationDataParsed.subCategoryIds.map(
+                  (id) => new Types.ObjectId(id),
+                )
+              : [],
+            submittedAt: new Date(),
+          },
+        ],
+        { session: session },
+      );
+      await this.locationRequestModel.create(
+        [
+          {
+            type: LocationRequestType.CREATE,
+            status: LocationRequestStatus.PENDING,
+            submittedBy: new Types.ObjectId(userId),
+            locationId: location[0]._id,
+            ownershipRequested: true,
+            newData: {
+              ...locationDataParsed,
+            },
+            isPotentialDuplicate: duplicateCandidates.length > 0,
+            suspectedDuplicateLocationIds: duplicateCandidates.map(
+              (item) => new Types.ObjectId(item.id),
+            ),
+            pinLocation: {
+              type: 'Point',
+              coordinates: [
+                requestDataParsed.pinLongitude,
+                requestDataParsed.pinLatitude,
+              ],
+            },
+            deviceLocation: {
+              type: 'Point',
+              coordinates: [
+                requestDataParsed.deviceLongitude,
+                requestDataParsed.deviceLatitude,
+              ],
+            },
+            deviceDistanceMeters: deviceDistanceMeters.distanceMeters,
+            verificationProof: {
+              proofUrls: [
+                ...uploadedImages.map((url) => url.url),
+                ...uploadedVideoFiles.map((url) => url.url),
+              ],
+              licenseUrls: (uploadedLicenseFiles || []).map((url) => url.url),
+              systemCode: requestDataParsed.systemCode,
+              capturedAt: requestDataParsed.captureAt,
+            },
+          },
+        ],
+        { session: session },
+      );
+      await session.commitTransaction();
       return {
         success: true,
         message: 'Gửi địa điểm để duyệt thành công',
         statusCode: 200,
       };
     } catch (error) {
+      await session.abortTransaction();
       console.error('Error in registerLocation service:', error);
       if (error instanceof HttpException) {
         throw error;
       }
       throw new InternalServerErrorException('Xảy ra lỗi khi đăng ký địa điểm');
+    } finally {
+      await session.endSession();
     }
   }
 

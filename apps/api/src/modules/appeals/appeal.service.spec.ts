@@ -30,6 +30,7 @@ describe('Kiểm thử hợp đồng kháng nghị', () => {
 
   it('lưu nguồn yêu cầu quyền truy cập', () => {
     expect(DisputeSchema.path('requestAccessId')).toBeDefined();
+    expect(DisputeSchema.path('appealId')).toBeDefined();
   });
 });
 
@@ -227,7 +228,12 @@ describe('Kiểm thử AppealService', () => {
       status: RequestAccessStatus.REJECTED,
       save: jest.fn().mockResolvedValue(undefined),
     };
-    const dispute = { _id: new Types.ObjectId(), status: 'OPEN' };
+    const dispute = {
+      _id: new Types.ObjectId(),
+      status: 'OPEN',
+      vendorAId: ownerId,
+      vendorBId: userId,
+    };
     appealModel.findById.mockReturnValue(query(appeal));
     reqModel.findById.mockReturnValue(query(req));
     disputeModel.findOne.mockReturnValue(query(null));
@@ -247,13 +253,22 @@ describe('Kiểm thử AppealService', () => {
     expect(disputeModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
         requestAccessId: targetId,
+        appealId: appeal._id,
         vendorAId: ownerId,
         vendorBId: userId,
         evidenceB: expect.arrayContaining(req.evidenceFiles),
       }),
     );
     expect(audit.log).toHaveBeenCalledTimes(1);
-    expect(notify.notify).toHaveBeenCalledTimes(1);
+    expect(notify.notify).toHaveBeenCalledTimes(3);
+    expect(notify.notify).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: String(ownerId),
+        type: 'DISPUTE_OPENED',
+        refCollection: 'disputes',
+        refId: String(dispute._id),
+      }),
+    );
   });
 
   it('giữ nguyên quyết định kháng nghị yêu cầu truy cập mà không thay đổi yêu cầu', async () => {

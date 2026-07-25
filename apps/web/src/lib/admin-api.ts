@@ -467,6 +467,7 @@ export async function rejectClaim(
 export interface AdminLocationRequestFlags {
   suspectedDuplicate?: boolean;
   farPin?: boolean;
+  ownershipRegistration?: boolean;
   suspectedDuplicateLocationIds?: string[];
   [key: string]: unknown;
 }
@@ -484,6 +485,13 @@ export interface AdminLocationRequest {
     name?: string;
     address?: string;
     [key: string]: unknown;
+  };
+  ownershipRequested?: boolean;
+  verificationProof?: {
+    proofUrls?: string[];
+    licenseUrls?: string[];
+    systemCode?: string;
+    capturedAt?: string;
   };
   flags?: AdminLocationRequestFlags;
   deviceDistanceMeters?: number;
@@ -558,6 +566,18 @@ export async function confirmDuplicateLocation(
   return res.data;
 }
 
+export async function confirmDuplicateLocationRequest(
+  requestId: string,
+  reason: string,
+  duplicateOfLocationId?: string,
+): Promise<LocationRequestActionResponse> {
+  const res = await api.patch<LocationRequestActionResponse>(
+    `/admin/location-requests/${requestId}/confirm-duplicate`,
+    { reason, ...(duplicateOfLocationId ? { duplicateOfLocationId } : {}) },
+  );
+  return res.data;
+}
+
 export interface DecisionEvidence {
   url: string;
   fileType: "IMAGE" | "VIDEO" | "DOCUMENT";
@@ -582,12 +602,20 @@ export interface DecisionLocation {
 export interface AdminDispute {
   _id: string;
   requestAccessId?: string;
+  appealId?: string;
   locationId: DecisionLocation | string;
   vendorAId: DecisionUser | string;
   vendorBId: DecisionUser | string;
   evidenceA: DecisionEvidence[];
   evidenceB: DecisionEvidence[];
   status: string;
+  context?: {
+    requestReason?: string;
+    ownerResponseReason?: string;
+    appealArgument?: string;
+    requestedAt?: string;
+    rejectedAt?: string;
+  };
   adminDecision?: { reason?: string; decidedAt?: string };
   createdAt?: string;
 }
