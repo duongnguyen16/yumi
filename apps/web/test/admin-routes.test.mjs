@@ -21,7 +21,7 @@ test('root routes into the admin default page', async () => {
     'utf8',
   );
 
-  assert.match(source, /redirect\('\/categories'\)/);
+  assert.match(source, /redirect\('\/dashboard'\)/);
 });
 
 test('admin screens and login use flat routes', async () => {
