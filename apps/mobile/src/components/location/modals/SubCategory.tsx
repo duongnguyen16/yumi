@@ -2,7 +2,7 @@ import { getSubCategory } from "@/service/categoryService";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { Modal, Portal } from "react-native-paper";
-import { AppText, Chip, Stack } from "@/ui/components";
+import { AppText, Chip, NoticeSnackbar, Stack } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 
 export default function SubCategory({
@@ -13,6 +13,7 @@ export default function SubCategory({
   subVisible,
 }) {
   const [subCategory, setSubCategory] = useState([]);
+  const [message, setMessage] = useState("");
   const handleSelect = (subCategoryId) => {
     setSelectedSubCategory((prev) => {
       if (prev.includes(subCategoryId)) {
@@ -27,7 +28,7 @@ export default function SubCategory({
       const response = await getSubCategory(selectedCategory);
       if (response.success) {
         setSubCategory(response.data);
-      }
+      } else setMessage(response.message || "Không thể tải danh mục con.");
     };
     fetchSubCategory();
   }, [selectedCategory]);
@@ -52,6 +53,7 @@ export default function SubCategory({
           </View>
         </Stack>
       </Modal>
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Portal>
   );
 }

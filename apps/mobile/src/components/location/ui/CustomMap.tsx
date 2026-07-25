@@ -18,7 +18,8 @@ import {
   useState,
 } from "react";
 import { View } from "react-native";
-import { EmptyState, IconButton, LoadingState } from "@/ui/components";
+import { EmptyState, IconButton, LoadingState, NoticeSnackbar } from "@/ui/components";
+import { getNoticeMessage } from "@/ui/feedback";
 import { colors, radius, spacing } from "@/ui/tokens";
 
 const MAP_API =
@@ -63,6 +64,7 @@ function CustomMap(
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
   const cameraRef = useRef<CameraRef>(null);
   const mapRef = useRef<MapRef>(null);
 
@@ -139,18 +141,25 @@ function CustomMap(
   const getLocation = async () => {
     try {
       const response = await getCurrentLocation();
+      if (!response.success || !response.locationData) {
+        setMessage(response.message || "Không thể lấy vị trí hiện tại.");
+        return;
+      }
       cameraRef.current?.setStop({
-        center: [response.coords.longitude, response.coords.latitude],
+        center: [
+          response.locationData.coords.longitude,
+          response.locationData.coords.latitude,
+        ],
         zoom: 15,
         duration: 1000,
         easing: "ease",
       });
       setPinLocation({
-        longitude: response.coords.longitude,
-        latitude: response.coords.latitude,
+        longitude: response.locationData.coords.longitude,
+        latitude: response.locationData.coords.latitude,
       });
     } catch (error) {
-      console.error("Error fetching current location:", error);
+      setMessage(getNoticeMessage(error, "Không thể lấy vị trí hiện tại."));
     }
   };
 
@@ -256,6 +265,7 @@ function CustomMap(
           />
         </View>
       )}
+      <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </View>
   );
 }

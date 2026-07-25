@@ -46,7 +46,12 @@ import {
   TextField,
   WizardScreen,
 } from "@/ui/components";
+import Dialog from "@/ui/components/dialog";
 import { colors, radius, spacing } from "@/ui/tokens";
+import {
+  contributionExitConfirmation,
+  getContributionExitAction,
+} from "@/navigation/contribution-exit";
 import {
   validateContributionBasics,
   validateVendorVideos,
@@ -157,6 +162,8 @@ export default function ContributePlaceScreen() {
   const router = useRouter();
   const mapRef = useRef<MapRef>(null);
   const [step, setStep] = useState(0);
+  const [exitConfirmationVisible, setExitConfirmationVisible] =
+    useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
@@ -827,6 +834,15 @@ export default function ContributePlaceScreen() {
     }
   };
 
+  const exitContribution = () => {
+    if (getContributionExitAction(router.canGoBack()) === "BACK") {
+      router.back();
+      return;
+    }
+
+    router.replace("/(tabs)/home");
+  };
+
   const handleDuplicateDecision = () => {
     setDuplicateOptionVisible(false);
     setStep(2);
@@ -1150,10 +1166,10 @@ export default function ContributePlaceScreen() {
         currentStep={step}
         loading={saving}
         metadata={isVendorRegistration ? `Mã: ${displaySystemCode}` : undefined}
-        onBack={() =>
-          step > 0 ? setStep((current) => current - 1) : router.back()
-        }
+        onExit={() => setExitConfirmationVisible(true)}
+        onStepBack={() => setStep((current) => Math.max(0, current - 1))}
         onContinue={handleContinue}
+        showFooterBack={step > 0}
         stepLabels={activeStepLabels.map((label) =>
           label.replace(/^\d+\.\s*/, ""),
         )}
@@ -1161,6 +1177,16 @@ export default function ContributePlaceScreen() {
       >
         {renderStepContent()}
       </WizardScreen>
+
+      <Dialog
+        {...contributionExitConfirmation}
+        option
+        result={(confirmed) => {
+          if (confirmed) exitContribution();
+        }}
+        setVisible={setExitConfirmationVisible}
+        visible={exitConfirmationVisible}
+      />
 
       <ActionSheet
         actions={[

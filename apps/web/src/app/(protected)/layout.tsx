@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, CircularProgress } from '@mui/material';
 import { Sidebar } from '@/components/admin/Sidebar';
@@ -15,19 +15,19 @@ export default function ProtectedLayout({
 }) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const canAccess = useSyncExternalStore(
-    () => () => {},
-    () => Boolean(getAccessToken() && isAdmin()),
-    () => false,
-  );
+  const [canAccess, setCanAccess] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!canAccess) {
+    setCanAccess(Boolean(getAccessToken() && isAdmin()));
+  }, []);
+
+  useEffect(() => {
+    if (canAccess === false) {
       router.replace('/login');
     }
   }, [canAccess, router]);
 
-  if (!canAccess) {
+  if (canAccess !== true) {
     return (
       <Box
         sx={{

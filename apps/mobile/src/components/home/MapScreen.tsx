@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BackHandler,
   Keyboard,
@@ -44,6 +44,7 @@ import {
   LoadingState,
   MapCanvas,
   MapSearchDock,
+  NoticeSnackbar,
 } from "@/ui/components";
 import { colors, spacing } from "@/ui/tokens";
 import LocationSearchScreen from "../location/LocationSearchScreen";
@@ -72,7 +73,12 @@ type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
 type CategoryOption = { _id: string; name: string; isActive?: boolean };
 
 export default function MapScreen() {
-  const { location, setLocation } = useLocationContext();
+  const {
+    clearLocationError,
+    location,
+    locationError,
+    setLocation,
+  } = useLocationContext();
   const { locationId } = useLocalSearchParams<{ locationId?: string }>();
   const [mapStyle, setMapStyle] = useState<StyleSpecification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,17 +91,41 @@ export default function MapScreen() {
   const [selectedLocation, setSelectedLocation] =
     useState<MapLocationPreview | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [message, setMessage] = useState("");
   const cameraRef = useRef<CameraRef>(null);
   const searchInputRef = useRef<TextInput>(null);
   const hasAutoCentered = useRef(false);
   const navigation = useNavigation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const selectedCameraStop = useMemo(
+    () =>
+      selectedLocation
+        ? {
+            center: selectedLocation.coordinates,
+            duration: 700,
+            easing: "ease" as const,
+            padding: {
+              bottom: 300,
+              left: 0,
+              right: 0,
+              top: 0,
+            },
+            zoom: mapSelectionZoom,
+          }
+        : {},
+    [selectedLocation],
+  );
 
   useEffect(() => {
     getAllLocations()
-      .then((response) => setGeoJson(response.locations ?? emptyGeoJson))
-      .catch((error) => console.error("Error fetching locations:", error));
+      .then((response) => {
+        setGeoJson(response.locations ?? emptyGeoJson);
+        if (!response.success) {
+          setMessage(response.message || "Không thể tải các địa điểm.");
+        }
+      })
+      .catch(() => setMessage("Không thể tải các địa điểm."));
     getAllCategories()
       .then((response) => {
         if (response.success) {
@@ -104,9 +134,9 @@ export default function MapScreen() {
               (category: CategoryOption) => category.isActive !== false,
             ),
           );
-        }
+        } else setMessage(response.message || "Không thể tải danh mục.");
       })
-      .catch(() => undefined);
+      .catch(() => setMessage("Không thể tải danh mục."));
   }, []);
 
   useEffect(() => {
@@ -184,7 +214,7 @@ export default function MapScreen() {
     setSearchQuery("");
     setSearchScreen(false);
     setSelectedLocation(preview);
-    cameraRef.current?.setStop({
+    cameraRef.current?.easeTo({
       center: preview.coordinates,
       duration: 700,
       easing: "ease",
@@ -207,6 +237,8 @@ export default function MapScreen() {
         ? getMapLocationPreview(response.data)
         : null;
       if (active && preview) focusLocation(preview);
+      else if (active && !response?.success)
+        setMessage(response?.message || "Không thể mở chi tiết địa điểm.");
     });
     return () => {
       active = false;
@@ -233,14 +265,18 @@ export default function MapScreen() {
       return () => subscription.remove();
     }, [closeSearch, searchScreen]),
   );
-
   const setCurrentLocation = useCallback(async () => {
     const currentLocation = await getCurrentLocation();
-    if (!currentLocation) return;
+    if (!currentLocation?.success || !currentLocation.locationData) {
+      setMessage(
+        currentLocation?.message || "Không thể lấy vị trí hiện tại.",
+      );
+      return;
+    }
     setSelectedLocation(null);
     const coordinates: [number, number] = [
-      currentLocation.coords.longitude,
-      currentLocation.coords.latitude,
+      currentLocation.locationData.coords.longitude,
+      currentLocation.locationData.coords.latitude,
     ];
     setLocation(coordinates);
     cameraRef.current?.setStop({
@@ -253,13 +289,16 @@ export default function MapScreen() {
 
   const setCameraByLocation = useCallback(async () => {
     if (!selectedLocation) return;
-    cameraRef.current?.setStop({
+    cameraRef.current?.easeTo({
       center: selectedLocation.coordinates,
-      zoom: EXPLORE_NEARBY_ZOOM,
-      duration: 1000,
+      zoom: mapSelectionZoom,
+      duration: 700,
       easing: "ease",
       padding: {
         bottom: 300,
+        left: 0,
+        right: 0,
+        top: 0,
       },
     });
   }, [selectedLocation]);
@@ -267,7 +306,7 @@ export default function MapScreen() {
   useEffect(() => {
     if (!mapStyle || !selectedLocation) return;
     setCameraByLocation();
-  }, [mapStyle, selectedLocation]);
+  }, [mapStyle, selectedLocation, setCameraByLocation]);
 
   useEffect(() => {
     if (!mapStyle || locationId || hasAutoCentered.current) return;
@@ -330,111 +369,101 @@ export default function MapScreen() {
           ))}
         </ScrollView>
       ) : null}
-      {searchScreen ? (
-        <LocationSearchScreen
-          initialCategoryId={searchCategoryId}
-          onSelectLocation={(item) => {
-            const preview = getMapLocationPreview(item);
-            if (preview) focusLocation(preview);
-            else if (item?._id) router.push(`/location/${item._id}` as never);
-          }}
-          searchQuery={searchQuery}
-        />
-      ) : (
-        <View style={{ flex: 1 }}>
-          <Map mapStyle={mapStyle} style={{ flex: 1 }}>
-            <Camera
-              initialViewState={{
-                center: location,
-                zoom: EXPLORE_NEARBY_ZOOM,
-              }}
-              ref={cameraRef}
-            />
-            <NativeUserLocation />
-            <GeoJSONSource
-              cluster
-              clusterMaxZoom={12}
-              clusterRadius={20}
-              data={geoJson}
-              id="geojson"
-              onPress={(event) => {
-                event.stopPropagation();
-                const feature = event.nativeEvent.features?.[0];
-                const preview = getMapLocationPreview(feature);
-                if (preview) focusLocation(preview);
-              }}
-            >
-              <Layer
-                filter={["has", "point_count"]}
-                id="locations-cluster"
-                paint={{
-                  "circle-color": colors.textPrimary,
-                  "circle-radius": 18,
-                  "circle-stroke-color": colors.surfaceBase,
-                  "circle-stroke-width": 2,
-                }}
-                source="geojson"
-                type="circle"
-              />
-              <Layer
-                filter={["has", "point_count"]}
-                id="locations-cluster-count"
-                layout={{
-                  "text-anchor": "center",
-                  "text-field": ["get", "point_count_abbreviated"],
-                  "text-size": 14,
-                  "text-font": ["Roboto Regular"],
-                }}
-                paint={{ "text-color": colors.textInverse }}
-                source="geojson"
-                type="symbol"
-              />
-              <Layer
-                filter={["!", ["has", "point_count"]]}
-                id="locations-circle"
-                paint={{
-                  "circle-color": colors.accentPrimary,
-                  "circle-radius": 8,
-                  "circle-stroke-color": colors.surfaceBase,
-                  "circle-stroke-width": 2,
-                }}
-                source="geojson"
-                type="circle"
-              />
-              <Layer
-                filter={["!", ["has", "point_count"]]}
-                id="locations-label"
-                layout={{
-                  "text-allow-overlap": false,
-                  "text-anchor": "top",
-                  "text-field": ["get", "name"],
-                  "text-ignore-placement": false,
-                  "text-offset": [0, 1.5],
-                  "text-size": 12,
-                  "text-font": ["Roboto Regular"],
-                }}
-                paint={{
-                  "text-color": colors.textPrimary,
-                  "text-halo-color": colors.surfaceBase,
-                  "text-halo-width": 1.5,
-                }}
-                source="geojson"
-                type="symbol"
-              />
-            </GeoJSONSource>
-          </Map>
-          <View
-            pointerEvents="none"
-            style={{
-              height: insets.top + 144,
-              left: 0,
-              position: "absolute",
-              right: 0,
-              top: 0,
-              zIndex: 2,
+      <View style={{ flex: 1 }}>
+        <Map mapStyle={mapStyle} style={{ flex: 1 }}>
+          <Camera
+            initialViewState={{
+              center: location,
+              zoom: EXPLORE_NEARBY_ZOOM,
+            }}
+            ref={cameraRef}
+            {...selectedCameraStop}
+          />
+          <NativeUserLocation />
+          <GeoJSONSource
+            cluster
+            clusterMaxZoom={12}
+            clusterRadius={20}
+            data={geoJson}
+            id="geojson"
+            onPress={(event) => {
+              event.stopPropagation();
+              const feature = event.nativeEvent.features?.[0];
+              const preview = getMapLocationPreview(feature);
+              if (preview) focusLocation(preview);
             }}
           >
-            {/* <View
+            <Layer
+              filter={["has", "point_count"]}
+              id="locations-cluster"
+              paint={{
+                "circle-color": colors.textPrimary,
+                "circle-radius": 18,
+                "circle-stroke-color": colors.surfaceBase,
+                "circle-stroke-width": 2,
+              }}
+              source="geojson"
+              type="circle"
+            />
+            <Layer
+              filter={["has", "point_count"]}
+              id="locations-cluster-count"
+              layout={{
+                "text-anchor": "center",
+                "text-field": ["get", "point_count_abbreviated"],
+                "text-size": 14,
+                "text-font": ["Roboto Regular"],
+              }}
+              paint={{ "text-color": colors.textInverse }}
+              source="geojson"
+              type="symbol"
+            />
+            <Layer
+              filter={["!", ["has", "point_count"]]}
+              id="locations-circle"
+              paint={{
+                "circle-color": colors.accentPrimary,
+                "circle-radius": 8,
+                "circle-stroke-color": colors.surfaceBase,
+                "circle-stroke-width": 2,
+              }}
+              source="geojson"
+              type="circle"
+            />
+            <Layer
+              filter={["!", ["has", "point_count"]]}
+              id="locations-label"
+              layout={{
+                "text-allow-overlap": false,
+                "text-anchor": "top",
+                "text-field": ["get", "name"],
+                "text-ignore-placement": false,
+                "text-offset": [0, 1.5],
+                "text-size": 12,
+                "text-font": ["Roboto Regular"],
+              }}
+              paint={{
+                "text-color": colors.textPrimary,
+                "text-halo-color": colors.surfaceBase,
+                "text-halo-width": 1.5,
+              }}
+              source="geojson"
+              type="symbol"
+            />
+          </GeoJSONSource>
+        </Map>
+        <View
+          pointerEvents="none"
+          style={{
+            height: insets.top + 144,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0,
+            zIndex: 2,
+          }}
+        >
+          {/* <View
               style={{
                 backgroundColor: colors.surfaceApp,
                 flex: 3,
@@ -455,19 +484,19 @@ export default function MapScreen() {
                 opacity: 0.12,
               }}
             /> */}
-          </View>
-          <View
-            pointerEvents="none"
-            style={{
-              bottom: 0,
-              height: 156,
-              left: 0,
-              position: "absolute",
-              right: 0,
-              zIndex: 2,
-            }}
-          >
-            {/* <View
+        </View>
+        <View
+          pointerEvents="none"
+          style={{
+            bottom: 0,
+            height: 156,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            zIndex: 2,
+          }}
+        >
+          {/* <View
               style={{
                 backgroundColor: colors.surfaceApp,
                 flex: 1,
@@ -488,16 +517,44 @@ export default function MapScreen() {
                 opacity: 0.7,
               }}
             /> */}
-          </View>
-          {selectedLocation ? (
-            <MapLocationDrawer
-              key={selectedLocation.id}
-              location={selectedLocation}
-              onDismiss={() => setSelectedLocation(null)}
-            />
-          ) : null}
         </View>
-      )}
+        {selectedLocation ? (
+          <MapLocationDrawer
+            key={selectedLocation.id}
+            location={selectedLocation}
+            onDismiss={() => setSelectedLocation(null)}
+          />
+        ) : null}
+      </View>
+      {searchScreen ? (
+        <View
+          style={{
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0,
+            zIndex: 8,
+          }}
+        >
+          <LocationSearchScreen
+            initialCategoryId={searchCategoryId}
+            onSelectLocation={(item) => {
+              const preview = getMapLocationPreview(item);
+              if (preview) focusLocation(preview);
+              else if (item?._id) router.push(`/location/${item._id}` as never);
+            }}
+            searchQuery={searchQuery}
+          />
+        </View>
+      ) : null}
+      <NoticeSnackbar
+        message={message || locationError}
+        onDismiss={() => {
+          setMessage("");
+          clearLocationError();
+        }}
+      />
     </MapCanvas>
   );
 }

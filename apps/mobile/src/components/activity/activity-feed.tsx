@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import { FlatList, RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getTabContentBottomPadding } from "@/navigation/tab-content-inset";
+import { applyMarkAllRead, applyMarkOneRead } from "./read-state";
 
 export default function ActivityFeed() {
   const insets = useSafeAreaInsets();
@@ -36,21 +37,36 @@ export default function ActivityFeed() {
   };
 
   const handleMarkOneRead = async (id: string) => {
-    await markOneAsRead(id);
-    setNotifications((current) => current.map((item) => item._id === id ? { ...item, isRead: true } : item));
-    setUnreadCount((current) => Math.max(0, current - 1));
+    const response = await markOneAsRead(id);
+    if (!response.success) {
+      setMessage("Không thể đánh dấu thông báo đã đọc.");
+      return false;
+    }
+    const next = applyMarkOneRead(notifications, unreadCount, id, true);
+    setNotifications(next.notifications);
+    setUnreadCount(next.unreadCount);
+    return true;
   };
 
   const handleOpen = async (item: Notification) => {
-    if (!item.isRead) await handleMarkOneRead(item._id);
+    if (!item.isRead) {
+      const marked = await handleMarkOneRead(item._id);
+      if (!marked) return;
+    }
     const destination = getNotificationDestination(item);
     if (destination) router.push(destination as never);
   };
 
   const handleMarkAllRead = async () => {
-    await markAllAsRead();
-    setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
-    setUnreadCount(0);
+    const response = await markAllAsRead();
+    if (!response.success) {
+      setMessage("Không thể đánh dấu tất cả thông báo đã đọc.");
+      return;
+    }
+    const next = applyMarkAllRead(notifications, unreadCount, true);
+    setNotifications(next.notifications);
+    setUnreadCount(next.unreadCount);
+    setMessage("Đã đánh dấu tất cả thông báo là đã đọc.");
   };
 
   if (loading) return <View style={{ flex: 1 }}><LoadingState label="Đang tải thông báo" /></View>;

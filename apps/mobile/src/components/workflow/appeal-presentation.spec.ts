@@ -66,7 +66,9 @@ describe("Kiểm thử cách hiển thị kháng cáo", () => {
     ];
 
     expect(hasAppealForTarget(appeals, "USER_BANNED", "user-1")).toBe(true);
-    expect(hasAppealForTarget(appeals, "LOCATION_REJECTED", "user-1")).toBe(false);
+    expect(hasAppealForTarget(appeals, "LOCATION_REJECTED", "user-1")).toBe(
+      false,
+    );
     expect(hasAppealForTarget(appeals, "USER_BANNED", "user-2")).toBe(false);
   });
 

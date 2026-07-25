@@ -25,6 +25,8 @@ import { colors, fontFamily, radius, spacing } from "@/ui/tokens";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useContext, useState } from "react";
 import { Avatar, Surface } from "react-native-paper";
+import Dialog from "@/ui/components/dialog";
+import { getConfirmationCopy } from "@/ui/confirmation";
 
 function getDisplayName(
   profile: ProfileData | null,
@@ -53,6 +55,7 @@ export default function AccountScreen() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [logoutVisible, setLogoutVisible] = useState(false);
   const displayName = getDisplayName(profile, user);
   const email = String(profile?.email ?? user?.email ?? "");
   const sessionAvatarUrl = getSessionAvatarUrl(user);
@@ -65,6 +68,14 @@ export default function AccountScreen() {
   const phoneVerified =
     profile?.phoneVerified === true || user?.phoneVerified === true;
   const isVendor = profile?.role === "VENDOR" || user?.role === "VENDOR";
+  const logoutConfirmation = getConfirmationCopy("LOGOUT");
+
+  const confirmLogout = async () => {
+    const result = await handleLogout();
+    if (!result.success) {
+      setMessage(result.message || "Không thể đăng xuất.");
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -233,11 +244,23 @@ export default function AccountScreen() {
         <Button
           icon="logout"
           label="Đăng xuất"
-          onPress={handleLogout}
+          onPress={() => setLogoutVisible(true)}
           variant="destructive"
           width="full"
         />
       </PageContent>
+      <Dialog
+        cancelLabel={logoutConfirmation.cancelLabel}
+        confirmLabel={logoutConfirmation.confirmLabel}
+        message={logoutConfirmation.message}
+        option
+        result={(confirmed) => {
+          if (confirmed) void confirmLogout();
+        }}
+        setVisible={setLogoutVisible}
+        title={logoutConfirmation.title}
+        visible={logoutVisible}
+      />
       <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );

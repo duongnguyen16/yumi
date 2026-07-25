@@ -16,6 +16,7 @@ import {
 } from "react";
 
 type AuthenticatedUser = Record<string, unknown>;
+type LogoutResult = { success: boolean; message?: string };
 
 type UserContextValue = {
   user: AuthenticatedUser | null;
@@ -23,7 +24,7 @@ type UserContextValue = {
   setUser: Dispatch<SetStateAction<AuthenticatedUser | null>>;
   accessToken: string | null;
   setAccessToken: (token: string | null) => void;
-  handleLogout: () => Promise<void>;
+  handleLogout: () => Promise<LogoutResult>;
 };
 
 export const userContext = createContext<UserContextValue>({
@@ -32,7 +33,7 @@ export const userContext = createContext<UserContextValue>({
   setUser: () => undefined,
   accessToken: null,
   setAccessToken: () => undefined,
-  handleLogout: async () => undefined,
+  handleLogout: async () => ({ success: false }),
 });
 
 export default function UserContextProvider({
@@ -47,12 +48,23 @@ export default function UserContextProvider({
 
   const handleLogout = async () => {
     try {
+      const deleted = await deleteAllTokens();
+      if (!deleted) {
+        return {
+          success: false,
+          message: "Không thể xóa phiên đăng nhập an toàn. Vui lòng thử lại.",
+        };
+      }
       setUser(null);
       setAccessToken(null);
-      await deleteAllTokens();
       router.replace("/auth/login");
+      return { success: true };
     } catch (error) {
       console.error("Error logging out:", error);
+      return {
+        success: false,
+        message: "Không thể đăng xuất. Vui lòng thử lại.",
+      };
     }
   };
 

@@ -24,18 +24,6 @@ export class PendingVendorRegistration {
   name!: string;
 
   @Prop({ required: true })
-  business_name!: string;
-
-  @Prop({ required: true })
-  business_phone!: string;
-
-  @Prop({ type: String, default: null })
-  business_address?: string | null;
-
-  @Prop({ type: String, default: null })
-  id_card_image_url?: string | null;
-
-  @Prop({ required: true })
   otp_hash!: string;
 
   @Prop({ type: Number, default: 0 })

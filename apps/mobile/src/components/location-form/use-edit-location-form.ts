@@ -12,7 +12,6 @@ import {
 } from "@/service/locationService";
 import * as ImagePicker from "expo-image-picker";
 import { useContext, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 import {
   buildSuggestionChanges,
   getAllowedEditFields,
@@ -74,6 +73,7 @@ export function useEditLocationForm({
   const [flagValue, setFlagValue] =
     useState<EditSuggestionFlag>("PERMANENTLY_CLOSED");
   const [suggestionNote, setSuggestionNote] = useState("");
+  const [message, setMessage] = useState("");
   const isOwner = Boolean(
     user?._id && data?.ownerId && String(user._id) === String(data.ownerId),
   );
@@ -88,6 +88,11 @@ export function useEditLocationForm({
   useEffect(() => {
     if (!selectedCategory) return;
     getSubCategory(selectedCategory).then((response) => {
+      if (!response.success) {
+        setSubCategories([]);
+        setMessage(response.message || "Không thể tải danh mục con.");
+        return;
+      }
       setSubCategories(response.data || []);
       setSelectedSubCategories((current) => ({
         ...current,
@@ -99,6 +104,10 @@ export function useEditLocationForm({
   useEffect(() => {
     if (!data) return;
     getAllCategories().then((response) => {
+      if (!response.success) {
+        setMessage(response.message || "Không thể tải danh mục.");
+        return;
+      }
       setCategories(response.data || []);
       setName(data.name || "");
       setAddress(data.address || "");
@@ -125,7 +134,7 @@ export function useEditLocationForm({
   const pickMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Cần quyền truy cập thư viện ảnh");
+      setMessage("Cần quyền truy cập thư viện ảnh.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -139,28 +148,32 @@ export function useEditLocationForm({
   const sendOtp = async () => {
     const phoneResult = validatePhoneOtpRequest(phone);
     if (!phoneResult.isValid || !phoneResult.phone) {
-      Alert.alert(phoneResult.message);
+      setMessage(phoneResult.message);
       return;
     }
 
     const response = await sentUpdatePhoneOtp(data._id, phoneResult.phone);
     if (response.success) setOtpSent(true);
-    Alert.alert(response.success ? "Đã gửi mã OTP" : "Gửi mã OTP thất bại");
+    setMessage(
+      response.success
+        ? "Đã gửi mã OTP."
+        : response.message || "Gửi mã OTP thất bại.",
+    );
   };
 
   const verifyOtp = async () => {
     const otpResult = validatePhoneOtpVerification(otp);
     if (!otpResult.isValid || !otpResult.otp) {
-      Alert.alert(otpResult.message);
+      setMessage(otpResult.message);
       return;
     }
 
     const response = await verifyUpdatePhoneOtp(data._id, otpResult.otp);
     if (response.success) setOtpVerified(true);
-    Alert.alert(
+    setMessage(
       response.success
-        ? "Xác minh số điện thoại thành công"
-        : "Mã OTP không hợp lệ",
+        ? "Xác minh số điện thoại thành công."
+        : response.message || "Mã OTP không hợp lệ.",
     );
     setOtp("");
   };
@@ -190,15 +203,17 @@ export function useEditLocationForm({
       flag: flagValue,
     });
     if (changes.length === 0) {
-      Alert.alert("Chọn ít nhất một thông tin hợp lệ để đề xuất");
+      setMessage("Chọn ít nhất một thông tin hợp lệ để đề xuất.");
       return;
     }
     const response = await submitEditSuggestion(data._id, {
       changes,
       note: suggestionNote.trim() || undefined,
     });
-    Alert.alert(
-      response.success ? "Đã gửi đề xuất chỉnh sửa" : response.message,
+    setMessage(
+      response.success
+        ? "Đã gửi đề xuất chỉnh sửa."
+        : response.message || "Không thể gửi đề xuất chỉnh sửa.",
     );
     if (response.success) setSuggestionNote("");
   };
@@ -220,12 +235,19 @@ export function useEditLocationForm({
       otpVerified,
     });
     if (!validation.isValid) {
-      Alert.alert(validation.message);
+      setMessage(validation.message);
       return;
     }
     const device = selectedFields.includes("address")
       ? await getCurrentLocation()
       : null;
+    if (
+      (!device?.success || !device.locationData) &&
+      selectedFields.includes("address")
+    ) {
+      setMessage("Không thể lấy vị trí thiết bị. Vui lòng thử lại.");
+      return;
+    }
     const payload = {
       name: selectedFields.includes("name") ? name : undefined,
       address: selectedFields.includes("address") ? address : undefined,
@@ -248,8 +270,8 @@ export function useEditLocationForm({
       pinLatitude: selectedFields.includes("address")
         ? (pinLocation?.latitude ?? coordinates?.[1])
         : undefined,
-      deviceLongitude: device?.coords.longitude,
-      deviceLatitude: device?.coords.latitude,
+      deviceLongitude: device?.locationData.coords.longitude,
+      deviceLatitude: device?.locationData.coords.latitude,
     };
     const formData = new FormData();
     formData.append("data", JSON.stringify(payload));
@@ -265,10 +287,10 @@ export function useEditLocationForm({
       } as unknown as Blob),
     );
     const response = await updateLocation(formData, data._id);
-    Alert.alert(
+    setMessage(
       response.success
-        ? "Cập nhật địa điểm thành công"
-        : response.message || "Không thể cập nhật địa điểm",
+        ? "Cập nhật địa điểm thành công."
+        : response.message || "Không thể cập nhật địa điểm.",
     );
     if (response.success) setAssets([]);
   };
@@ -326,6 +348,8 @@ export function useEditLocationForm({
     suggestionNote,
     setSuggestionNote,
     loading,
+    message,
+    dismissMessage: () => setMessage(""),
     submit,
   };
 }

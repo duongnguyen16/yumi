@@ -1,0 +1,74 @@
+[
+  {
+    "_id": { "$oid": "667000000000000000000001" },
+    "name": "Ăn uống",
+    "description": "Quán ăn, nhà hàng, đồ ăn nhanh và các địa điểm phục vụ bữa ăn hằng ngày.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-06-25T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-25T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000002" },
+    "name": "Cà phê và giải khát",
+    "description": "Quán cà phê, trà sữa, nước ép và các không gian gặp gỡ thư giãn.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-06-25T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-25T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000003" },
+    "name": "Học tập và làm việc",
+    "description": "Thư viện, không gian học tập, coworking và dịch vụ hỗ trợ sinh viên.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-06-25T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-25T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000004" },
+    "name": "Lưu trú",
+    "description": "Khách sạn, homestay, nhà nghỉ và khu lưu trú ngắn hạn.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-06-25T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-25T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000005" },
+    "name": "Dịch vụ và tiện ích",
+    "description": "Cửa hàng tiện lợi, sửa chữa, giặt ủi, photocopy và các tiện ích địa phương.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-06-25T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-25T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000006" },
+    "name": "Tham quan và giải trí",
+    "description": "Điểm tham quan, vui chơi, thể thao và các không gian công cộng.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-06-25T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-06-25T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000007" },
+    "name": "Y tế và Sức khỏe",
+    "description": "Bệnh viện, phòng khám, nhà thuốc và các dịch vụ chăm sóc sức khỏe.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-07-19T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-07-19T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000008" },
+    "name": "Mua sắm và Thời trang",
+    "description": "Trung tâm thương mại, cửa hàng thời trang, thiết bị điện tử và quà tặng.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-07-19T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-07-19T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "667000000000000000000009" },
+    "name": "Phương tiện và Giao thông",
+    "description": "Trạm xăng, trạm sạc xe điện, dịch vụ sửa chữa và cho thuê phương tiện.",
+    "isActive": true,
+    "createdAt": { "$date": "2026-07-19T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-07-19T00:00:00.000Z" }
+  }
+]
