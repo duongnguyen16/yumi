@@ -42,6 +42,7 @@ import { Topbar } from '@/components/admin/Topbar';
 import { AdminCard } from '@/components/admin/AdminCard';
 import { ActionButton } from '@/components/admin/ActionButton';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { SearchInput } from '@/components/admin/SearchInput';
 import { tokens } from '@/theme/admin-tokens';
 
 const REPORT_PAGE_SIZE = 20;
@@ -78,6 +79,14 @@ function formatTime(value?: string): string {
   return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—';
 }
 
+function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
 const headSx: SxProps<Theme> = {
   fontFamily: tokens.font.mono,
   fontSize: 11,
@@ -97,6 +106,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   // Action modal state
   const [actionReport, setActionReport] = useState<AdminReport | null>(null);
@@ -128,6 +138,30 @@ export default function ReportsPage() {
   }, []);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / REPORT_PAGE_SIZE)), [total]);
+
+  const filteredReports = useMemo(() => {
+    const q = normalizeSearch(search.trim());
+    if (!q) return reports;
+
+    return reports.filter((r) =>
+      normalizeSearch(
+        [
+          r.reporter?.fullName,
+          r.reporter?.email,
+          r.targetType === 'REVIEW' ? 'Đánh giá' : 'Địa điểm',
+          REASON_LABEL[r.reason] ?? r.reason,
+          ROUTE_LABEL[r.route] ?? r.route,
+          STATUS_CHIP[r.status]?.label ?? r.status,
+          r.description,
+          r.targetId,
+          r.handledBy?.fullName,
+          r.handledBy?.email,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      ).includes(q),
+    );
+  }, [reports, search]);
 
   function handlePageChange(_: unknown, p: number) {
     setPage(p);
@@ -199,6 +233,13 @@ export default function ReportsPage() {
             ? `${pendingCount} báo cáo đang chờ xử lý`
             : 'Tất cả báo cáo'
         }
+        actions={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Tìm kiếm báo cáo..."
+          />
+        }
       />
 
       {error && (
@@ -237,18 +278,22 @@ export default function ReportsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {reports.length === 0 && (
+                {filteredReports.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} sx={{ borderBottom: 'none' }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
                         title="Không có báo cáo"
-                        subtitle="Chưa có báo cáo nào từ người dùng."
+                        subtitle={
+                          search.trim()
+                            ? 'Không có báo cáo khớp tìm kiếm.'
+                            : 'Chưa có báo cáo nào từ người dùng.'
+                        }
                       />
                     </TableCell>
                   </TableRow>
                 )}
-                {reports.map((r, idx) => {
+                {filteredReports.map((r, idx) => {
                   const chip = STATUS_CHIP[r.status] ?? STATUS_CHIP.PENDING;
                   return (
                     <TableRow

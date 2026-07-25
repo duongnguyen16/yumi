@@ -27,6 +27,7 @@ import { listAuditLogs, type AuditLogEntry } from "@/lib/admin-api";
 import { Topbar } from "@/components/admin/Topbar";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { EmptyState } from "@/components/admin/EmptyState";
+import { SearchInput } from "@/components/admin/SearchInput";
 import { tokens } from "@/theme/admin-tokens";
 
 function extractMessage(err: unknown): string {
@@ -35,6 +36,14 @@ function extractMessage(err: unknown): string {
     message?: string;
   };
   return e?.response?.data?.message ?? e?.message ?? "Đã xảy ra lỗi";
+}
+
+function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
 }
 
 const headSx: SxProps<Theme> = {
@@ -58,6 +67,7 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [actionFilter, setActionFilter] = useState("");
+  const [search, setSearch] = useState("");
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -95,6 +105,27 @@ export default function AuditLogsPage() {
     [],
   );
 
+  const filteredLogs = useMemo(() => {
+    const q = normalizeSearch(search.trim());
+    if (!q) return logs;
+
+    return logs.filter((log) =>
+      normalizeSearch(
+        [
+          log.actorId?.fullName,
+          log.actorId?.email,
+          log.action,
+          log.targetCollection,
+          log.targetId,
+          log.reason,
+          dayjs(log.createdAt).format("DD/MM/YYYY HH:mm"),
+        ]
+          .filter(Boolean)
+          .join(" "),
+      ).includes(q),
+    );
+  }, [logs, search]);
+
   return (
     <Box
       sx={{
@@ -110,6 +141,12 @@ export default function AuditLogsPage() {
         subtitle="Audit log"
         actions={
           <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Tìm kiếm audit log..."
+              sx={{ width: { xs: "100%", sm: 260 } }}
+            />
             <TextField
               select
               size="small"
@@ -192,18 +229,22 @@ export default function AuditLogsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {logs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} sx={{ borderBottom: "none" }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
                         title="Không có hoạt động"
-                        subtitle="Chưa có audit log nào."
+                        subtitle={
+                          search.trim()
+                            ? "Không có audit log khớp tìm kiếm."
+                            : "Chưa có audit log nào."
+                        }
                       />
                     </TableCell>
                   </TableRow>
                 ) : (
-                  logs.map((log) => (
+                  filteredLogs.map((log) => (
                     <TableRow
                       key={log._id}
                       sx={{
