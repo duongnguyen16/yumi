@@ -130,11 +130,17 @@ export class LocationContributionsService {
       );
     }
 
-    const submittedToday = await this.locationModel.countDocuments({
+    const submittedToday = await this.locationRequestModel.countDocuments({
       submittedBy: new Types.ObjectId(userId),
-      source: LocationSource.CUSTOMER,
-      submittedAt: { $gte: getStartOfVietnamDay() },
-      status: { $in: [LocationStatus.SUBMITTED, LocationStatus.PUBLISHED] },
+      type: LocationRequestType.CREATE,
+      createdAt: { $gte: getStartOfVietnamDay() },
+      status: {
+        $in: [
+          LocationRequestStatus.PENDING,
+          LocationRequestStatus.APPROVED,
+          LocationRequestStatus.REJECTED,
+        ],
+      },
     });
     if (submittedToday >= CONTRIBUTION_DAILY_LIMIT) {
       throw new BadRequestException(
@@ -171,7 +177,7 @@ export class LocationContributionsService {
     });
     if (!positionValidation.withinRange) {
       throw new BadRequestException(
-        'Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm',
+        'Bạn phải đứng trong phạm vi 200m mới được tạo địa điểm',
       );
     }
 
@@ -235,35 +241,45 @@ export class LocationContributionsService {
       imageUrls,
     };
 
-    const request = await this.locationRequestModel.create({
-      type: LocationRequestType.CREATE,
-      submittedBy: new Types.ObjectId(userId),
-      locationId: location._id,
-      status: LocationRequestStatus.PENDING,
-      oldData: null,
-      newData,
-      imageUrls,
-      pinLocation: {
-        type: 'Point',
-        coordinates: [dto.longitude, dto.latitude],
-      },
-      deviceLocation: {
-        type: 'Point',
-        coordinates: [dto.deviceLongitude, dto.deviceLatitude],
-      },
-      deviceDistanceMeters: positionValidation.distanceMeters,
-      isPotentialDuplicate: duplicateCandidates.length > 0,
-      suspectedDuplicateLocationIds: suspectedDuplicateIds,
-    });
+    let request: LocationRequestDocument;
+    try {
+      request = await this.locationRequestModel.create({
+        type: LocationRequestType.CREATE,
+        submittedBy: new Types.ObjectId(userId),
+        locationId: location._id,
+        status: LocationRequestStatus.PENDING,
+        oldData: null,
+        newData,
+        imageUrls,
+        pinLocation: {
+          type: 'Point',
+          coordinates: [dto.longitude, dto.latitude],
+        },
+        deviceLocation: {
+          type: 'Point',
+          coordinates: [dto.deviceLongitude, dto.deviceLatitude],
+        },
+        deviceDistanceMeters: positionValidation.distanceMeters,
+        isPotentialDuplicate: duplicateCandidates.length > 0,
+        suspectedDuplicateLocationIds: suspectedDuplicateIds,
+      });
+    } catch (error) {
+      await this.locationModel.deleteOne({ _id: location._id }).exec();
+      throw error;
+    }
 
-    await this.notificationModel.create({
-      userId: new Types.ObjectId(userId),
-      type: 'LOCATION_REQUEST_PENDING',
-      refCollection: 'location_requests',
-      refId: request._id,
-      title: 'Địa điểm đang chờ phê duyệt',
-      body: 'Địa điểm của bạn đang chờ phê duyệt.',
-    });
+    await this.notificationModel
+      .create({
+        userId: new Types.ObjectId(userId),
+        type: 'LOCATION_REQUEST_PENDING',
+        refCollection: 'location_requests',
+        refId: request._id,
+        title: 'Địa điểm đang chờ phê duyệt',
+        body: 'Địa điểm của bạn đang chờ phê duyệt.',
+      })
+      .catch((error) => {
+        console.log('Error creating location contribution notification:', error);
+      });
 
     return {
       success: true,
