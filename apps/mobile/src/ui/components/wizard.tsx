@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { ProgressBar, Surface } from "react-native-paper";
 import { colors, spacing } from "../tokens";
 import { Button, IconButton } from "./button";
@@ -7,6 +7,7 @@ import { AppText, Inline, Stack } from "./layout";
 import { NavigationBar } from "./navigation";
 import { Screen } from "./screen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getKeyboardSafeAreaBehavior } from "../keyboard-safe-area";
 
 export function Stepper({
   current,
@@ -116,6 +117,7 @@ export function WizardScreen({
   loading = false,
   showFooterBack = true,
   showProgress = true,
+  keyboardSafe = false,
 }: {
   title: string;
   metadata?: string;
@@ -130,7 +132,32 @@ export function WizardScreen({
   loading?: boolean;
   showFooterBack?: boolean;
   showProgress?: boolean;
+  keyboardSafe?: boolean;
 }) {
+  const content = (
+    <ScrollView
+      contentContainerStyle={{
+        gap: spacing[4],
+        padding: spacing[4],
+        paddingBottom: spacing[6],
+      }}
+      contentInsetAdjustmentBehavior="automatic"
+      style={{ flex: 1 }}
+    >
+      {children}
+    </ScrollView>
+  );
+  const footer = (
+    <FormFooter
+      continueDisabled={continueDisabled}
+      continueLabel={continueLabel}
+      loading={loading}
+      onBack={onStepBack}
+      onContinue={onContinue}
+      showBack={showFooterBack}
+      backDisabled={currentStep === 0}
+    />
+  );
   return (
     <Screen>
       <NavigationBar onBack={onExit} title={title} />
@@ -145,26 +172,18 @@ export function WizardScreen({
       {showProgress ? (
         <Stepper current={currentStep} labels={stepLabels} />
       ) : null}
-      <ScrollView
-        contentContainerStyle={{
-          gap: spacing[4],
-          padding: spacing[4],
-          paddingBottom: spacing[6],
-        }}
-        contentInsetAdjustmentBehavior="automatic"
-        style={{ flex: 1 }}
-      >
-        {children}
-      </ScrollView>
-      <FormFooter
-        continueDisabled={continueDisabled}
-        continueLabel={continueLabel}
-        loading={loading}
-        onBack={onStepBack}
-        onContinue={onContinue}
-        showBack={showFooterBack}
-        backDisabled={currentStep === 0}
-      />
+      {keyboardSafe ? (
+        <KeyboardAvoidingView
+          behavior={getKeyboardSafeAreaBehavior(Platform.OS)}
+          style={{ flex: 1 }}
+        >
+          {content}
+          {footer}
+        </KeyboardAvoidingView>
+      ) : (
+        content
+      )}
+      {keyboardSafe ? null : footer}
     </Screen>
   );
 }

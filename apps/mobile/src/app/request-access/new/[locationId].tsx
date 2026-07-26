@@ -8,7 +8,7 @@ import {
   getRequestAccessPhoneHelper,
   getRequestAccessSubmitAction,
 } from "@/navigation/request-access-verification";
-import { getRequestAccessKeyboardBehavior } from "@/navigation/request-access-keyboard";
+import { getKeyboardSafeAreaBehavior } from "@/ui/keyboard-safe-area";
 import {
   BottomActionBar,
   Button,
@@ -159,11 +159,11 @@ export default function NewAccessScreen() {
         position.coords.latitude,
       ];
       const evidenceFiles = proofs.map((proof) => ({
-          ...proof,
-          geo: { type: "Point" as const, coordinates },
-          accuracyMeters: position.coords.accuracy || undefined,
-          capturedAt: proof.capturedAt,
-        }));
+        ...proof,
+        geo: { type: "Point" as const, coordinates },
+        accuracyMeters: position.coords.accuracy || undefined,
+        capturedAt: proof.capturedAt,
+      }));
       const response = await createAccess(
         locationId,
         reason.trim() || undefined,
@@ -198,10 +198,7 @@ export default function NewAccessScreen() {
   const form = (
     <>
       <PageContent>
-        <FormSection
-          supportingText={supportingText}
-          title="Lý do yêu cầu"
-        >
+        <FormSection supportingText={supportingText} title="Lý do yêu cầu">
           <TextArea
             label="Lý do yêu cầu"
             maxLength={500}
@@ -262,7 +259,7 @@ export default function NewAccessScreen() {
       <NavigationBar onBack={() => router.back()} title="Xin chuyển quyền" />
       {verificationState === "OTP_REQUIRED" ? (
         <KeyboardAvoidingView
-          behavior={getRequestAccessKeyboardBehavior(Platform.OS)}
+          behavior={getKeyboardSafeAreaBehavior(Platform.OS)}
           style={{ flex: 1 }}
         >
           {form}

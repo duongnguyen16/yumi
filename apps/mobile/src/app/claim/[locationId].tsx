@@ -4,10 +4,7 @@ import {
   verifyClaimOtp,
   type ClaimEvidence,
 } from "@/service/claimService";
-import {
-  getClaimProof,
-  type ClaimProof,
-} from "@/components/claim/claim-photo";
+import { getClaimProof, type ClaimProof } from "@/components/claim/claim-photo";
 import {
   AppText,
   FormSection,
@@ -51,7 +48,7 @@ export default function ClaimLocationScreen() {
   const [otp, setOtp] = useState("");
   const [proof, setProof] = useState<ClaimProof | null>(null);
   const [license, setLicense] = useState<ClaimProof | null>(null);
-const [message, setMessage] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const step = getStep(siteCode, otpRequired, otpVerified);
 
@@ -219,6 +216,7 @@ const [message, setMessage] = useState("");
           (step === 1 && otp.trim().length !== 6) || (step === 2 && !proof)
         }
         currentStep={step}
+        keyboardSafe={step === 1}
         loading={loading}
         onExit={() => router.back()}
         onStepBack={() => router.back()}
