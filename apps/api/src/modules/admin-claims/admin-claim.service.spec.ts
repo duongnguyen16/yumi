@@ -3,9 +3,11 @@ import { NotificationPort } from 'src/common/contracts/notification.port';
 import { AuditLogDocument } from 'src/common/schemas/audit-log.schema';
 import { ClaimRequestDocument } from 'src/common/schemas/claim-request.schema';
 import { LocationDocument } from 'src/common/schemas/location.schema';
+import { UserDocument } from 'src/common/schemas/user.schema';
 import {
   ClaimRequestStatus,
   TrustEventType,
+  UserRole,
 } from 'src/common/schemas/common.enums';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { AdminClaimService } from './admin-claim.service';
@@ -30,20 +32,31 @@ describe('Kiểm thử AdminClaimService', () => {
     const logModel = { create: jest.fn().mockResolvedValue({}) };
     const trust = { recordEvent: jest.fn().mockResolvedValue({}) };
     const notification = { notify: jest.fn().mockResolvedValue(undefined) };
+    const userModel = {
+      findById: jest.fn().mockReturnValue(
+        query({
+          role: UserRole.VENDOR,
+          save: jest.fn().mockResolvedValue(undefined),
+        }),
+      ),
+    };
+    const service = new AdminClaimService(
+      claimModel as unknown as Model<ClaimRequestDocument>,
+      locModel as unknown as Model<LocationDocument>,
+      userModel as unknown as Model<UserDocument>,
+      logModel as unknown as Model<AuditLogDocument>,
+      trust as unknown as TrustEngineService,
+      notification as unknown as NotificationPort,
+    );
 
     return {
-      service: new AdminClaimService(
-        claimModel as unknown as Model<ClaimRequestDocument>,
-        locModel as unknown as Model<LocationDocument>,
-        logModel as unknown as Model<AuditLogDocument>,
-        trust as unknown as TrustEngineService,
-        notification as unknown as NotificationPort,
-      ),
+      service,
       claimModel,
       locModel,
       logModel,
       trust,
       notification,
+      userModel,
     };
   }
 
@@ -227,6 +240,40 @@ describe('Kiểm thử AdminClaimService', () => {
     );
     expect(notification.notify).toHaveBeenCalledTimes(1);
     expect(logModel.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('chuyển Customer thành Vendor khi duyệt claim', async () => {
+    const { service, claimModel, locModel, userModel } = createService();
+    const requester = {
+      role: UserRole.CUSTOMER,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const req = claim();
+    const loc = location();
+    userModel.findById.mockReturnValue(query(requester));
+    claimModel.findById.mockReturnValue(query(req));
+    locModel.findById.mockReturnValue(query(loc));
+
+    const result = await service.approve(String(claimId), String(adminId));
+
+    expect(result.success).toBe(true);
+    expect(requester.role).toBe(UserRole.VENDOR);
+    expect(requester.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('không duyệt claim khi không tìm thấy người yêu cầu', async () => {
+    const { service, claimModel, locModel, userModel } = createService();
+    const req = claim();
+    const loc = location();
+    userModel.findById.mockReturnValue(query(null));
+    claimModel.findById.mockReturnValue(query(req));
+    locModel.findById.mockReturnValue(query(loc));
+
+    const result = await service.approve(String(claimId), String(adminId));
+
+    expect(result).toMatchObject({ success: false, statusCode: 404 });
+    expect(loc.ownerId).toBeNull();
+    expect(loc.save).not.toHaveBeenCalled();
   });
 
   it('đóng claim xung đột trước khi chuyển sang yêu cầu quyền truy cập', async () => {

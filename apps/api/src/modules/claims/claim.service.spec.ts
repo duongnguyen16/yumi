@@ -13,13 +13,13 @@ function query<T>(value: T) {
   };
 }
 
-const eligibleVendor = {
+const eligibleUser = {
   role: UserRole.VENDOR,
   status: UserStatus.ACTIVE,
   phoneVerified: true,
 };
 
-function attachUserModel(service: ClaimService, user = eligibleVendor) {
+function attachUserModel(service: ClaimService, user = eligibleUser) {
   const userModel = {
     findById: jest.fn().mockReturnValue(query(user)),
   };
@@ -57,7 +57,10 @@ describe('Kiểm thử ClaimService', () => {
       sms as never,
       {} as never,
     );
-    attachUserModel(service);
+    attachUserModel(service, {
+      ...eligibleUser,
+      role: UserRole.CUSTOMER,
+    });
 
     const result = await service.start(String(locationId), String(vendorId));
 
@@ -203,14 +206,14 @@ describe('Kiểm thử ClaimService', () => {
   });
 
   it.each([
-    ['tài khoản Customer', { ...eligibleVendor, role: UserRole.CUSTOMER }],
+    ['tài khoản Admin', { ...eligibleUser, role: UserRole.ADMIN }],
     [
-      'Vendor chưa xác minh số điện thoại',
-      { ...eligibleVendor, phoneVerified: false },
+      'tài khoản chưa xác minh số điện thoại',
+      { ...eligibleUser, phoneVerified: false },
     ],
     [
-      'Vendor không còn active',
-      { ...eligibleVendor, status: UserStatus.WARNED },
+      'tài khoản không còn active',
+      { ...eligibleUser, status: UserStatus.WARNED },
     ],
   ])('chặn %s bắt đầu claim', async (_label, user) => {
     const locationId = new Types.ObjectId();
@@ -270,7 +273,7 @@ describe('Kiểm thử ClaimService', () => {
       sms as never,
       {} as never,
     );
-    attachUserModel(service, { ...eligibleVendor, phoneVerified: false });
+    attachUserModel(service, { ...eligibleUser, phoneVerified: false });
 
     const result = await service.submit(
       {

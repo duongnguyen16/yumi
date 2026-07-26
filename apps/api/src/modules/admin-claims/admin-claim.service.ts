@@ -17,9 +17,11 @@ import {
 import {
   ClaimRequestStatus,
   TrustEventType,
+  UserRole,
 } from 'src/common/schemas/common.enums';
 import { EvidenceFile } from 'src/common/schemas/common.embedded';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { ListClaimsDTO } from './dto/list-claims.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
@@ -51,6 +53,8 @@ export class AdminClaimService {
     private readonly claimModel: Model<ClaimRequestDocument>,
     @InjectModel(Location.name)
     private readonly locModel: Model<LocationDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     @InjectModel(AuditLog.name)
     private readonly logModel: Model<AuditLogDocument>,
     private readonly trust: TrustEngineService,
@@ -136,6 +140,11 @@ export class AdminClaimService {
         return this.redirectToAccess(claim, loc, adminId);
       }
 
+      const requester = await this.userModel.findById(claim.vendorId).exec();
+      if (!requester) {
+        return this.fail(404, 'Không tìm thấy người yêu cầu claim');
+      }
+
       // approve claim
       const oldOwner = loc.ownerId ? String(loc.ownerId) : null;
       loc.ownerId = claim.vendorId;
@@ -148,6 +157,11 @@ export class AdminClaimService {
         decidedAt: new Date(),
       };
       await claim.save();
+
+      if (requester.role === UserRole.CUSTOMER) {
+        requester.role = UserRole.VENDOR;
+        await requester.save();
+      }
 
       await this.trust.recordEvent({
         userId: claim.vendorId,

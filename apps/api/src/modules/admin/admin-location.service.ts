@@ -14,7 +14,9 @@ import { Location, LocationDocument } from 'src/common/schemas/location.schema';
 import {
   LocationStatus,
   TrustEventType,
+  UserRole,
 } from 'src/common/schemas/common.enums';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import {
   NOTIFICATION_PORT,
@@ -23,7 +25,7 @@ import {
 import { ListPendingRequestsDTO } from './dto/list-pending-requests.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 
-const FAR_PIN_THRESHOLD = 500;
+const FAR_PIN_THRESHOLD = 200;
 
 const REVIEWABLE_STATUSES: LocationRequestStatus[] = [
   LocationRequestStatus.PENDING,
@@ -97,6 +99,8 @@ export class AdminLocationService {
     private reqModel: Model<LocationRequestDocument>,
     @InjectModel(Location.name)
     private locModel: Model<LocationDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     @InjectModel(AuditLog.name)
     private logModel: Model<AuditLogDocument>,
     private readonly trust: TrustEngineService,
@@ -478,8 +482,7 @@ export class AdminLocationService {
 
       const fromLocStatus = location.status;
 
-      req.reviewerId = new Types.ObjectId(adminId);
-      req.reviewedAt = new Date();
+      let ownershipRequester: UserDocument | null = null;
 
       // cập nhật trạng thái req và location
 
@@ -497,6 +500,21 @@ export class AdminLocationService {
           };
         }
 
+        if (ownershipRegistration) {
+          ownershipRequester = await this.userModel
+            .findById(req.submittedBy)
+            .exec();
+          if (!ownershipRequester) {
+            return {
+              success: false,
+              statusCode: 404,
+              message: 'Không tìm thấy người gửi đăng ký sở hữu',
+            };
+          }
+        }
+
+        req.reviewerId = new Types.ObjectId(adminId);
+        req.reviewedAt = new Date();
         req.status = LocationRequestStatus.APPROVED;
         req.reviewNote = null;
         this.applySnapshot(location, req.newData);
@@ -508,6 +526,8 @@ export class AdminLocationService {
         const note = duplicateOfLocationId
           ? `${rejectionReason} (trùng với địa điểm ${duplicateOfLocationId})`
           : rejectionReason;
+        req.reviewerId = new Types.ObjectId(adminId);
+        req.reviewedAt = new Date();
         req.status = LocationRequestStatus.REJECTED;
         req.reviewNote = note;
         if (location.status !== LocationStatus.PUBLISHED) {
@@ -518,6 +538,11 @@ export class AdminLocationService {
       // lưu db
       await req.save();
       await location.save();
+
+      if (ownershipRequester?.role === UserRole.CUSTOMER) {
+        ownershipRequester.role = UserRole.VENDOR;
+        await ownershipRequester.save();
+      }
 
       // update cho user trust và notification
 
@@ -645,7 +670,10 @@ export class AdminLocationService {
       if (key === 'subCategoryIds') {
         if (Array.isArray(value)) {
           location.subCategoryIds = value
-            .filter((id): id is string => typeof id === 'string' && Types.ObjectId.isValid(id))
+            .filter(
+              (id): id is string =>
+                typeof id === 'string' && Types.ObjectId.isValid(id),
+            )
             .map((id) => new Types.ObjectId(id));
         }
       }
@@ -679,7 +707,10 @@ export class AdminLocationService {
   }
 
   private isOwnershipRegistration(
-    req: Pick<Partial<LocationRequest>, 'ownershipRequested' | 'verificationProof'>,
+    req: Pick<
+      Partial<LocationRequest>,
+      'ownershipRequested' | 'verificationProof'
+    >,
   ) {
     return (
       req.ownershipRequested === true ||

@@ -59,18 +59,18 @@ export class ClaimService {
 
   // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
 
-  async start(locationId: string, vendorId: string) {
+  async start(locationId: string, requesterId: string) {
     try {
       // id k hle
       if (
         !Types.ObjectId.isValid(locationId) ||
-        !Types.ObjectId.isValid(vendorId)
+        !Types.ObjectId.isValid(requesterId)
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
       // kiểm tra tính khả thi? tk có phải vendor ko, tk có bị banned k
 
-      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      const eligibilityFailure = await this.getEligibilityFailure(requesterId);
       if (eligibilityFailure) return eligibilityFailure;
 
       // xử lý location
@@ -113,11 +113,11 @@ export class ClaimService {
 
       await this.sessionModel.findOneAndUpdate(
         {
-          vendorId: new Types.ObjectId(vendorId),
+          vendorId: new Types.ObjectId(requesterId),
           locationId: new Types.ObjectId(locationId),
         },
         {
-          vendorId: new Types.ObjectId(vendorId),
+          vendorId: new Types.ObjectId(requesterId),
           locationId: new Types.ObjectId(locationId),
           siteCode,
           otpHash: otp ? await bcrypt.hash(otp, 10) : null,
@@ -144,20 +144,20 @@ export class ClaimService {
   }
 
   // xác minh otp
-  async verifyOtp(locationId: string, vendorId: string, otp: string) {
+  async verifyOtp(locationId: string, requesterId: string, otp: string) {
     try {
       if (
         !Types.ObjectId.isValid(locationId) ||
-        !Types.ObjectId.isValid(vendorId)
+        !Types.ObjectId.isValid(requesterId)
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
 
-      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      const eligibilityFailure = await this.getEligibilityFailure(requesterId);
       if (eligibilityFailure) return eligibilityFailure;
       const session = await this.sessionModel
         .findOne({
-          vendorId: new Types.ObjectId(vendorId),
+          vendorId: new Types.ObjectId(requesterId),
           locationId: new Types.ObjectId(locationId),
         })
         .exec();
@@ -196,15 +196,15 @@ export class ClaimService {
     }
   }
 
-  async submit(dto: SubmitClaimDto, vendorId: string) {
+  async submit(dto: SubmitClaimDto, requesterId: string) {
     try {
       if (
         !Types.ObjectId.isValid(dto.locationId) ||
-        !Types.ObjectId.isValid(vendorId)
+        !Types.ObjectId.isValid(requesterId)
       ) {
         return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
       }
-      const eligibilityFailure = await this.getEligibilityFailure(vendorId);
+      const eligibilityFailure = await this.getEligibilityFailure(requesterId);
       if (eligibilityFailure) return eligibilityFailure;
       const location = await this.locationModel
         .findById(dto.locationId)
@@ -219,7 +219,7 @@ export class ClaimService {
 
       const session = await this.sessionModel
         .findOne({
-          vendorId: new Types.ObjectId(vendorId),
+          vendorId: new Types.ObjectId(requesterId),
           locationId: new Types.ObjectId(dto.locationId),
         })
         .exec();
@@ -270,7 +270,7 @@ export class ClaimService {
       let claim: ClaimRequestDocument;
       try {
         claim = await this.claimModel.create({
-          vendorId: new Types.ObjectId(vendorId),
+          vendorId: new Types.ObjectId(requesterId),
           locationId: new Types.ObjectId(dto.locationId),
           type: ClaimRequestType.CLAIM_EXISTING_LOCATION,
           evidenceFiles,
@@ -289,7 +289,7 @@ export class ClaimService {
       // xóa session, vì đã nộp claim rồi
       await this.sessionModel.deleteOne({ _id: session._id }).exec();
       await this.notification.notify({
-        userId: vendorId,
+        userId: requesterId,
         type: 'CLAIM_SUBMITTED',
         title: 'Đã nhận yêu cầu xác nhận sở hữu',
         body: `Yêu cầu claim cho "${location.name}" đang chờ admin duyệt.`,
@@ -345,21 +345,21 @@ export class ClaimService {
     return sanitized;
   }
 
-  private async getEligibilityFailure(vendorId: string) {
-    const user = await this.userModel.findById(vendorId).lean().exec();
-    if (!user || user.role !== UserRole.VENDOR) {
+  private async getEligibilityFailure(requesterId: string) {
+    const user = await this.userModel.findById(requesterId).lean().exec();
+    if (!user || ![UserRole.CUSTOMER, UserRole.VENDOR].includes(user.role)) {
       return this.failure(
         403,
-        'Chỉ tài khoản Vendor mới có thể claim địa điểm',
+        'Chỉ tài khoản Customer hoặc Vendor mới có thể claim địa điểm',
       );
     }
     if (user.status !== UserStatus.ACTIVE) {
-      return this.failure(403, 'Tài khoản Vendor không ở trạng thái hoạt động');
+      return this.failure(403, 'Tài khoản không ở trạng thái hoạt động');
     }
     if (user.phoneVerified !== true) {
       return this.failure(
         403,
-        'Vendor phải xác minh số điện thoại trước khi claim địa điểm',
+        'Bạn phải xác minh số điện thoại trước khi claim địa điểm',
       );
     }
     return null;
