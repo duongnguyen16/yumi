@@ -3,13 +3,14 @@ import {
   startAccessVerification,
   verifyAccessOtp,
 } from "@/service/requestAccessService";
-import { getRequestAccessSubmitAction } from "@/navigation/request-access-verification";
+import {
+  getRequestAccessPhoneHelper,
+  getRequestAccessSubmitAction,
+} from "@/navigation/request-access-verification";
 import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
-  AppText,
   BottomActionBar,
   Button,
-  Card,
   FormSection,
   MediaPicker,
   NavigationBar,
@@ -20,7 +21,6 @@ import {
   TextField,
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
-import { colors } from "@/ui/tokens";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
 import * as ImagePicker from "expo-image-picker";
 import * as ExpoLocation from "expo-location";
@@ -180,6 +180,11 @@ export default function NewAccessScreen() {
 
   const locationName = name || "Địa điểm này";
   const supportingText = `${locationName} đang có chủ. Chủ hiện tại có 3 ngày để đồng ý hoặc từ chối.`;
+  const phoneHelper = getRequestAccessPhoneHelper({
+    destinationPhone,
+    locationName,
+    otpRequired,
+  });
   const proofItems = proofs.map((proof) => ({
     id: proof.uri,
     name: proof.fileName,
@@ -216,71 +221,26 @@ export default function NewAccessScreen() {
                 current.filter((proof) => proof.uri !== uri),
               )
             }
-            supportingText="Ảnh rõ nét giúp chủ hiện tại và hệ thống xác thực yêu cầu nhanh hơn."
+            layout="horizontal-square"
             title="Bằng chứng tại địa điểm"
           />
         </FormSection>
-        <FormSection
-          supportingText="Xác minh số liên hệ công khai trước khi gửi yêu cầu chuyển quyền."
-          title="Kiểm tra số điện thoại"
-        >
-          {!sessionId ? (
-            <Card>
-              <AppText variant="headline">Đang chuẩn bị xác minh</AppText>
-              <AppText
-                style={{ color: colors.textSecondary }}
-                variant="subhead"
-              >
-                Hệ thống đang kiểm tra số điện thoại liên hệ của địa điểm.
-              </AppText>
-            </Card>
-          ) : otpRequired ? (
-            <>
-              <Card>
-                <AppText
-                  style={{ color: colors.textSecondary }}
-                  variant="caption"
-                >
-                  MÃ XÁC NHẬN ĐÃ GỬI ĐẾN
-                </AppText>
-                <AppText variant="title2">
-                  {destinationPhone || "Số điện thoại của địa điểm"}
-                </AppText>
-                <AppText
-                  style={{ color: colors.textSecondary }}
-                  variant="subhead"
-                >
-                  Đây là số điện thoại liên hệ công khai của địa điểm{" "}
-                  {locationName}.
-                </AppText>
-              </Card>
-              <TextField
-                keyboardType="number-pad"
-                label="Mã OTP gồm 6 số"
-                maxLength={6}
-                onChangeText={(value) =>
-                  setOtp(value.replace(/\D/g, "").slice(0, 6))
-                }
-                value={otp}
-              />
-            </>
-          ) : (
-            <Card>
-              <AppText variant="headline">Không cần xác minh OTP</AppText>
-              <AppText
-                style={{ color: colors.textSecondary }}
-                variant="subhead"
-              >
-                Địa điểm chưa có số điện thoại liên hệ công khai. Bạn có thể
-                gửi yêu cầu sau khi bổ sung bằng chứng.
-              </AppText>
-            </Card>
-          )}
-          <AppText style={{ color: colors.textSecondary }} variant="caption">
-            Nếu chủ không phản hồi sau 3 ngày, hệ thống sẽ yêu cầu xác minh lại
-            trước khi chuyển quyền.
-          </AppText>
-        </FormSection>
+        {phoneHelper ? (
+          <FormSection
+            supportingText={phoneHelper}
+            title="Kiểm tra số điện thoại"
+          >
+            <TextField
+              keyboardType="number-pad"
+              label="Mã OTP gồm 6 số"
+              maxLength={6}
+              onChangeText={(value) =>
+                setOtp(value.replace(/\D/g, "").slice(0, 6))
+              }
+              value={otp}
+            />
+          </FormSection>
+        ) : null}
       </PageContent>
       <BottomActionBar>
         <Button

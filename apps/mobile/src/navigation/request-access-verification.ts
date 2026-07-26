@@ -28,6 +28,21 @@ export interface RequestAccessSubmitInput {
   submitting: boolean;
 }
 
+export function getRequestAccessPhoneHelper({
+  destinationPhone,
+  locationName,
+  otpRequired,
+}: {
+  destinationPhone: string | null;
+  locationName: string;
+  otpRequired: boolean;
+}) {
+  if (!otpRequired) return null;
+
+  const phone = destinationPhone || "số điện thoại của địa điểm";
+  return `Mã OTP đã gửi đến ${phone}, số điện thoại liên hệ công khai của ${locationName}.`;
+}
+
 export function getRequestAccessSubmitAction(
   input: RequestAccessSubmitInput,
 ): {

@@ -1,5 +1,6 @@
 import {
   getAccessVerificationState,
+  getRequestAccessPhoneHelper,
   getRequestAccessSubmitAction,
 } from "./request-access-verification";
 
@@ -72,5 +73,24 @@ describe("request access verification state", () => {
         submitting: true,
       }).disabled,
     ).toBe(true);
+  });
+
+  it("shows phone helper only when OTP is required", () => {
+    expect(
+      getRequestAccessPhoneHelper({
+        destinationPhone: null,
+        locationName: "Quán Mộc",
+        otpRequired: false,
+      }),
+    ).toBeNull();
+    expect(
+      getRequestAccessPhoneHelper({
+        destinationPhone: "0900000000",
+        locationName: "Quán Mộc",
+        otpRequired: true,
+      }),
+    ).toBe(
+      "Mã OTP đã gửi đến 0900000000, số điện thoại liên hệ công khai của Quán Mộc.",
+    );
   });
 });
