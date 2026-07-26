@@ -1,5 +1,6 @@
 import { userContext } from "@/contexts/userContext";
 import { getLocationPublicDetails } from "@/common/map-location";
+import { canManageLocationImages } from "@/components/location/location-image-management";
 import { AppText, Button, Divider, Inline, Stack } from "@/ui/components";
 import { colors, radius, spacing } from "@/ui/tokens";
 import * as Linking from "expo-linking";
@@ -40,6 +41,7 @@ type GeneralTabProps = {
   onRefresh?: () => Promise<void> | void;
   showActions?: boolean;
   showProducts?: boolean;
+  onManageImages?: () => void;
 };
 
 export default function GeneralTab({
@@ -49,6 +51,7 @@ export default function GeneralTab({
   onRefresh,
   showActions = true,
   showProducts = true,
+  onManageImages,
 }: GeneralTabProps) {
   const [visible, setVisible] = useState(false);
   const details = getLocationPublicDetails(data);
@@ -124,6 +127,7 @@ export default function GeneralTab({
         <LocationManagementActions
           data={data}
           onEdit={() => setVisible(true)}
+          onManageImages={onManageImages}
         />
       ) : null}
       {showProducts ? (
@@ -201,18 +205,29 @@ function DetailRow({
 export function LocationManagementActions({
   data,
   onEdit,
+  onManageImages,
 }: {
   data?: LocationSummaryData | null;
   onEdit?: () => void;
+  onManageImages?: () => void;
 }) {
   const { user } = useContext(userContext);
   const router = useRouter();
   const userId = getId(user);
+  const userRole = typeof user?.role === "string" ? user.role : undefined;
   const ownerId = getId(data?.ownerId);
   const locationId = String(data?._id ?? data?.id ?? "");
 
   return (
     <>
+      {canManageLocationImages({ role: userRole, userId, ownerId }) && onManageImages ? (
+        <Button
+          icon="image-plus"
+          label="Thêm ảnh"
+          onPress={onManageImages}
+          variant="secondary"
+        />
+      ) : null}
       {userId === ownerId ? (
         <Button
           icon="pencil-outline"

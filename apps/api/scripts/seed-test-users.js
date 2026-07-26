@@ -487,11 +487,10 @@ const fixtureCollections = () => ({
       deviceLocation: { type: 'Point', coordinates: [105.5409, 21.0132] },
       deviceDistanceMeters: 18,
       verificationProof: {
-        proofUrls: [
+        imageUrls: [
           'https://example.com/test-fixtures/vendor-new-location.jpg',
         ],
         systemCode: 'LOC-TEST1',
-        capturedAt: daysAgo(1),
       },
     },
     {
@@ -523,7 +522,7 @@ const fixtureCollections = () => ({
       pinLocation: { type: 'Point', coordinates: [105.551, 21.023] },
       deviceLocation: { type: 'Point', coordinates: [105.5511, 21.0231] },
       deviceDistanceMeters: 14,
-      verificationProof: { proofUrls: ['https://example.com/test-fixtures/contribution-pending.jpg'] },
+      verificationProof: { imageUrls: ['https://example.com/test-fixtures/contribution-pending.jpg'] },
     },
     {
       _id: id('66f400000000000000000002'),
@@ -550,7 +549,7 @@ const fixtureCollections = () => ({
       oldData: { name: 'Fixture dia diem 27', address: 'Dia chi cu' },
       newData: { name: 'Fixture dia diem 27 da cap nhat', address: 'Dia chi moi da doi chieu' },
       changedFields: ['name', 'address'],
-      verificationProof: { proofUrls: ['https://example.com/test-fixtures/contribution-reapproval.jpg'] },
+      verificationProof: { imageUrls: ['https://example.com/test-fixtures/contribution-reapproval.jpg'] },
     },
     {
       _id: id('66f400000000000000000004'),

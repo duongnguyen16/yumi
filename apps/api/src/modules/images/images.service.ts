@@ -18,7 +18,7 @@ const ALLOWED_MIME_TYPES = [
   'video/quicktime',
   'video/mpeg',
 ];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const PRODUCT_IMAGE_ROOT = 'location-products';
 
 @Injectable()
@@ -224,7 +224,10 @@ export class ImagesService {
     }
   }
 
-  assertOwnedLocationMediaUrl(userId: string | { toString(): string }, url: string) {
+  assertOwnedLocationMediaUrl(
+    userId: string | { toString(): string },
+    url: string,
+  ) {
     let parsed: URL;
     try {
       parsed = new URL(url);
@@ -262,7 +265,7 @@ export class ImagesService {
     }
 
     if (file.size > MAX_IMAGE_SIZE) {
-      throw new BadRequestException('Ảnh sản phẩm phải nhỏ hơn hoặc bằng 5MB');
+      throw new BadRequestException('Ảnh sản phẩm phải nhỏ hơn hoặc bằng 10MB');
     }
   }
 

@@ -58,6 +58,7 @@ import {
   validateContributionBasics,
   validateVendorVideos,
 } from "@/common/contribute-validation";
+import { requestPhotoMetadataPermission } from "@/service/permissions";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -237,12 +238,7 @@ export default function ContributePlaceScreen() {
         licenseCount: licenseFiles.length,
         videoCount: videos.length,
       }),
-    [
-      images.length,
-      isVendorRegistration,
-      licenseFiles.length,
-      videos.length,
-    ],
+    [images.length, isVendorRegistration, licenseFiles.length, videos.length],
   );
 
   const duplicateWarning = similarLocations.length > 0;
@@ -462,18 +458,23 @@ export default function ContributePlaceScreen() {
         setNotice("Bạn cần cấp quyền thư viện ảnh để chọn ảnh.");
         return;
       }
+      const mediaPermission = await requestPhotoMetadataPermission();
+      if (!mediaPermission) {
+        setNotice("Bạn cần cấp quyền truy cập thư viện ảnh để chọn ảnh.");
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsMultipleSelection: true,
         selectionLimit: MAX_IMAGES - images.length,
         quality: 0.8,
         exif: true,
+        legacy: false,
       });
 
       if (result.canceled) {
         return;
       }
-
       const newImages = result.assets.map((asset, index) => ({
         id: `${Date.now()}-${index}`,
         uri: asset.uri,
@@ -518,6 +519,7 @@ export default function ContributePlaceScreen() {
         allowsMultipleSelection: true,
         selectionLimit: MAX_VIDEOS - videos.length,
         quality: 0.8,
+        exif: true,
       });
 
       if (result.canceled) {
@@ -536,8 +538,14 @@ export default function ContributePlaceScreen() {
         fileName: asset.fileName ?? `verification-${Date.now()}-${index}.mp4`,
         mimeType: asset.mimeType ?? "video/mp4",
         fileSize: asset.fileSize as number,
+        duration: asset.duration as number,
       }));
-
+      console.log(
+        "Picked videos",
+        newVideos[0].mimeType,
+        newVideos[0].fileSize,
+        newVideos[0].duration,
+      );
       setVideos((current) => [...current, ...newVideos].slice(0, MAX_VIDEOS));
     } catch (error) {
       logContributeError("pick-videos", error);
@@ -816,6 +824,10 @@ export default function ContributePlaceScreen() {
 
       if (isVendorRegistration && videos.length < 1) {
         setNotice("Hãy thêm ít nhất 1 video có chứa mã xác thực.");
+        return;
+      }
+      if (isVendorRegistration && images.length < 1) {
+        setNotice("Hãy thêm ít nhất 1 ảnh.");
         return;
       }
       if (!isVendorRegistration && images.length < 1) {

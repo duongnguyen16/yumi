@@ -346,14 +346,14 @@ export function LocationRequestDetailDrawer({
               value={verification.systemCode ?? '—'}
             />
             <Divider />
-            <MetaRow
-              label="Thời điểm ghi nhận"
-              value={formatDate(verification.capturedAt)}
+            <EvidenceLinks
+              title="Ảnh tại chỗ"
+              urls={verification.imageUrls}
             />
             <Divider />
             <EvidenceLinks
-              title="Ảnh/video tại chỗ"
-              urls={verification.proofUrls}
+              title="Video xác thực"
+              urls={verification.videoUrls}
             />
             <Divider />
             <EvidenceLinks title="Giấy phép" urls={verification.licenseUrls} />

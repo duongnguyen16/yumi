@@ -488,10 +488,11 @@ export interface AdminLocationRequest {
   };
   ownershipRequested?: boolean;
   verificationProof?: {
-    proofUrls?: string[];
+    imageUrls?: string[];
+    videoUrls?: string[];
     licenseUrls?: string[];
     systemCode?: string;
-    capturedAt?: string;
+    proofUrls?: string[];
   };
   flags?: AdminLocationRequestFlags;
   deviceDistanceMeters?: number;

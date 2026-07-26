@@ -227,6 +227,61 @@ describe('Kiểm thử AdminLocationService', () => {
     expect(submitter.save).toHaveBeenCalledTimes(1);
   });
 
+  it('gán người gửi làm owner khi phiếu có video xác minh sở hữu', async () => {
+    const { service, reqModel, locModel } = createService();
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      ownershipRequested: false,
+      verificationProof: { videoUrls: ['https://storage/proof.mp4'] },
+      newData: {},
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      status: LocationStatus.SUBMITTED,
+      ownerId: undefined,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.approve(String(request._id), String(adminId));
+
+    expect(result.success).toBe(true);
+    expect(location.ownerId).toEqual(request.submittedBy);
+  });
+
+  it('vẫn nhận diện bằng chứng proofUrls của phiếu cũ', async () => {
+    const { service, reqModel, locModel } = createService();
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      verificationProof: {
+        proofUrls: ['https://storage/location/video/site-code.mp4'],
+      },
+      newData: {},
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      status: LocationStatus.SUBMITTED,
+      ownerId: undefined,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.approve(String(request._id), String(adminId));
+
+    expect(result.success).toBe(true);
+    expect(location.ownerId).toEqual(request.submittedBy);
+  });
+
   it('không gán owner khi duyệt đóng góp cộng đồng', async () => {
     const { service, reqModel, locModel, userModel } = createService();
     const request = {

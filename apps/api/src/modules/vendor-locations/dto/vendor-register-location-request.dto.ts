@@ -1,11 +1,9 @@
 import {
   IsArray,
   IsBoolean,
-  IsDateString,
   IsMongoId,
   IsNotEmpty,
   IsNumber,
-  IsObject,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -34,8 +32,4 @@ export class CreateLocationRequestDataDto {
 
   @IsNumber()
   pinLongitude!: number;
-
-  @IsString()
-  @IsDateString({}, { message: 'Thời gian chụp không hợp lệ' })
-  captureAt!: string;
 }

@@ -243,7 +243,6 @@ export const submitVendorRegistration = async (
       deviceLongitude: payload.deviceLongitude,
       isPotentialDuplicate: payload.isPotentialDuplicate,
       suspectedDuplicateLocationIds: payload.suspectedDuplicateLocationIds,
-      captureAt: new Date().toISOString(),
       pinLatitude: payload.latitude,
       pinLongitude: payload.longitude,
     };
@@ -265,6 +264,7 @@ export const submitVendorRegistration = async (
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      timeout: 0,
     });
     if (response.data?.success === false) {
       return {

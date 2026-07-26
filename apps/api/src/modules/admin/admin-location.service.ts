@@ -57,17 +57,18 @@ const ALLOWED_SNAPSHOT_FIELDS = new Set([
   'pinLongitude',
 ]);
 
+type LocationVerificationProof = NonNullable<
+  LocationRequest['verificationProof']
+> & {
+  proofUrls?: string[];
+};
+
 type LocationRequestQueueItem = {
   isPotentialDuplicate?: boolean;
   suspectedDuplicateLocationIds?: Types.ObjectId[];
   deviceDistanceMeters?: number | null;
   ownershipRequested?: boolean;
-  verificationProof?: {
-    proofUrls?: string[];
-    licenseUrls?: string[];
-    systemCode?: string;
-    capturedAt?: Date;
-  };
+  verificationProof?: LocationVerificationProof;
   [key: string]: unknown;
 };
 
@@ -712,9 +713,14 @@ export class AdminLocationService {
       'ownershipRequested' | 'verificationProof'
     >,
   ) {
+    const proof = req.verificationProof as LocationVerificationProof | undefined;
     return (
       req.ownershipRequested === true ||
-      Boolean(req.verificationProof?.proofUrls?.length)
+      Boolean(
+        proof?.imageUrls?.length ||
+          proof?.videoUrls?.length ||
+          proof?.proofUrls?.length,
+      )
     );
   }
 }

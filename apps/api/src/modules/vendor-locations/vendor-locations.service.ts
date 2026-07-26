@@ -1,12 +1,11 @@
 import {
-  BadRequestException,
   HttpException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import bcrypt from 'bcryptjs';
-import { Model, Types, Connection } from 'mongoose';
+import { ClientSession, Model, Types, Connection } from 'mongoose';
 import { generateSystemCode } from 'src/common/func/generate-code';
 import {
   LocationSource,
@@ -39,6 +38,10 @@ import { CreateLocationRequestDataDto } from './dto/vendor-register-location-req
 import { UpdateLocationDto } from './dto/vendor-update-location.dto';
 import { isUnderHold } from 'src/common/ownership/hold.util';
 import { Review, ReviewDocument } from 'src/common/schemas/review.schema';
+import {
+  Notification,
+  NotificationDocument,
+} from 'src/common/schemas/notification.schema';
 
 type ReviewRequiredData = {
   name?: string | null;
@@ -49,6 +52,24 @@ type ReviewRequiredData = {
   isPotentialDuplicate?: boolean;
   suspectedDuplicateLocationIds?: Types.ObjectId[];
 };
+
+type LocationImageManagementError = {
+  success: false;
+  message: string;
+  statusCode: number;
+};
+
+type LocationImageManagementResult =
+  | LocationImageManagementError
+  | {
+      success: true;
+      message: string;
+      images?: Array<{ url: string; isCover: boolean; uploadedAt: Date }>;
+      imageUrl?: string;
+    };
+
+type OwnedLocationResult =
+  { location: LocationDocument } | { error: LocationImageManagementError };
 
 @Injectable()
 export class VendorLocationsService {
@@ -65,6 +86,8 @@ export class VendorLocationsService {
     private readonly locationGeoService: LocationGeoService,
     private readonly duplicateDetectionService: DuplicateDetectionService,
     @InjectConnection() private readonly connection: Connection,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
   ) {}
 
   //kiểm tra số điện thoại đã xác minh otp chưa bằng cách check trong schema otp, thêm validate khoảng cách 50m khi cập nhập vị trí
@@ -155,12 +178,12 @@ export class VendorLocationsService {
               updateData.pinLatitude ?? 0,
               updateData.pinLongitude ?? 0,
             );
-          if (reviewRequiredData.deviceDistanceMeters > 500) {
+          if (reviewRequiredData.deviceDistanceMeters > 200) {
             await session.abortTransaction();
             return {
               success: false,
               message:
-                'Bạn phải đứng trong phạm vi 50m mới được cập nhật địa điểm',
+                'Bạn phải đứng trong phạm vi 200m mới được cập nhật địa điểm',
               statusCode: 400,
             };
           }
@@ -192,7 +215,6 @@ export class VendorLocationsService {
           oldData.address = location.address;
           oldData.coordinates = location.geo.coordinates;
         }
-        const now = new Date();
         const urls = await this.imagesService.uploadMultiMedia(id, files ?? []);
         await this.locationRequestModel.create(
           [
@@ -208,8 +230,7 @@ export class VendorLocationsService {
               deviceDistanceMeters:
                 reviewRequiredData.deviceDistanceMeters ?? null,
               verificationProof: {
-                proofUrls: urls.map((url) => url.url),
-                capturedAt: now,
+                imageUrls: urls.map((url) => url.url),
               },
               isPotentialDuplicate:
                 reviewRequiredData.isPotentialDuplicate ?? false,
@@ -354,6 +375,24 @@ export class VendorLocationsService {
           statusCode: 400,
         };
       }
+      const existingRequest = await this.locationRequestModel
+        .findOne({
+          submittedBy: new Types.ObjectId(userId),
+          ownershipRequested: true,
+          status: LocationRequestStatus.PENDING,
+          'verificationProof.systemCode': requestDataParsed.systemCode,
+        })
+        .lean()
+        .exec();
+      if (existingRequest) {
+        await session.abortTransaction();
+        return {
+          success: true,
+          message: 'Hồ sơ đăng ký địa điểm đã được gửi trước đó',
+          statusCode: 200,
+          alreadySubmitted: true,
+        };
+      }
       const checkOtp = await this.otpModel.findOne({
         userId: new Types.ObjectId(userId),
         purpose: OtpPurpose.VERIFY_LOCATION,
@@ -454,7 +493,7 @@ export class VendorLocationsService {
         ],
         { session: session },
       );
-      await this.locationRequestModel.create(
+      const request = await this.locationRequestModel.create(
         [
           {
             type: LocationRequestType.CREATE,
@@ -485,17 +524,27 @@ export class VendorLocationsService {
             },
             deviceDistanceMeters: deviceDistanceMeters.distanceMeters,
             verificationProof: {
-              proofUrls: [
-                ...uploadedImages.map((url) => url.url),
-                ...uploadedVideoFiles.map((url) => url.url),
-              ],
+              imageUrls: uploadedImages.map((d) => d.url),
+              videoUrls: uploadedVideoFiles.map((d) => d.url),
               licenseUrls: (uploadedLicenseFiles || []).map((url) => url.url),
               systemCode: requestDataParsed.systemCode,
-              capturedAt: requestDataParsed.captureAt,
             },
           },
         ],
         { session: session },
+      );
+      await this.notificationModel.create(
+        [
+          {
+            userId: new Types.ObjectId(userId),
+            type: 'LOCATION_REQUEST_PENDING',
+            refCollection: 'location_requests',
+            refId: request[0]._id,
+            title: 'Địa điểm đang chờ phê duyệt',
+            body: 'Địa điểm của bạn đang chờ phê duyệt.',
+          },
+        ],
+        { session },
       );
       await session.commitTransaction();
       return {
@@ -795,41 +844,15 @@ export class VendorLocationsService {
           statusCode: 400,
         };
       }
-      if (!review.locationId) {
+      if (!review.reply.vendorId.equals(new Types.ObjectId(vendorId))) {
         return {
           success: false,
-          message: 'Đánh giá không có địa điểm liên quan',
-          statusCode: 400,
-        };
-      }
-      const location = await this.locationModel.findById(review?.locationId);
-      if (!location) {
-        return {
-          success: false,
-          message: 'Không tìm thấy địa điểm liên quan đến đánh giá',
-          statusCode: 404,
-        };
-      }
-      if (!location?.ownerId) {
-        return {
-          success: false,
-          message: 'Bạn không có quyền phản hồi đánh giá cho địa điểm này',
-          statusCode: 400,
-        };
-      }
-      if (!location.ownerId.equals(new Types.ObjectId(vendorId))) {
-        return {
-          success: false,
-          message: 'Bạn không có quyền phản hồi đánh giá cho địa điểm này',
+          message: 'Bạn chỉ được chỉnh sửa phản hồi của mình',
           statusCode: 403,
         };
       }
-      await this.reviewModel.updateOne(
-        { _id: reviewId },
-        {
-          $set: { reply: { vendorId: new Types.ObjectId(vendorId), content } },
-        },
-      );
+      review.reply.content = content;
+      await review.save();
       return {
         success: true,
         message: 'Cập nhật phản hồi thành công',
@@ -839,6 +862,168 @@ export class VendorLocationsService {
       return {
         success: false,
         message: 'Xảy ra lỗi khi cập nhật phản hồi',
+        statusCode: 500,
+      };
+    }
+  }
+
+  async addImagesToLocation(
+    locationId: string,
+    vendorId: string,
+    files: Express.Multer.File[],
+  ): Promise<LocationImageManagementResult> {
+    try {
+      const owned = await this.findOwnedLocation(locationId, vendorId);
+      if ('error' in owned) {
+        return owned.error;
+      }
+      const uploaded = await this.imagesService.uploadMultiMedia(
+        `location-images/${locationId}`,
+        files,
+      );
+
+      return this.connection.transaction(async (session) => {
+        const current = await this.findOwnedLocation(
+          locationId,
+          vendorId,
+          session,
+        );
+        if ('error' in current) {
+          return current.error;
+        }
+
+        const existingImages = current.location.imagesUrls ?? [];
+        const hasCover = existingImages.some((image) => image.isCover);
+        const images = uploaded.map((image, index) => ({
+          url: image.url,
+          isCover: !hasCover && index === 0,
+          uploadedAt: new Date(),
+        }));
+
+        current.location.imagesUrls ??= [];
+        current.location.imagesUrls.push(...images);
+        await current.location.save({ session });
+
+        return {
+          success: true,
+          message: 'Đã thêm ảnh vào địa điểm',
+          images,
+        };
+      });
+    } catch (error) {
+      console.error('Error in addImagesToLocation service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi thêm ảnh vào địa điểm',
+        statusCode: 500,
+      };
+    }
+  }
+
+  async setLocationCoverImage(
+    locationId: string,
+    vendorId: string,
+    imageUrl: string,
+  ): Promise<LocationImageManagementResult> {
+    try {
+      return this.connection.transaction(async (session) => {
+        const owned = await this.findOwnedLocation(
+          locationId,
+          vendorId,
+          session,
+        );
+        if ('error' in owned) {
+          return owned.error;
+        }
+
+        const selected = owned.location.imagesUrls.find(
+          (image) => image.url === imageUrl,
+        );
+        if (!selected) {
+          return {
+            success: false,
+            message: 'Ảnh không thuộc địa điểm này',
+            statusCode: 400,
+          };
+        }
+
+        owned.location.imagesUrls.forEach((image) => {
+          image.isCover = image === selected;
+        });
+        await owned.location.save({ session });
+
+        return {
+          success: true,
+          message: 'Đã đặt ảnh bìa',
+          imageUrl,
+        };
+      });
+    } catch (error) {
+      console.error('Error in setLocationCoverImage service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi đặt ảnh bìa',
+        statusCode: 500,
+      };
+    }
+  }
+
+  private async findOwnedLocation(
+    locationId: string,
+    vendorId: string,
+    session?: ClientSession,
+  ): Promise<OwnedLocationResult> {
+    const query = this.locationModel.findById(locationId);
+    const location = session
+      ? await query.session(session).exec()
+      : await query.exec();
+    if (!location) {
+      return {
+        error: {
+          success: false,
+          message: 'Không tìm thấy địa điểm',
+          statusCode: 404,
+        },
+      };
+    }
+
+    if (!location.ownerId || location.ownerId.toString() !== vendorId) {
+      return {
+        error: {
+          success: false,
+          message: 'Bạn không có quyền quản lý ảnh của địa điểm này',
+          statusCode: 403,
+        },
+      };
+    }
+
+    return { location };
+  }
+
+  async addImageToLocation(locationId: string, file: Express.Multer.File) {
+    try {
+      const location = await this.locationModel.findById(locationId).exec();
+      const uploadedImage = await this.imagesService.uploadMultiMedia(
+        `location-images/${locationId}`,
+        [file],
+      );
+      const data = uploadedImage.map((img, index) => ({
+        url: img.url,
+        isCover: index === 0,
+        uploadedAt: new Date(),
+      }));
+      location?.imagesUrls.push(...data);
+      await location?.save();
+      return {
+        success: true,
+        message: 'Thêm ảnh vào địa điểm thành công',
+        imageUrl: uploadedImage[0].url,
+      };
+    } catch (error) {
+      console.error('Error in addImageToLocation service:', error);
+      return {
+        success: false,
+        message: 'Xảy ra lỗi khi thêm ảnh vào địa điểm',
         statusCode: 500,
       };
     }

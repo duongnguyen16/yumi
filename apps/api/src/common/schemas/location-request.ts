@@ -21,7 +21,6 @@ export enum LocationRequestStatus {
 
 @Schema({ timestamps: true, collection: 'location_requests' })
 export class LocationRequest {
-
   @Prop({
     type: String,
     enum: LocationRequestType,
@@ -139,10 +138,10 @@ export class LocationRequest {
 
   @Prop({ type: Object })
   verificationProof?: {
-    proofUrls?: string[];
+    imageUrls?: string[];
+    videoUrls?: string[];
     licenseUrls?: string[];
     systemCode?: string;
-    capturedAt?: Date;
   };
 }
 

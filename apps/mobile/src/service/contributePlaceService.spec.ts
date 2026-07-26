@@ -3,6 +3,7 @@ import {
   CustomerContributionPayload,
   PendingContributionImage,
   submitCustomerContribution,
+  submitVendorRegistration,
 } from './contributePlaceService';
 
 jest.mock('./aixos', () => ({
@@ -94,6 +95,34 @@ describe('submitCustomerContribution', () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+      },
+    );
+  });
+
+  it('does not apply the short API timeout to vendor evidence uploads', async () => {
+    await submitVendorRegistration({
+      ...payload,
+      systemCode: 'ABC123',
+      videoFiles: [
+        {
+          uri: 'file:///evidence.mp4',
+          fileName: 'evidence.mp4',
+          mimeType: 'video/mp4',
+          fileSize: 1024,
+        },
+      ],
+      licenseFiles: [],
+      imageFiles,
+    });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/location/register',
+      expect.anything(),
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 0,
       },
     );
   });

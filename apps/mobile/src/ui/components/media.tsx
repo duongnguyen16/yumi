@@ -19,6 +19,7 @@ type MediaPickerProps = {
   icon?: IconName;
   addLabel?: string;
   layout?: "default" | "horizontal-square";
+  disabled?: boolean;
 };
 
 export function MediaPicker({
@@ -31,6 +32,7 @@ export function MediaPicker({
   icon = "image-outline",
   addLabel = "Thêm tệp",
   layout = "default",
+  disabled = false,
 }: MediaPickerProps) {
   if (layout === "horizontal-square") {
     return (
@@ -69,10 +71,11 @@ export function MediaPicker({
                 <Icon color={colors.accentPrimary} size={28} source={icon} />
               </View>
             )}
-            <Pressable
-              accessibilityLabel={`Xóa ${item.name || title}`}
-              accessibilityRole="button"
-              hitSlop={8}
+             <Pressable
+               accessibilityLabel={`Xóa ${item.name || title}`}
+               accessibilityRole="button"
+               disabled={disabled}
+               hitSlop={8}
               onPress={() => onRemove(item.id)}
               style={{
                 alignItems: "center",
@@ -91,10 +94,11 @@ export function MediaPicker({
           </View>
         ))}
         {items.length < maxCount ? (
-          <Pressable
-            accessibilityLabel={addLabel}
-            accessibilityRole="button"
-            onPress={onAdd}
+           <Pressable
+             accessibilityLabel={addLabel}
+             accessibilityRole="button"
+             disabled={disabled}
+             onPress={onAdd}
             style={{
               alignItems: "center",
               backgroundColor: colors.surfaceControl,
@@ -138,10 +142,10 @@ export function MediaPicker({
               <AppText numberOfLines={1} variant="subhead">{item.name || title}</AppText>
               {item.metadata ? <AppText style={{ color: colors.textSecondary }} variant="caption">{item.metadata}</AppText> : null}
             </Stack>
-            <IconButton icon="close" label={`Xóa ${item.name || title}`} onPress={() => onRemove(item.id)} />
+            <IconButton disabled={disabled} icon="close" label={`Xóa ${item.name || title}`} onPress={() => onRemove(item.id)} />
           </Inline>
         ))}
-        {items.length < maxCount ? <Button icon="plus" label={addLabel} onPress={onAdd} variant="secondary" width="full" /> : null}
+        {items.length < maxCount ? <Button disabled={disabled} icon="plus" label={addLabel} onPress={onAdd} variant="secondary" width="full" /> : null}
       </Stack>
     </Card>
   );

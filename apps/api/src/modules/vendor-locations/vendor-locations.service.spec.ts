@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import bcrypt from 'bcryptjs';
 import { VendorLocationsService } from './vendor-locations.service';
 
 function createService(location: Record<string, unknown>) {
@@ -85,5 +86,598 @@ describe('VendorLocationsService ownership hold', () => {
     expect(result).toMatchObject({ success: false, statusCode: 403 });
     expect(location.set).not.toHaveBeenCalled();
     expect(location.save).not.toHaveBeenCalled();
+  });
+});
+
+function createRegistrationRetryService({
+  pendingOtp = null,
+  existingRequest = { _id: new Types.ObjectId() },
+}: {
+  pendingOtp?: { _id: Types.ObjectId; otpHash: string } | null;
+  existingRequest?: { _id: Types.ObjectId } | null;
+} = {}) {
+  const userId = new Types.ObjectId();
+  const locationRequestModel = {
+    findOne: jest.fn().mockReturnValue({
+      lean: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(existingRequest),
+      }),
+    }),
+  };
+  const session = {
+    startTransaction: jest.fn(),
+    abortTransaction: jest.fn().mockResolvedValue(undefined),
+    endSession: jest.fn().mockResolvedValue(undefined),
+  };
+  const service = new VendorLocationsService(
+    {} as never,
+    locationRequestModel as never,
+    {
+      findById: jest.fn().mockResolvedValue({
+        _id: userId,
+        phoneVerified: true,
+      }),
+    } as never,
+    { findOne: jest.fn().mockResolvedValue(pendingOtp) } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {
+      startSession: jest.fn().mockResolvedValue(session),
+    } as never,
+  );
+
+  return { service, userId, locationRequestModel, session };
+}
+
+const registrationRequestData = {
+  systemCode: 'ABC123',
+  deviceLatitude: 10.7769,
+  deviceLongitude: 106.7009,
+  pinLatitude: 10.7769,
+  pinLongitude: 106.7009,
+};
+
+const registrationLocationData = {
+  name: 'Quán cà phê thử nghiệm',
+  description: 'Địa điểm dùng để kiểm tra gửi lại.',
+  address: '1 Đường Test, Thành phố Hồ Chí Minh',
+  categoryId: String(new Types.ObjectId()),
+  latitude: 10.7769,
+  longitude: 106.7009,
+};
+
+describe('VendorLocationsService registration retries', () => {
+  it('treats a retry as successful when the same system code already created a pending request', async () => {
+    const { service, userId, locationRequestModel, session } =
+      createRegistrationRetryService();
+
+    const result = await service.registerLocation(
+      String(userId),
+      registrationRequestData,
+      registrationLocationData,
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      statusCode: 200,
+      alreadySubmitted: true,
+    });
+    expect(locationRequestModel.findOne).toHaveBeenCalledWith({
+      submittedBy: userId,
+      ownershipRequested: true,
+      status: 'PENDING',
+      'verificationProof.systemCode': 'ABC123',
+    });
+    expect(session.abortTransaction).toHaveBeenCalledTimes(1);
+    expect(session.endSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('recognizes a committed retry even when a different system code is pending', async () => {
+    const { service, userId } = createRegistrationRetryService({
+      pendingOtp: {
+        _id: new Types.ObjectId(),
+        otpHash: bcrypt.hashSync('OTHER1', 4),
+      },
+    });
+
+    const result = await service.registerLocation(
+      String(userId),
+      registrationRequestData,
+      registrationLocationData,
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      statusCode: 200,
+      alreadySubmitted: true,
+    });
+  });
+
+  it('still rejects a system code without an exact persisted request', async () => {
+    const { service, userId } = createRegistrationRetryService({
+      existingRequest: null,
+    });
+
+    const result = await service.registerLocation(
+      String(userId),
+      registrationRequestData,
+      registrationLocationData,
+    );
+
+    expect(result).toMatchObject({
+      success: false,
+      statusCode: 400,
+    });
+  });
+});
+
+describe('VendorLocationsService registration notifications', () => {
+  it('persists a pending notification for the created location request in the same transaction', async () => {
+    const userId = new Types.ObjectId();
+    const locationId = new Types.ObjectId();
+    const requestId = new Types.ObjectId();
+    const session = {
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn().mockResolvedValue(undefined),
+      abortTransaction: jest.fn().mockResolvedValue(undefined),
+      endSession: jest.fn().mockResolvedValue(undefined),
+    };
+    const notificationModel = {
+      create: jest.fn().mockResolvedValue([]),
+    };
+    const service = new VendorLocationsService(
+      {
+        create: jest.fn().mockResolvedValue([{ _id: locationId }]),
+      } as never,
+      {
+        findOne: jest.fn().mockReturnValue({
+          lean: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(null),
+          }),
+        }),
+        create: jest.fn().mockResolvedValue([{ _id: requestId }]),
+      } as never,
+      {
+        findById: jest.fn().mockResolvedValue({
+          _id: userId,
+          phoneVerified: true,
+          role: 'CUSTOMER',
+        }),
+      } as never,
+      {
+        findOne: jest.fn().mockResolvedValue({
+          _id: new Types.ObjectId(),
+          otpHash: bcrypt.hashSync('ABC123', 4),
+        }),
+        updateOne: jest.fn().mockResolvedValue({}),
+      } as never,
+      {} as never,
+      {
+        uploadMultiMedia: jest
+          .fn()
+          .mockResolvedValue([{ url: 'https://storage/evidence.jpg' }]),
+      } as never,
+      {} as never,
+      {
+        validatePinDistance: jest.fn().mockReturnValue({
+          withinRange: true,
+          distanceMeters: 0,
+        }),
+      } as never,
+      {
+        findPossibleDuplicates: jest.fn().mockResolvedValue([]),
+      } as never,
+      {
+        startSession: jest.fn().mockResolvedValue(session),
+      } as never,
+      notificationModel as never,
+    );
+
+    const result = await service.registerLocation(
+      String(userId),
+      registrationRequestData,
+      registrationLocationData,
+      {
+        imageFiles: [{} as Express.Multer.File],
+        videoFiles: [{} as Express.Multer.File],
+      },
+    );
+
+    expect(result).toMatchObject({ success: true, statusCode: 200 });
+    expect(notificationModel.create).toHaveBeenCalledWith(
+      [
+        {
+          userId,
+          type: 'LOCATION_REQUEST_PENDING',
+          refCollection: 'location_requests',
+          refId: requestId,
+          title: 'Địa điểm đang chờ phê duyệt',
+          body: 'Địa điểm của bạn đang chờ phê duyệt.',
+        },
+      ],
+      { session },
+    );
+    expect(notificationModel.create.mock.invocationCallOrder[0]).toBeLessThan(
+      session.commitTransaction.mock.invocationCallOrder[0],
+    );
+  });
+});
+
+const locationId = '667200000000000000000001';
+const vendorId = '66a000000000000000000001';
+const otherVendorId = '66a000000000000000000002';
+const file1 = {
+  mimetype: 'image/jpeg',
+  originalname: 'first.jpg',
+  size: 1,
+} as Express.Multer.File;
+const file2 = {
+  mimetype: 'image/png',
+  originalname: 'second.png',
+  size: 1,
+} as Express.Multer.File;
+
+function createOwnedLocation({
+  imagesUrls = [],
+}: {
+  imagesUrls?: Array<{ url: string; isCover: boolean }>;
+} = {}) {
+  return {
+    ownerId: new Types.ObjectId(vendorId),
+    imagesUrls,
+    save: jest.fn().mockResolvedValue(undefined),
+  };
+}
+
+function createImageService(
+  location: ReturnType<typeof createOwnedLocation> | null,
+  {
+    locations = [location],
+    transaction = async <T>(work: (session: unknown) => Promise<T>) =>
+      work({}),
+  }: {
+    locations?: Array<ReturnType<typeof createOwnedLocation> | null>;
+    transaction?: <T>(work: (session: unknown) => Promise<T>) => Promise<T>;
+  } = {},
+) {
+  const imagesService = {
+    uploadMultiMedia: jest.fn(),
+  };
+  let locationLookupCount = 0;
+  const connection = { transaction: jest.fn(transaction) };
+  const service = new VendorLocationsService(
+    {
+      findById: jest.fn().mockImplementation(() => {
+        const resolvedLocation =
+          locations[Math.min(locationLookupCount++, locations.length - 1)];
+        const query = {
+          exec: jest.fn().mockResolvedValue(resolvedLocation),
+          session: jest.fn(),
+        };
+        query.session.mockReturnValue(query);
+        return query;
+      }),
+    } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    imagesService as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    connection as never,
+    {} as never,
+  );
+
+  return { service, imagesService, connection };
+}
+
+type ImageManagementService = VendorLocationsService & {
+  addImagesToLocation(
+    locationId: string,
+    vendorId: string,
+    files: Express.Multer.File[],
+  ): Promise<unknown>;
+  setLocationCoverImage(
+    locationId: string,
+    vendorId: string,
+    imageUrl: string,
+  ): Promise<unknown>;
+};
+
+describe('VendorLocationsService location image management', () => {
+  it('appends uploaded images without replacing existing images or cover', async () => {
+    const location = createOwnedLocation({
+      imagesUrls: [{ url: 'https://cdn/cover.jpg', isCover: true }],
+    });
+    const { service, imagesService } = createImageService(location);
+    imagesService.uploadMultiMedia.mockResolvedValue([
+      { url: 'https://cdn/new-1.jpg' },
+      { url: 'https://cdn/new-2.jpg' },
+    ]);
+
+    const result = await (service as ImageManagementService).addImagesToLocation(
+      locationId,
+      vendorId,
+      [file1, file2],
+    );
+
+    expect(result).toMatchObject({ success: true });
+    expect(location.imagesUrls).toEqual([
+      { url: 'https://cdn/cover.jpg', isCover: true },
+      expect.objectContaining({ url: 'https://cdn/new-1.jpg', isCover: false }),
+      expect.objectContaining({ url: 'https://cdn/new-2.jpg', isCover: false }),
+    ]);
+    expect(location.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses only the first new image as cover when the gallery has no cover', async () => {
+    const location = createOwnedLocation();
+    const { service, imagesService } = createImageService(location);
+    imagesService.uploadMultiMedia.mockResolvedValue([
+      { url: 'https://cdn/first.jpg' },
+      { url: 'https://cdn/second.jpg' },
+    ]);
+
+    await (service as ImageManagementService).addImagesToLocation(
+      locationId,
+      vendorId,
+      [file1, file2],
+    );
+
+    expect(location.imagesUrls.map((image) => [image.url, image.isCover])).toEqual([
+      ['https://cdn/first.jpg', true],
+      ['https://cdn/second.jpg', false],
+    ]);
+  });
+
+  it('recomputes first-upload cover assignment in a transaction after a concurrent upload', async () => {
+    const initialLocation = createOwnedLocation();
+    const latestLocation = createOwnedLocation({
+      imagesUrls: [{ url: 'https://cdn/concurrent-cover.jpg', isCover: true }],
+    });
+    const { service, imagesService, connection } = createImageService(
+      initialLocation,
+      { locations: [initialLocation, latestLocation] },
+    );
+    imagesService.uploadMultiMedia.mockResolvedValue([
+      { url: 'https://cdn/retried-upload.jpg' },
+    ]);
+
+    await (service as ImageManagementService).addImagesToLocation(
+      locationId,
+      vendorId,
+      [file1],
+    );
+
+    expect(connection.transaction).toHaveBeenCalledTimes(1);
+    expect(latestLocation.imagesUrls.map((image) => [image.url, image.isCover]))
+      .toEqual([
+        ['https://cdn/concurrent-cover.jpg', true],
+        ['https://cdn/retried-upload.jpg', false],
+      ]);
+  });
+
+  it('rejects an image upload when the location does not exist', async () => {
+    const { service } = createImageService(null);
+
+    await expect(
+      (service as ImageManagementService).addImagesToLocation(locationId, vendorId, [file1]),
+    ).resolves.toMatchObject({ success: false, statusCode: 404 });
+  });
+
+  it('rejects an image upload from a user who does not own the location', async () => {
+    const { service } = createImageService(createOwnedLocation());
+
+    await expect(
+      (service as ImageManagementService).addImagesToLocation(
+        locationId,
+        otherVendorId,
+        [file1],
+      ),
+    ).resolves.toMatchObject({ success: false, statusCode: 403 });
+  });
+
+  it('changes the selected location image into the only cover', async () => {
+    const location = createOwnedLocation({
+      imagesUrls: [
+        { url: 'https://cdn/old-cover.jpg', isCover: true },
+        { url: 'https://cdn/new-cover.jpg', isCover: false },
+      ],
+    });
+    const { service } = createImageService(location);
+
+    const result = await (service as ImageManagementService).setLocationCoverImage(
+      locationId,
+      vendorId,
+      'https://cdn/new-cover.jpg',
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      imageUrl: 'https://cdn/new-cover.jpg',
+    });
+    expect(location.imagesUrls.map((image) => [image.url, image.isCover])).toEqual([
+      ['https://cdn/old-cover.jpg', false],
+      ['https://cdn/new-cover.jpg', true],
+    ]);
+    expect(location.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks only the selected image instance as cover when gallery URLs are duplicated', async () => {
+    const location = createOwnedLocation({
+      imagesUrls: [
+        { url: 'https://cdn/old-cover.jpg', isCover: true },
+        { url: 'https://cdn/duplicate.jpg', isCover: false },
+        { url: 'https://cdn/duplicate.jpg', isCover: false },
+      ],
+    });
+    const { service } = createImageService(location);
+
+    await (service as ImageManagementService).setLocationCoverImage(
+      locationId,
+      vendorId,
+      'https://cdn/duplicate.jpg',
+    );
+
+    expect(location.imagesUrls.map((image) => image.isCover)).toEqual([
+      false,
+      true,
+      false,
+    ]);
+    expect(location.imagesUrls.filter((image) => image.isCover)).toHaveLength(1);
+  });
+
+  it('reapplies a cover change in a retried transaction against the latest gallery', async () => {
+    const firstAttempt = createOwnedLocation({
+      imagesUrls: [
+        { url: 'https://cdn/old-cover.jpg', isCover: true },
+        { url: 'https://cdn/new-cover.jpg', isCover: false },
+      ],
+    });
+    const latestLocation = createOwnedLocation({
+      imagesUrls: [
+        { url: 'https://cdn/other-cover.jpg', isCover: true },
+        { url: 'https://cdn/new-cover.jpg', isCover: false },
+      ],
+    });
+    const { service, connection } = createImageService(firstAttempt, {
+      locations: [firstAttempt, latestLocation],
+      transaction: async (work) => {
+        await work({});
+        return work({});
+      },
+    });
+
+    await (service as ImageManagementService).setLocationCoverImage(
+      locationId,
+      vendorId,
+      'https://cdn/new-cover.jpg',
+    );
+
+    expect(connection.transaction).toHaveBeenCalledTimes(1);
+    expect(latestLocation.imagesUrls.map((image) => [image.url, image.isCover]))
+      .toEqual([
+        ['https://cdn/other-cover.jpg', false],
+        ['https://cdn/new-cover.jpg', true],
+      ]);
+    expect(latestLocation.imagesUrls.filter((image) => image.isCover)).toHaveLength(1);
+  });
+
+  it('rejects a cover URL that is not in the location gallery', async () => {
+    const { service } = createImageService(createOwnedLocation());
+
+    await expect(
+      (service as ImageManagementService).setLocationCoverImage(
+        locationId,
+        vendorId,
+        'https://cdn/other.jpg',
+      ),
+    ).resolves.toMatchObject({ success: false, statusCode: 400 });
+  });
+});
+
+function createReplyEditService({
+  replyAuthorId,
+  currentOwnerId,
+}: {
+  replyAuthorId: string;
+  currentOwnerId: string;
+}) {
+  const createdAt = new Date('2026-07-19T08:00:00.000Z');
+  const replyAuthorObjectId = new Types.ObjectId(replyAuthorId);
+  const review = {
+    status: 'PUBLISHED',
+    locationId: new Types.ObjectId(),
+    reply: {
+      vendorId: replyAuthorObjectId,
+      content: 'Nội dung cũ',
+      createdAt,
+    },
+    save: jest.fn().mockResolvedValue(undefined),
+  };
+  const reviewModel = {
+    findById: jest.fn().mockResolvedValue(review),
+    updateOne: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+  };
+  const locationModel = {
+    findById: jest.fn().mockResolvedValue({
+      ownerId: new Types.ObjectId(currentOwnerId),
+    }),
+  };
+  const service = new VendorLocationsService(
+    locationModel as never,
+    {} as never,
+    { findById: jest.fn().mockResolvedValue({}) } as never,
+    {} as never,
+    reviewModel as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
+
+  return {
+    createdAt,
+    locationModel,
+    replyAuthorObjectId,
+    review,
+    reviewModel,
+    service,
+  };
+}
+
+describe('VendorLocationsService review reply editing', () => {
+  const replyAuthorId = '66a000000000000000000011';
+  const newOwnerId = '66a000000000000000000012';
+  const reviewId = '667200000000000000000011';
+
+  it('allows the persisted reply author to edit after location ownership changes', async () => {
+    const {
+      createdAt,
+      replyAuthorObjectId,
+      review,
+      service,
+    } = createReplyEditService({ replyAuthorId, currentOwnerId: newOwnerId });
+
+    const result = await service.editReply(
+      replyAuthorId,
+      'Nội dung mới',
+      reviewId,
+    );
+
+    expect(result).toMatchObject({ success: true });
+    expect(review.reply).toMatchObject({
+      vendorId: replyAuthorObjectId,
+      content: 'Nội dung mới',
+      createdAt,
+    });
+    expect(review.reply.vendorId).toBe(replyAuthorObjectId);
+    expect(review.reply.createdAt).toBe(createdAt);
+    expect(review.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects the current location owner when they did not write the reply', async () => {
+    const { review, reviewModel, service } = createReplyEditService({
+      replyAuthorId,
+      currentOwnerId: newOwnerId,
+    });
+
+    const result = await service.editReply(
+      newOwnerId,
+      'Nội dung trái phép',
+      reviewId,
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 403 });
+    expect(review.reply.content).toBe('Nội dung cũ');
+    expect(review.save).not.toHaveBeenCalled();
+    expect(reviewModel.updateOne).not.toHaveBeenCalled();
   });
 });

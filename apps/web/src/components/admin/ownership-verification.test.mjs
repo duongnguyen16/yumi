@@ -7,17 +7,52 @@ test("normalizes ownership proof for admin review", () => {
     getOwnershipVerificationView({
       ownershipRequested: true,
       verificationProof: {
-        proofUrls: ["https://storage/proof.mp4"],
+        imageUrls: ["https://storage/proof.jpg", ""],
+        videoUrls: ["https://storage/proof.mp4"],
         licenseUrls: ["https://storage/license.jpg"],
         systemCode: "ABC123",
-        capturedAt: "2026-07-25T10:00:00.000Z",
       },
     }),
     {
       systemCode: "ABC123",
-      capturedAt: "2026-07-25T10:00:00.000Z",
-      proofUrls: ["https://storage/proof.mp4"],
+      imageUrls: ["https://storage/proof.jpg"],
+      videoUrls: ["https://storage/proof.mp4"],
       licenseUrls: ["https://storage/license.jpg"],
+    },
+  );
+});
+
+test("recognizes ownership evidence from the new image and video fields", () => {
+  assert.notEqual(
+    getOwnershipVerificationView({
+      ownershipRequested: false,
+      verificationProof: {
+        videoUrls: ["https://storage/proof.mp4"],
+      },
+    }),
+    null,
+  );
+});
+
+test("shows legacy proof URLs in the matching image and video groups", () => {
+  assert.deepEqual(
+    getOwnershipVerificationView({
+      verificationProof: {
+        proofUrls: [
+          "https://storage/location/image/store-front.jpg?token=abc",
+          "https://storage/location/video/site-code.mp4?token=def",
+        ],
+      },
+    }),
+    {
+      systemCode: undefined,
+      imageUrls: [
+        "https://storage/location/image/store-front.jpg?token=abc",
+      ],
+      videoUrls: [
+        "https://storage/location/video/site-code.mp4?token=def",
+      ],
+      licenseUrls: [],
     },
   );
 });
@@ -27,7 +62,8 @@ test("returns null when the request is not an ownership registration", () => {
     getOwnershipVerificationView({
       ownershipRequested: false,
       verificationProof: {
-        proofUrls: [],
+        imageUrls: [],
+        videoUrls: [],
         licenseUrls: [],
       },
     }),

@@ -10,5 +10,6 @@
       "rootPath": "apps/mobile",
       "jestCommandLine": "npm test --"
     }
-  ]
+  ],
+  "java.compile.nullAnalysis.mode": "disabled"
 }

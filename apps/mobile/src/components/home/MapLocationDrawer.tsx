@@ -9,6 +9,7 @@ import {
 } from "@/common/map-location";
 import ProductSection from "@/components/location/ProductSection";
 import { ImagePreviewModal } from "@/components/location/ImagePreviewModal";
+import { LocationImageManagementModal } from "@/components/location/LocationImageManagementModal";
 import { LocationReportSheet } from "@/components/location/LocationReportSheet";
 import GeneralTab, {
   LocationManagementActions,
@@ -75,6 +76,7 @@ export function MapLocationDrawer({
   const [details, setDetails] = useState<LocationDetails | null>(null);
   const [detent, setDetent] = useState<DrawerDetent>("half");
   const [reportVisible, setReportVisible] = useState(false);
+  const [imageManagerVisible, setImageManagerVisible] = useState(false);
   const [message, setMessage] = useState("");
   const halfHeight = getDrawerDetentHeight("half", windowHeight, insets.top);
   const fullHeight = getDrawerDetentHeight("full", windowHeight, insets.top);
@@ -306,7 +308,10 @@ export function MapLocationDrawer({
               variant="destructive"
             />
           ) : null}
-          <LocationManagementActions data={current} />
+          <LocationManagementActions
+            data={current}
+            onManageImages={() => setImageManagerVisible(true)}
+          />
         </ScrollView>
         <SheetScroll
           bottomInset={insets.bottom}
@@ -343,6 +348,14 @@ export function MapLocationDrawer({
           locationId={locationId}
           onDismiss={() => setReportVisible(false)}
           visible={reportVisible}
+        />
+        <LocationImageManagementModal
+          imageUrls={current.imagesUrls ?? []}
+          locationId={locationId}
+          locationName={current.name}
+          onChanged={refreshDetails}
+          onDismiss={() => setImageManagerVisible(false)}
+          visible={imageManagerVisible}
         />
         <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
       </Surface>

@@ -28,6 +28,7 @@ import {
 } from "./review-reply-model";
 
 type VendorReviewReplyDialogProps = {
+  canEditReply: boolean;
   draft: string;
   editing: boolean;
   review: LocationReview | null;
@@ -41,6 +42,7 @@ type VendorReviewReplyDialogProps = {
 };
 
 export function VendorReviewReplyDialog({
+  canEditReply,
   draft,
   editing,
   review,
@@ -56,7 +58,7 @@ export function VendorReviewReplyDialog({
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const hasReply = Boolean(review?.reply?.content);
   const mode = getReviewReplyDialogMode(hasReply, editing);
-  const visibility = getReviewReplyDialogVisibility(mode);
+  const visibility = getReviewReplyDialogVisibility(mode, canEditReply);
 
   if (!review) return null;
 
