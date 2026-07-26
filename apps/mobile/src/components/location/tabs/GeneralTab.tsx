@@ -250,7 +250,7 @@ export function LocationManagementActions({
       {ownerId && userId !== ownerId ? (
         <Button
           icon="account-key-outline"
-          label="Bạn là chủ địa điểm này"
+          label="Bạn là chủ địa điểm này?"
           onPress={() =>
             router.push({
               pathname: "/request-access/new/[locationId]",

@@ -55,7 +55,6 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
-      {} as never,
     );
     attachUserModel(service, {
       ...eligibleUser,
@@ -101,7 +100,6 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
-      {} as never,
     );
     attachUserModel(service);
 
@@ -145,9 +143,6 @@ describe('Kiểm thử ClaimService', () => {
     };
     const notification = { notify: jest.fn().mockResolvedValue(undefined) };
     const sms = { sendOtp: jest.fn() };
-    const siteCodeImage = {
-      contains: jest.fn().mockResolvedValue(true),
-    };
     const service = new ClaimService(
       locationModel as never,
       claimModel as never,
@@ -156,7 +151,6 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
-      siteCodeImage as never,
     );
     attachUserModel(service);
 
@@ -169,7 +163,7 @@ describe('Kiểm thử ClaimService', () => {
             fileType: 'IMAGE',
             geo: { type: 'Point', coordinates: [105.5, 21.0] },
             capturedAt: '2026-07-10T08:00:00.000Z',
-            metadata: { siteCode: 'CLIENT-CANNOT-BE-TRUSTED' },
+            metadata: { siteCode: 'CLG-ABC123' },
           },
         ],
       },
@@ -199,10 +193,144 @@ describe('Kiểm thử ClaimService', () => {
     expect(createdClaim.evidenceFiles[0].metadata.siteCode).toBeUndefined();
     expect(location.ownerId).toBeNull();
     expect(notification.notify).toHaveBeenCalledTimes(1);
-    expect(siteCodeImage.contains).toHaveBeenCalledWith(
-      'https://example.com/proof.jpg',
-      'CLG-ABC123',
+  });
+
+  it.each([
+    ['thiếu siteCode', undefined],
+    ['siteCode không khớp', 'CLG-WRONG1'],
+  ])('không tạo claim khi metadata %s', async (_label, siteCode) => {
+    const locationId = new Types.ObjectId();
+    const vendorId = new Types.ObjectId();
+    const locationModel = {
+      findById: jest.fn().mockReturnValue(
+        query({
+          _id: locationId,
+          name: 'Quán cà phê Campus',
+          status: LocationStatus.PUBLISHED,
+          ownerId: null,
+        }),
+      ),
+    };
+    const claimModel = {
+      exists: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId(),
+        status: 'PENDING',
+      }),
+    };
+    const requestAccessModel = { exists: jest.fn().mockResolvedValue(null) };
+    const sessionModel = {
+      findOne: jest.fn().mockReturnValue(
+        query({
+          _id: new Types.ObjectId(),
+          siteCode: 'CLG-ABC123',
+          otpRequired: false,
+          otpVerified: false,
+        }),
+      ),
+      deleteOne: jest.fn().mockReturnValue(query({})),
+    };
+    const notification = { notify: jest.fn() };
+    const sms = { sendOtp: jest.fn() };
+    const service = new ClaimService(
+      locationModel as never,
+      claimModel as never,
+      requestAccessModel as never,
+      sessionModel as never,
+      {} as never,
+      notification as never,
+      sms as never,
     );
+    attachUserModel(service);
+
+    const result = await service.submit(
+      {
+        locationId: String(locationId),
+        evidenceFiles: [
+          {
+            url: 'https://example.com/proof.jpg',
+            fileType: 'IMAGE',
+            geo: { type: 'Point', coordinates: [105.5, 21.0] },
+            capturedAt: '2026-07-10T08:00:00.000Z',
+            ...(siteCode ? { metadata: { siteCode } } : {}),
+          },
+        ],
+      },
+      String(vendorId),
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 400 });
+    expect(claimModel.create).not.toHaveBeenCalled();
+    expect(sessionModel.deleteOne).not.toHaveBeenCalled();
+  });
+
+  it('không nhận siteCode từ ảnh thiếu dữ liệu chụp tại chỗ', async () => {
+    const locationId = new Types.ObjectId();
+    const vendorId = new Types.ObjectId();
+    const locationModel = {
+      findById: jest.fn().mockReturnValue(
+        query({
+          _id: locationId,
+          name: 'Quán cà phê Campus',
+          status: LocationStatus.PUBLISHED,
+          ownerId: null,
+        }),
+      ),
+    };
+    const claimModel = {
+      exists: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId(),
+        status: 'PENDING',
+      }),
+    };
+    const requestAccessModel = { exists: jest.fn().mockResolvedValue(null) };
+    const sessionModel = {
+      findOne: jest.fn().mockReturnValue(
+        query({
+          _id: new Types.ObjectId(),
+          siteCode: 'CLG-ABC123',
+          otpRequired: false,
+          otpVerified: false,
+        }),
+      ),
+      deleteOne: jest.fn().mockReturnValue(query({})),
+    };
+    const notification = { notify: jest.fn().mockResolvedValue(undefined) };
+    const sms = { sendOtp: jest.fn() };
+    const service = new ClaimService(
+      locationModel as never,
+      claimModel as never,
+      requestAccessModel as never,
+      sessionModel as never,
+      {} as never,
+      notification as never,
+      sms as never,
+    );
+    attachUserModel(service);
+
+    const result = await service.submit(
+      {
+        locationId: String(locationId),
+        evidenceFiles: [
+          {
+            url: 'https://example.com/on-site.jpg',
+            fileType: 'IMAGE',
+            geo: { type: 'Point', coordinates: [105.5, 21.0] },
+            capturedAt: '2026-07-10T08:00:00.000Z',
+          },
+          {
+            url: 'https://example.com/uploaded.jpg',
+            fileType: 'IMAGE',
+            metadata: { siteCode: 'CLG-ABC123' },
+          },
+        ],
+      },
+      String(vendorId),
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 400 });
+    expect(claimModel.create).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -241,7 +369,6 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
-      {} as never,
     );
     const userModel = attachUserModel(service, user);
 
@@ -271,7 +398,6 @@ describe('Kiểm thử ClaimService', () => {
       {} as never,
       notification as never,
       sms as never,
-      {} as never,
     );
     attachUserModel(service, { ...eligibleUser, phoneVerified: false });
 

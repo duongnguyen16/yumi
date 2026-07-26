@@ -31,7 +31,6 @@ import {
 } from 'src/common/contracts/notification.port';
 import { SmsService } from '../auth/services/sms.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
-import { SiteCodeImageService } from './site-code-image.service';
 
 const SESSION_TTL_MINUTES = 30;
 const MAX_OTP_ATTEMPTS = 5;
@@ -54,7 +53,6 @@ export class ClaimService {
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
     private readonly sms: SmsService,
-    private readonly siteCodeImage: SiteCodeImageService,
   ) {}
 
   // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
@@ -231,7 +229,7 @@ export class ClaimService {
         );
       }
 
-      // ảnh phải có vị trí và thời điểm chụp, và phải có ảnh cho thấy mã siteCode
+      // ảnh phải có vị trí, thời điểm chụp và siteCode hợp lệ
       const hasGeoPhoto = dto.evidenceFiles.some((file) => {
         if (file.fileType !== 'IMAGE') return false;
         if (file.geo?.coordinates.length !== 2) return false;
@@ -243,12 +241,12 @@ export class ClaimService {
           'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
         );
       }
-      const siteCodeImageUrl = await this.findSiteCodeImage(
+      const siteCodeFile = this.findSiteCodeFile(
         dto.evidenceFiles,
         session.siteCode,
       );
-      if (!siteCodeImageUrl) {
-        return this.failure(400, 'Ảnh phải cho thấy mã hệ thống đã cấp');
+      if (!siteCodeFile) {
+        return this.failure(400, 'Metadata ảnh không có mã hệ thống hợp lệ');
       }
       if (await this.hasPendingSlot(dto.locationId)) {
         return this.failure(409, 'Địa điểm đang có yêu cầu chờ xử lý');
@@ -260,7 +258,7 @@ export class ClaimService {
         capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
         metadata: {
           ...this.sanitizeMetadata(file.metadata),
-          ...(file.url === siteCodeImageUrl ? { siteCodeVerified: true } : {}),
+          ...(file === siteCodeFile ? { siteCodeVerified: true } : {}),
           ...(session.otpRequired
             ? {}
             : { adminScrutiny: 'NO_PHONE_HIGHER_SCRUTINY' }),
@@ -326,15 +324,14 @@ export class ClaimService {
     return false;
   }
 
-  private async findSiteCodeImage(
+  private findSiteCodeFile(
     files: SubmitClaimDto['evidenceFiles'],
     siteCode: string,
   ) {
     for (const file of files) {
       if (file.fileType !== 'IMAGE') continue;
-
-      const matched = await this.siteCodeImage.contains(file.url, siteCode);
-      if (matched) return file.url;
+      if (file.geo?.coordinates.length !== 2 || !file.capturedAt) continue;
+      if (file.metadata?.siteCode === siteCode) return file;
     }
     return null;
   }

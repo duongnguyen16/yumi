@@ -17,6 +17,7 @@ describe("submitClaim", () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { success: true } });
     const payload = {
       locationId: "507f1f77bcf86cd799439011",
+      siteCode: "CLG-ABC123",
       evidenceFiles: [
         {
           url: "https://example.com/proof.jpg",
@@ -33,6 +34,21 @@ describe("submitClaim", () => {
 
     await submitClaim(payload);
 
-    expect(api.post).toHaveBeenCalledWith("/claims/submit", payload);
+    expect(api.post).toHaveBeenCalledWith("/claims/submit", {
+      locationId: "507f1f77bcf86cd799439011",
+      evidenceFiles: [
+        {
+          url: "https://example.com/proof.jpg",
+          fileType: "IMAGE",
+          geo: {
+            type: "Point",
+            coordinates: [105.8, 21.0],
+          },
+          capturedAt: "2026-07-21T08:00:00.000Z",
+          metadata: { siteCode: "CLG-ABC123" },
+        },
+      ],
+      licenseUrl: "https://example.com/license.jpg",
+    });
   });
 });

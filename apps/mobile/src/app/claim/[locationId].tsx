@@ -185,6 +185,7 @@ export default function ClaimLocationScreen() {
       };
       const result = await submitClaim({
         locationId,
+        siteCode,
         evidenceFiles: [evidence],
         licenseUrl,
       });
