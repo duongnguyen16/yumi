@@ -12,7 +12,7 @@ interface TopbarProps {
   actions?: ReactNode;
 }
 
-export function Topbar({ title, subtitle, actions }: TopbarProps) {
+  export function Topbar({ title, subtitle, actions }: TopbarProps) {
   const { openMobile } = useSidebar();
 
   return (
@@ -51,11 +51,11 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
           >
             {title}
           </Typography>
-          {subtitle && (
+          {/*{subtitle && (
             <Typography variant="overline" sx={{ display: 'block', mt: 0.25 }}>
               {subtitle}
             </Typography>
-          )}
+          )}*/}
         </Box>
       </Stack>
       {actions && (

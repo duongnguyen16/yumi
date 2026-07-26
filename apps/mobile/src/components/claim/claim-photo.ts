@@ -1,4 +1,4 @@
-import type { ImagePickerResponse } from "react-native-image-picker";
+import type { ImagePickerResult } from "expo-image-picker";
 
 export type ClaimProof = {
   uri: string;
@@ -8,10 +8,10 @@ export type ClaimProof = {
 };
 
 export function getClaimProof(
-  result: ImagePickerResponse,
+  result: ImagePickerResult,
   now = Date.now,
 ): ClaimProof | null {
-  if (result.didCancel || result.errorCode) return null;
+  if (result.canceled) return null;
 
   const asset = result.assets?.[0];
   if (!asset?.uri) return null;
@@ -19,7 +19,7 @@ export function getClaimProof(
   return {
     uri: asset.uri,
     fileName: asset.fileName || `claim-${now()}.jpg`,
-    mimeType: asset.type || "image/jpeg",
+    mimeType: asset.mimeType || "image/jpeg",
     fileSize: asset.fileSize || 0,
   };
 }

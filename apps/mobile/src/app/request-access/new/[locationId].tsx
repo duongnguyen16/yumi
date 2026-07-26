@@ -7,7 +7,7 @@ import {
   getRequestAccessPhoneHelper,
   getRequestAccessSubmitAction,
 } from "@/navigation/request-access-verification";
-import { uploadContributionImage } from "@/service/contributePlaceService";
+import { uploadOwnershipImage } from "@/service/ownershipImageService";
 import {
   BottomActionBar,
   Button,
@@ -152,7 +152,7 @@ export default function NewAccessScreen() {
       ];
       const evidenceFiles = await Promise.all(
         proofs.map(async (proof) => ({
-          url: await uploadContributionImage(proof),
+          url: await uploadOwnershipImage(proof),
           fileType: "IMAGE" as const,
           geo: { type: "Point" as const, coordinates },
           accuracyMeters: position.coords.accuracy || undefined,

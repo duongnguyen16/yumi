@@ -35,7 +35,7 @@ export const startClaim = async (
   }
 };
 
-export const verifyClaimOtp = async (locationId: string, otp: string) => {
+  export const verifyClaimOtp = async (locationId: string, otp: string) => {
   try {
     const response = await api.post("/claims/verify-otp", { locationId, otp });
     return response.data as ClaimApiResponse;
