@@ -9,7 +9,7 @@ import type { IconName } from "./types";
 
 export type MediaPickerItem = { id: string; uri?: string; name?: string; metadata?: string };
 
-export function MediaPicker({ title, supportingText, items, maxCount, onAdd, onRemove, icon = "image-outline", addLabel = "Thêm tệp" }: { title: string; supportingText?: string; items: MediaPickerItem[]; maxCount: number; onAdd: () => void; onRemove: (id: string) => void; icon?: IconName; addLabel?: string }) {
+export function MediaPicker({ title, supportingText, items, maxCount, onAdd, onRemove, icon = "image-outline", addLabel = "Thêm tệp", disabled = false }: { title: string; supportingText?: string; items: MediaPickerItem[]; maxCount: number; onAdd: () => void; onRemove: (id: string) => void; icon?: IconName; addLabel?: string; disabled?: boolean }) {
   return (
     <Card>
       <Stack>
@@ -27,10 +27,10 @@ export function MediaPicker({ title, supportingText, items, maxCount, onAdd, onR
               <AppText numberOfLines={1} variant="subhead">{item.name || title}</AppText>
               {item.metadata ? <AppText style={{ color: colors.textSecondary }} variant="caption">{item.metadata}</AppText> : null}
             </Stack>
-            <IconButton icon="close" label={`Xóa ${item.name || title}`} onPress={() => onRemove(item.id)} />
+            <IconButton disabled={disabled} icon="close" label={`Xóa ${item.name || title}`} onPress={() => onRemove(item.id)} />
           </Inline>
         ))}
-        {items.length < maxCount ? <Button icon="plus" label={addLabel} onPress={onAdd} variant="secondary" width="full" /> : null}
+        {items.length < maxCount ? <Button disabled={disabled} icon="plus" label={addLabel} onPress={onAdd} variant="secondary" width="full" /> : null}
       </Stack>
     </Card>
   );

@@ -34,7 +34,7 @@ export class LocationGeoService {
     return {
       success: true,
       distanceMeters,
-      withinRange: distanceMeters <= 500,
+      withinRange: distanceMeters <= 200,
       requiresManualPin: (input.accuracyMeters ?? 0) > 50,
     };
   }

@@ -32,6 +32,28 @@ export function canManageReviewReplies(
   );
 }
 
+export function canOpenReviewReply(
+  canCreateReply: boolean,
+  hasReply: boolean,
+): boolean {
+  return canCreateReply || hasReply;
+}
+
+export function canEditReviewReply(
+  user: ReviewReplyUser,
+  replyVendorId: EntityId,
+): boolean {
+  const userId = normalizeEntityId(user);
+  const vendorId = normalizeEntityId(replyVendorId);
+
+  return Boolean(
+    user?.role === "VENDOR" &&
+      userId &&
+      vendorId &&
+      userId === vendorId,
+  );
+}
+
 export function validateReviewReply(content: string): {
   content: string;
   error: string;
@@ -57,12 +79,15 @@ export function getReviewReplyDialogMode(
   return editing ? "edit" : "read";
 }
 
-export function getReviewReplyDialogVisibility(mode: ReviewReplyDialogMode) {
+export function getReviewReplyDialogVisibility(
+  mode: ReviewReplyDialogMode,
+  canEditReply: boolean,
+) {
   return {
     showComposer: mode === "create" || mode === "edit",
     showCreateActions: mode === "create",
     showEditActions: mode === "edit",
-    showEditMenu: mode === "read",
+    showEditMenu: mode === "read" && canEditReply,
     showReadReply: mode === "read",
   };
 }

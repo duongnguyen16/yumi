@@ -37,11 +37,12 @@ export function Button({ label, onPress, variant = "primary", size = "medium", w
   );
 }
 
-export function IconButton({ icon, label, onPress, selected = false }: { icon: IconName; label: string; onPress?: () => void; selected?: boolean }) {
+export function IconButton({ icon, label, onPress, selected = false, disabled = false }: { icon: IconName; label: string; onPress?: () => void; selected?: boolean; disabled?: boolean }) {
   return (
     <PaperIconButton
       accessibilityLabel={label}
       containerColor={selected ? colors.accentPrimary : colors.surfaceBase}
+      disabled={disabled}
       icon={icon}
       iconColor={selected ? colors.textInverse : colors.accentPrimary}
       mode="contained"

@@ -135,6 +135,34 @@ const updateLocation = async (formData: FormData, locationId: string) => {
   }
 };
 
+const addLocationImages = async (formData: FormData, locationId: string) => {
+  try {
+    const response = await api.post(`/location/${locationId}/images`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Không thể tải ảnh lên",
+    };
+  }
+};
+
+const setLocationCoverImage = async (locationId: string, imageUrl: string) => {
+  try {
+    const response = await api.patch(`/location/${locationId}/images/cover`, {
+      imageUrl,
+    });
+    return response.data;
+  } catch (error) {
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Không thể đổi ảnh bìa",
+    };
+  }
+};
+
 const getSystemCode = async () => {
   try {
     const response = await api.get("/location/register/code");
@@ -195,6 +223,8 @@ export {
   viewCount,
   searchLocation,
   updateLocation,
+  addLocationImages,
+  setLocationCoverImage,
   sentUpdatePhoneOtp,
   verifyUpdatePhoneOtp,
   getSystemCode,

@@ -57,7 +57,9 @@ import { Icon, Modal, Portal, Surface } from "react-native-paper";
 import { VendorReviewReplyDialog } from "./VendorReviewReplyDialog";
 import { getReviewComposerKeyboardBehavior } from "./review-composer-keyboard";
 import {
+  canEditReviewReply,
   canManageReviewReplies,
+  canOpenReviewReply,
   getReviewReplyMutation,
   normalizeEntityId,
   validateReviewReply,
@@ -118,6 +120,10 @@ export default function ReviewTab({
   );
   const selectedReview =
     reviews.find((review) => review.id === selectedReviewId) ?? null;
+  const canEditSelectedReply = canEditReviewReply(
+    userState?.user,
+    selectedReview?.reply?.vendorId,
+  );
 
   const loadReviews = useCallback(
     async (options?: { preserveExisting?: boolean; showLoading?: boolean }) => {
@@ -312,7 +318,14 @@ export default function ReviewTab({
     ]);
 
   const openReplyDialog = (review: LocationReview) => {
-    if (!canManageReplies) return;
+    if (
+      !canOpenReviewReply(
+        canManageReplies,
+        Boolean(review.reply?.content),
+      )
+    ) {
+      return;
+    }
     Keyboard.dismiss();
     setSelectedReviewId(review.id);
     setReplyDraft("");
@@ -327,7 +340,7 @@ export default function ReviewTab({
   };
 
   const startReplyEdit = () => {
-    if (!selectedReview?.reply?.content) return;
+    if (!canEditSelectedReply || !selectedReview?.reply?.content) return;
     setReplyDraft(selectedReview.reply.content);
     setEditingReply(true);
   };
@@ -437,7 +450,10 @@ export default function ReviewTab({
   const reviewItems = reviews.map((item) => (
     <ReviewCard
       canEdit={Boolean(currentUserId && item.user?.id === currentUserId)}
-      canReply={canManageReplies}
+      canOpenReply={canOpenReviewReply(
+        canManageReplies,
+        Boolean(item.reply?.content),
+      )}
       deleting={deletingReviewId === item.id}
       key={item.id}
       onDelete={requestDelete}
@@ -477,6 +493,7 @@ export default function ReviewTab({
   );
   const replyDialog = (
     <VendorReviewReplyDialog
+      canEditReply={canEditSelectedReply}
       draft={replyDraft}
       editing={editingReply}
       onCancelEdit={cancelReplyEdit}
@@ -529,7 +546,10 @@ export default function ReviewTab({
         renderItem={({ item }) => (
           <ReviewCard
             canEdit={Boolean(currentUserId && item.user?.id === currentUserId)}
-            canReply={canManageReplies}
+            canOpenReply={canOpenReviewReply(
+              canManageReplies,
+              Boolean(item.reply?.content),
+            )}
             deleting={deletingReviewId === item.id}
             onDelete={requestDelete}
             onEdit={startEdit}
@@ -547,7 +567,7 @@ export default function ReviewTab({
 function ReviewCard({
   review,
   canEdit,
-  canReply,
+  canOpenReply,
   onEdit,
   onDelete,
   onReply,
@@ -555,7 +575,7 @@ function ReviewCard({
 }: {
   review: LocationReview;
   canEdit: boolean;
-  canReply: boolean;
+  canOpenReply: boolean;
   onEdit: (review: LocationReview) => void;
   onDelete: (review: LocationReview) => void;
   onReply: (review: LocationReview) => void;
@@ -574,9 +594,11 @@ function ReviewCard({
   return (
     <>
     <Pressable
-      accessibilityHint={canReply ? "Mở hộp thoại phản hồi đánh giá" : undefined}
-      accessibilityRole={canReply ? "button" : undefined}
-      disabled={!canReply}
+      accessibilityHint={
+        canOpenReply ? "Mở phản hồi của đánh giá" : undefined
+      }
+      accessibilityRole={canOpenReply ? "button" : undefined}
+      disabled={!canOpenReply}
       onPress={() => onReply(review)}
       style={({ pressed }) => ({ opacity: pressed ? 0.86 : 1 })}
     >
@@ -614,13 +636,11 @@ function ReviewCard({
                   onPress={() => onDelete(review)}
                 />
               </Inline>
-            ) : canReply ? (
+            ) : canOpenReply ? (
               <Chip
                 icon={hasReply ? "check" : "reply"}
                 label={hasReply ? "Đã trả lời" : "Phản hồi"}
               />
-            ) : hasReply ? (
-              <Chip icon="check" label="Đã trả lời" />
             ) : null}
           </Inline>
           <Stack gap={spacing[2]}>

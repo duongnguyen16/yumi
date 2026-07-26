@@ -1,5 +1,7 @@
 import {
+  canEditReviewReply,
   canManageReviewReplies,
+  canOpenReviewReply,
   getReviewReplyDialogVisibility,
   getReviewReplyDialogMode,
   getReviewReplyMutation,
@@ -29,6 +31,34 @@ describe("vendor review reply model", () => {
     ).toBe(false);
   });
 
+  it("opens answered reviews for everyone and unanswered reviews only for the owner", () => {
+    expect(canOpenReviewReply(false, true)).toBe(true);
+    expect(canOpenReviewReply(false, false)).toBe(false);
+    expect(canOpenReviewReply(true, false)).toBe(true);
+  });
+
+  it("allows only the vendor recorded on the reply to edit it", () => {
+    expect(
+      canEditReviewReply(
+        { _id: "vendor-1", role: "VENDOR" },
+        "vendor-1",
+      ),
+    ).toBe(true);
+    expect(
+      canEditReviewReply(
+        { _id: "vendor-2", role: "VENDOR" },
+        "vendor-1",
+      ),
+    ).toBe(false);
+    expect(
+      canEditReviewReply(
+        { _id: "vendor-1", role: "CUSTOMER" },
+        "vendor-1",
+      ),
+    ).toBe(false);
+    expect(canEditReviewReply(null, "vendor-1")).toBe(false);
+  });
+
   it("trims valid content and rejects empty or oversized content", () => {
     expect(validateReviewReply("  Cảm ơn bạn!  ")).toEqual({
       content: "Cảm ơn bạn!",
@@ -49,21 +79,28 @@ describe("vendor review reply model", () => {
   });
 
   it("shows only the controls required by each dialog mode", () => {
-    expect(getReviewReplyDialogVisibility("create")).toEqual({
+    expect(getReviewReplyDialogVisibility("create", false)).toEqual({
       showComposer: true,
       showCreateActions: true,
       showEditActions: false,
       showEditMenu: false,
       showReadReply: false,
     });
-    expect(getReviewReplyDialogVisibility("read")).toEqual({
+    expect(getReviewReplyDialogVisibility("read", false)).toEqual({
+      showComposer: false,
+      showCreateActions: false,
+      showEditActions: false,
+      showEditMenu: false,
+      showReadReply: true,
+    });
+    expect(getReviewReplyDialogVisibility("read", true)).toEqual({
       showComposer: false,
       showCreateActions: false,
       showEditActions: false,
       showEditMenu: true,
       showReadReply: true,
     });
-    expect(getReviewReplyDialogVisibility("edit")).toEqual({
+    expect(getReviewReplyDialogVisibility("edit", true)).toEqual({
       showComposer: true,
       showCreateActions: false,
       showEditActions: true,

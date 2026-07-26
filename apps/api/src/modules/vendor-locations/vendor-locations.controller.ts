@@ -29,6 +29,7 @@ import { CreateLocationDto } from './dto/vendor-register-location.dto';
 import { CreateLocationRequestDataDto } from './dto/vendor-register-location-request.dto';
 // import { CheckUserGuard } from 'src/common/guard/check-user.guard';
 import { ReplyReviewDto } from './dto/reply-review.dto';
+import { CheckUserGuard } from 'src/common/guard/check-user.guard';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -121,7 +122,7 @@ export class VendorLocationsController {
   }
 
   @Post('update/:locationId')
-  @UseGuards(AuthGuard('jwt-at'))
+  @UseGuards(AuthGuard('jwt-at'), CheckUserGuard, VendorGuard)
   @UseInterceptors(FilesInterceptor('media', 5))
   async updateLocation(
     @Param('locationId') locationId: string,
@@ -130,6 +131,18 @@ export class VendorLocationsController {
     @Request() req: AuthenticatedRequest,
   ) {
     try {
+      file.forEach((f) => {
+        if (f.mimetype !== 'image/jpeg' && f.mimetype !== 'image/png') {
+          throw new BadRequestException(
+            'Chỉ chấp nhận định dạng ảnh jpeg hoặc png cho ảnh địa điểm',
+          );
+        }
+        if (f.size > 10 * 1024 * 1024) {
+          throw new BadRequestException(
+            'Kích thước ảnh địa điểm không được vượt quá 10MB',
+          );
+        }
+      });
       const dataParsed: unknown = JSON.parse(data);
       const dto = plainToInstance(UpdateLocationDto, dataParsed);
       const errors = await validate(dto, {
@@ -172,8 +185,90 @@ export class VendorLocationsController {
     }
   }
 
+  @Post(':locationId/images')
+  @UseGuards(AuthGuard('jwt-at'), CheckUserGuard, VendorGuard)
+  @UseInterceptors(
+    FilesInterceptor('images', 5, {
+      limits: { files: 5, fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  async addImages(
+    @Param('locationId') locationId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req: AuthenticatedRequest,
+  ) {
+    this.validateLocationImageFiles(files);
+    return this.throwImageManagementError(
+      await this.vendorLocationsService.addImagesToLocation(
+        locationId,
+        req.user.userId,
+        files,
+      ),
+    );
+  }
+
+  @Patch(':locationId/images/cover')
+  @UseGuards(AuthGuard('jwt-at'), CheckUserGuard, VendorGuard)
+  async setCoverImage(
+    @Param('locationId') locationId: string,
+    @Body('imageUrl') imageUrl: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    if (!imageUrl?.trim()) {
+      throw new BadRequestException('Thiếu ảnh cần đặt làm ảnh bìa');
+    }
+
+    return this.throwImageManagementError(
+      await this.vendorLocationsService.setLocationCoverImage(
+        locationId,
+        req.user.userId,
+        imageUrl,
+      ),
+    );
+  }
+
+  private validateLocationImageFiles(files: Express.Multer.File[]) {
+    if (!files?.length || files.length > 5) {
+      throw new BadRequestException('Chọn từ 1 đến 5 ảnh');
+    }
+
+    for (const file of files) {
+      if (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png') {
+        throw new BadRequestException('Chỉ chấp nhận ảnh JPEG hoặc PNG');
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        throw new BadRequestException(
+          'Kích thước ảnh địa điểm không được vượt quá 10MB',
+        );
+      }
+    }
+  }
+
+  private throwImageManagementError<
+    T extends {
+      success: boolean;
+      message: string;
+      statusCode?: number;
+    },
+  >(result: T) {
+    if (result.success) {
+      return result;
+    }
+
+    switch (result.statusCode) {
+      case 400:
+        throw new BadRequestException(result.message);
+      case 403:
+        throw new ForbiddenException(result.message);
+      case 404:
+        throw new NotFoundException(result.message);
+      default:
+        throw new InternalServerErrorException(result.message);
+    }
+  }
+
   @Post('register')
-  @UseGuards(AuthGuard('jwt-at'))
+  @UseGuards(AuthGuard('jwt-at'), CheckUserGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -233,6 +328,52 @@ export class VendorLocationsController {
           ...locationRequestErrors,
         ]);
       }
+      files.videoFiles?.forEach((file) => {
+        if (
+          file.mimetype !== 'video/mp4' &&
+          file.mimetype !== 'video/quicktime'
+        ) {
+          throw new BadRequestException(
+            'Chỉ chấp nhận định dạng video mp4 hoặc mov',
+          );
+        }
+        if (file.size > 50 * 1024 * 1024) {
+          throw new BadRequestException(
+            'Kích thước video không được vượt quá 50MB',
+          );
+        }
+        const duration = (file as Express.Multer.File & { duration?: number })
+          .duration;
+        if (typeof duration === 'number' && duration / 1000 > 60) {
+          throw new BadRequestException(
+            'Thời lượng video không được vượt quá 60 giây',
+          );
+        }
+      });
+      files.licenseFiles?.forEach((file) => {
+        if (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png') {
+          throw new BadRequestException(
+            'Chỉ chấp nhận định dạng ảnh jpeg hoặc png cho giấy phép',
+          );
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          throw new BadRequestException(
+            'Kích thước ảnh giấy phép không được vượt quá 10MB',
+          );
+        }
+      });
+      files.imageFiles?.forEach((file) => {
+        if (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png') {
+          throw new BadRequestException(
+            'Chỉ chấp nhận định dạng ảnh jpeg hoặc png cho ảnh địa điểm',
+          );
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          throw new BadRequestException(
+            'Kích thước ảnh địa điểm không được vượt quá 10MB',
+          );
+        }
+      });
       const result = await this.vendorLocationsService.registerLocation(
         req.user.userId,
         validateLocationRequest,

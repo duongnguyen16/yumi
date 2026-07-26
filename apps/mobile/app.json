@@ -38,11 +38,23 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Ứng dụng cần truy cập ảnh để đọc thông tin và vị trí của ảnh.",
+          "savePhotosPermission": "Ứng dụng cần quyền lưu ảnh vào thư viện.",
+          "isAccessMediaLocationEnabled": true,
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Cho phép YuMi truy cập ảnh để chọn ảnh sản phẩm."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
