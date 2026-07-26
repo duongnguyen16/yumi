@@ -71,6 +71,10 @@ export class RequestAccessVerificationService {
       sessionId: String(created._id),
       otpRequired,
       expiresAt: created.expiresAt,
+      destinationPhone: otpRequired ? String(location.phone) : undefined,
+      destinationType: otpRequired
+        ? ('LOCATION_CONTACT' as const)
+        : undefined,
     };
   }
 

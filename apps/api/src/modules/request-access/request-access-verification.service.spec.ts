@@ -15,6 +15,10 @@ describe('RequestAccessVerificationService', () => {
 
   function setup() {
     const sessionModel = {
+      create: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId(),
+        expiresAt: new Date(now.getTime() + 5 * 60_000),
+      }),
       findById: jest.fn(),
       findOneAndDelete: jest.fn(),
     };
@@ -52,6 +56,27 @@ describe('RequestAccessVerificationService', () => {
       ...data,
     };
   }
+
+  it('returns the public location phone receiving the OTP', async () => {
+    const { service, sms } = setup();
+
+    const result = await service.start(
+      String(userId),
+      String(locationId),
+      'CREATE',
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      otpRequired: true,
+      destinationPhone: '0900000000',
+      destinationType: 'LOCATION_CONTACT',
+    });
+    expect(sms.sendOtp).toHaveBeenCalledWith(
+      '0900000000',
+      expect.stringMatching(/^\d{6}$/),
+    );
+  });
 
   it('rejects consuming an expired session', async () => {
     const { service, sessionModel } = setup();
