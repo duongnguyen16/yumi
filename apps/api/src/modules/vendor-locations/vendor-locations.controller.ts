@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
@@ -164,6 +165,9 @@ export class VendorLocationsController {
         }
         if (result.statusCode === 403) {
           throw new ForbiddenException(result.message);
+        }
+        if (result.statusCode === 409) {
+          throw new ConflictException(result.message);
         }
         if (result.statusCode === 404) {
           throw new NotFoundException(result.message);

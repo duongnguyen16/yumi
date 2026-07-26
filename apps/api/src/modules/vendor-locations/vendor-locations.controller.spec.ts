@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { VendorLocationsController } from './vendor-locations.controller';
 
 describe('VendorLocationsController', () => {
@@ -20,6 +24,26 @@ describe('VendorLocationsController', () => {
         { user: { userId: '66a000000000000000000001' } } as never,
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('giữ nguyên HTTP 409 khi đã có yêu cầu cập nhật nhạy cảm đang chờ', async () => {
+    const service = {
+      updateLocation: jest.fn().mockResolvedValue({
+        success: false,
+        statusCode: 409,
+        message: 'Địa điểm đang có yêu cầu duyệt lại thông tin nhạy cảm',
+      }),
+    };
+    const controller = new VendorLocationsController(service as never);
+
+    await expect(
+      controller.updateLocation(
+        '667200000000000000000001',
+        JSON.stringify({ name: 'Tên mới' }),
+        [],
+        { user: { userId: '66a000000000000000000001' } } as never,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });
 

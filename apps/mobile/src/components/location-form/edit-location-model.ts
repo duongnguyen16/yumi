@@ -22,6 +22,34 @@ export type EditField =
   | "flag"
   | "category";
 
+export const EDIT_LOCATION_EVIDENCE_LIMIT = 5;
+
+export function getEditLocationEvidencePickerOptions(): {
+  mediaTypes: ["images"];
+  allowsMultipleSelection: true;
+  selectionLimit: number;
+  quality: 1;
+} {
+  return {
+    mediaTypes: ["images"],
+    allowsMultipleSelection: true,
+    selectionLimit: EDIT_LOCATION_EVIDENCE_LIMIT,
+    quality: 1,
+  };
+}
+
+export function getLocationUpdateSuccessMessage(response: {
+  success: boolean;
+  message?: string;
+  requiresReapproval?: boolean;
+}) {
+  const apiMessage = response.message?.trim();
+  if (apiMessage) return apiMessage;
+  return response.requiresReapproval
+    ? "Đã gửi thay đổi để Admin duyệt. Địa điểm vẫn hiển thị thông tin cũ trong thời gian chờ duyệt."
+    : "Cập nhật địa điểm thành công.";
+}
+
 const ownerFields: EditField[] = [
   "name",
   "address",

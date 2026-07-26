@@ -15,6 +15,8 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import {
   buildSuggestionChanges,
   getAllowedEditFields,
+  getEditLocationEvidencePickerOptions,
+  getLocationUpdateSuccessMessage,
   validateEditLocationSubmission,
   validatePhoneOtpRequest,
   validatePhoneOtpVerification,
@@ -137,11 +139,9 @@ export function useEditLocationForm({
       setMessage("Cần quyền truy cập thư viện ảnh.");
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
-      allowsMultipleSelection: true,
-      quality: 1,
-    });
+    const result = await ImagePicker.launchImageLibraryAsync(
+      getEditLocationEvidencePickerOptions(),
+    );
     if (!result.canceled) setAssets(result.assets);
   };
 
@@ -289,7 +289,7 @@ export function useEditLocationForm({
     const response = await updateLocation(formData, data._id);
     setMessage(
       response.success
-        ? "Cập nhật địa điểm thành công."
+        ? getLocationUpdateSuccessMessage(response)
         : response.message || "Không thể cập nhật địa điểm.",
     );
     if (response.success) setAssets([]);

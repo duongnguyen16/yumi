@@ -3,6 +3,7 @@ import LocationCategoryFields from "@/components/location-form/location-category
 import LocationContactFields from "@/components/location-form/location-contact-fields";
 import LocationScheduleFields from "@/components/location-form/location-schedule-fields";
 import {
+  EDIT_LOCATION_EVIDENCE_LIMIT,
   getEditSelectionChipIcon,
   type EditField,
 } from "@/components/location-form/edit-location-model";
@@ -247,14 +248,14 @@ export default function EditLocationScreen({
             name: asset.fileName || "Bằng chứng",
             uri: asset.uri,
           }))}
-          maxCount={10}
+          maxCount={EDIT_LOCATION_EVIDENCE_LIMIT}
           onAdd={form.pickMedia}
           onRemove={(id) =>
             form.setAssets((current) =>
               current.filter((asset) => (asset.assetId || asset.uri) !== id),
             )
           }
-          supportingText="Ảnh hoặc video chứng minh thay đổi."
+          supportingText="Tối đa 5 ảnh JPEG hoặc PNG chứng minh thay đổi."
           title="Bằng chứng"
         />
       ) : null}

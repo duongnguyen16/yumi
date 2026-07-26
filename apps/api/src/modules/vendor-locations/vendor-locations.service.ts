@@ -71,6 +71,18 @@ type LocationImageManagementResult =
 type OwnedLocationResult =
   { location: LocationDocument } | { error: LocationImageManagementError };
 
+const PENDING_SENSITIVE_UPDATE_MESSAGE =
+  'Địa điểm đang có yêu cầu duyệt lại thông tin nhạy cảm';
+
+function isDuplicateKeyError(error: unknown): error is { code: number } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 11000
+  );
+}
+
 @Injectable()
 export class VendorLocationsService {
   constructor(
@@ -144,8 +156,32 @@ export class VendorLocationsService {
           statusCode: 403,
         };
       }
+      const requiresReapproval = Boolean(
+        updateData?.name || updateData?.address,
+      );
       let reviewRequiredData: ReviewRequiredData = {};
-      if (updateData?.name || updateData?.address) {
+      if (requiresReapproval) {
+        const existingPendingUpdate = await this.locationRequestModel
+          .findOne({
+            locationId: new Types.ObjectId(id),
+            type: LocationRequestType.UPDATE,
+            status: {
+              $in: [
+                LocationRequestStatus.PENDING,
+                LocationRequestStatus.PENDING_RE_APPROVAL,
+              ],
+            },
+          })
+          .lean()
+          .exec();
+        if (existingPendingUpdate) {
+          await session.abortTransaction();
+          return {
+            success: false,
+            message: PENDING_SENSITIVE_UPDATE_MESSAGE,
+            statusCode: 409,
+          };
+        }
         reviewRequiredData = {
           name: updateData.name ?? null,
           address: updateData.address ?? null,
@@ -274,12 +310,22 @@ export class VendorLocationsService {
       await session.commitTransaction();
       return {
         success: true,
-        message: 'Cập nhật địa điểm thành công',
+        requiresReapproval,
+        message: requiresReapproval
+          ? 'Đã gửi thay đổi để Admin duyệt. Địa điểm vẫn hiển thị thông tin cũ trong thời gian chờ duyệt.'
+          : 'Cập nhật địa điểm thành công',
         location,
       };
     } catch (error) {
-      console.error('Error occurred at updateLocation:', error);
       await session.abortTransaction();
+      if (isDuplicateKeyError(error)) {
+        return {
+          success: false,
+          message: PENDING_SENSITIVE_UPDATE_MESSAGE,
+          statusCode: 409,
+        };
+      }
+      console.error('Error occurred at updateLocation:', error);
       return {
         success: false,
         message: 'Xảy ra lỗi khi cập nhật địa điểm',
