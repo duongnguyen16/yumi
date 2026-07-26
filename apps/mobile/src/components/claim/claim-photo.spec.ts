@@ -5,12 +5,16 @@ describe("getClaimProof", () => {
     expect(
       getClaimProof(
         {
+          canceled: false,
           assets: [
             {
               uri: "file:///claim-photo.jpg",
               fileName: "camera.jpg",
-              type: "image/jpeg",
+              type: "image",
+              mimeType: "image/jpeg",
               fileSize: 2048,
+              width: 1200,
+              height: 900,
             },
           ],
         },
@@ -25,6 +29,6 @@ describe("getClaimProof", () => {
   });
 
   it("bỏ qua khi người dùng hủy camera", () => {
-    expect(getClaimProof({ didCancel: true })).toBeNull();
+    expect(getClaimProof({ canceled: true, assets: null })).toBeNull();
   });
 });

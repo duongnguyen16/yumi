@@ -25,8 +25,6 @@ import * as ImagePicker from "expo-image-picker";
 import * as ExpoLocation from "expo-location";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { PermissionsAndroid, Platform } from "react-native";
-import { launchCamera } from "react-native-image-picker";
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -95,29 +93,17 @@ export default function ClaimLocationScreen() {
 
   const pickProof = async () => {
     try {
-      if (Platform.OS === "android") {
-        const permission = PermissionsAndroid.PERMISSIONS.CAMERA;
-        const hasPermission = await PermissionsAndroid.check(permission);
-        const result = hasPermission
-          ? PermissionsAndroid.RESULTS.GRANTED
-          : await PermissionsAndroid.request(permission);
-        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-          setMessage("Cần quyền camera để chụp bằng chứng tại địa điểm.");
-          return;
-        }
-      }
-
-      setMessage("");
-      const result = await launchCamera({
-        cameraType: "back",
-        mediaType: "photo",
-        quality: 0.8,
-        saveToPhotos: false,
-      });
-      if (result.errorCode) {
-        setMessage(result.errorMessage || "Không thể mở camera.");
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setMessage("Cần quyền camera để chụp bằng chứng tại địa điểm.");
         return;
       }
+      setMessage("");
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 0.8,
+      });
+      if (result.canceled) return;
 
       const nextProof = getClaimProof(result);
       if (nextProof) setProof(nextProof);
