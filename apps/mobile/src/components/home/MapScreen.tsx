@@ -18,6 +18,7 @@ import {
   GeoJSONSource,
   Layer,
   Map,
+  NativeUserLocation,
 } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import {
@@ -341,12 +342,6 @@ export default function MapScreen() {
       />
     );
 
-  const currentLocationGeoJson = {
-    type: "Feature" as const,
-    properties: {},
-    geometry: { type: "Point" as const, coordinates: location },
-  };
-
   return (
     <MapCanvas>
       <MapSearchDock
@@ -395,29 +390,7 @@ export default function MapScreen() {
             ref={cameraRef}
             {...selectedCameraStop}
           />
-          <GeoJSONSource data={currentLocationGeoJson} id="current-location">
-            <Layer
-              id="current-location-halo"
-              paint={{
-                "circle-color": colors.accentPrimary,
-                "circle-opacity": 0.2,
-                "circle-radius": 16,
-              }}
-              source="current-location"
-              type="circle"
-            />
-            <Layer
-              id="current-location-dot"
-              paint={{
-                "circle-color": colors.accentPrimary,
-                "circle-radius": 7,
-                "circle-stroke-color": colors.surfaceBase,
-                "circle-stroke-width": 2,
-              }}
-              source="current-location"
-              type="circle"
-            />
-          </GeoJSONSource>
+          <NativeUserLocation />
           <GeoJSONSource
             cluster
             clusterMaxZoom={12}
