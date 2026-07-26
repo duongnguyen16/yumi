@@ -167,25 +167,19 @@ mongodb://127.0.0.1:27017/wdp301
 
 You can also use MongoDB Atlas by replacing `MONGODB_URL` in `apps/api/.env`.
 
-## 4. Seed Development Data
+## 4. Reset Demo Data
 
-After configuring `apps/api/.env`, load seed data:
-
-```bash
-npm run seed --workspace=api
-```
-
-To load both base seed data and test users:
-
-```bash
-npm run seed:test --workspace=api
-```
-
-To reset the demo dataset:
+Configure `apps/api/.env` so `MONGODB_URL` points to a database named
+exactly `demo`, then run:
 
 ```bash
 npm run demo:reset --workspace=api
 ```
+
+The command refuses every other database name. It removes existing documents
+in `demo` while preserving collection indexes, rebuilds the complete demo
+dataset, and prints the available accounts and workflow scenarios. All demo
+accounts use the shared password `Demo@123456`.
 
 ## 5. Run the Applications
 

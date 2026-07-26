@@ -1,6 +1,11 @@
 import { Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { VendorLocationsService } from './vendor-locations.service';
+import { LocationStatus } from 'src/common/schemas/common.enums';
+import {
+  LocationRequestStatus,
+  LocationRequestType,
+} from 'src/common/schemas/location-request';
 
 function createService(location: Record<string, unknown>) {
   const userModel = {
@@ -56,7 +61,11 @@ describe('VendorLocationsService ownership hold', () => {
       [],
     );
 
-    expect(result).toMatchObject({ success: true });
+    expect(result).toMatchObject({
+      success: true,
+      requiresReapproval: false,
+      message: 'Cập nhật địa điểm thành công',
+    });
     expect(location.set).toHaveBeenCalledWith({
       openingHours: '08:00 - 22:00',
     });
@@ -86,6 +95,190 @@ describe('VendorLocationsService ownership hold', () => {
     expect(result).toMatchObject({ success: false, statusCode: 403 });
     expect(location.set).not.toHaveBeenCalled();
     expect(location.save).not.toHaveBeenCalled();
+  });
+});
+
+function createUpdateService({
+  pendingUpdate = null,
+  createError,
+}: {
+  pendingUpdate?: { _id: Types.ObjectId } | null;
+  createError?: unknown;
+} = {}) {
+  const ownerId = new Types.ObjectId();
+  const locationId = new Types.ObjectId();
+  const location = {
+    _id: locationId,
+    ownerId,
+    status: LocationStatus.PUBLISHED,
+    name: 'Tên cũ',
+    address: 'Địa chỉ cũ',
+    geo: { type: 'Point', coordinates: [105.5, 21] },
+    categoryId: new Types.ObjectId(),
+    toObject: jest.fn().mockReturnValue({}),
+    set: jest.fn(),
+    save: jest.fn().mockResolvedValue(undefined),
+  };
+  const locationRequestModel = {
+    findOne: jest.fn().mockReturnValue({
+      lean: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(pendingUpdate),
+      }),
+    }),
+    create: jest.fn().mockImplementation(() =>
+      createError
+        ? Promise.reject(createError)
+        : Promise.resolve([{ _id: new Types.ObjectId() }]),
+    ),
+  };
+  const imagesService = {
+    uploadMultiMedia: jest
+      .fn()
+      .mockResolvedValue([{ url: 'https://storage/proof.jpg' }]),
+  };
+  const session = {
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn().mockResolvedValue(undefined),
+    abortTransaction: jest.fn().mockResolvedValue(undefined),
+    endSession: jest.fn().mockResolvedValue(undefined),
+  };
+  const service = new VendorLocationsService(
+    {
+      findById: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(location),
+      }),
+    } as never,
+    locationRequestModel as never,
+    {
+      findById: jest.fn().mockResolvedValue({ _id: ownerId }),
+    } as never,
+    { findOne: jest.fn() } as never,
+    {} as never,
+    imagesService as never,
+    {} as never,
+    {
+      getDistanceMeters: jest.fn().mockReturnValue(0),
+    } as never,
+    {
+      findPossibleDuplicates: jest.fn().mockResolvedValue([]),
+    } as never,
+    {
+      startSession: jest.fn().mockResolvedValue(session),
+    } as never,
+    {} as never,
+  );
+
+  return {
+    service,
+    ownerId,
+    locationId,
+    location,
+    locationRequestModel,
+    imagesService,
+    session,
+  };
+}
+
+describe('VendorLocationsService sensitive update conflicts', () => {
+  const imageFile = {
+    mimetype: 'image/jpeg',
+    originalname: 'proof.jpg',
+    size: 1,
+  } as Express.Multer.File;
+
+  it('trả 409 trước khi upload nếu đã có yêu cầu cập nhật nhạy cảm đang chờ', async () => {
+    const fixture = createUpdateService({
+      pendingUpdate: { _id: new Types.ObjectId() },
+    });
+
+    const result = await fixture.service.updateLocation(
+      String(fixture.locationId),
+      { name: 'Tên mới' },
+      String(fixture.ownerId),
+      [imageFile],
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+    expect(fixture.locationRequestModel.findOne).toHaveBeenCalledWith({
+      locationId: fixture.locationId,
+      type: LocationRequestType.UPDATE,
+      status: {
+        $in: [
+          LocationRequestStatus.PENDING,
+          LocationRequestStatus.PENDING_RE_APPROVAL,
+        ],
+      },
+    });
+    expect(fixture.imagesService.uploadMultiMedia).not.toHaveBeenCalled();
+    expect(fixture.locationRequestModel.create).not.toHaveBeenCalled();
+  });
+
+  it('chuyển duplicate-key race thành 409', async () => {
+    const fixture = createUpdateService({ createError: { code: 11000 } });
+
+    const result = await fixture.service.updateLocation(
+      String(fixture.locationId),
+      { name: 'Tên mới' },
+      String(fixture.ownerId),
+      [imageFile],
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+  });
+});
+
+describe('VendorLocationsService sensitive update publication', () => {
+  const imageFile = {
+    mimetype: 'image/jpeg',
+    originalname: 'proof.jpg',
+    size: 1,
+  } as Express.Multer.File;
+
+  it('keeps old public data and reports Admin review for a sensitive edit', async () => {
+    const fixture = createUpdateService();
+
+    const result = await fixture.service.updateLocation(
+      String(fixture.locationId),
+      {
+        name: 'Tên mới',
+        address: 'Địa chỉ mới',
+        pinLatitude: 21.1,
+        pinLongitude: 105.6,
+        deviceLatitude: 21.1,
+        deviceLongitude: 105.6,
+      },
+      String(fixture.ownerId),
+      [imageFile],
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      requiresReapproval: true,
+      message: expect.stringContaining('Admin duyệt'),
+    });
+    expect(fixture.location).toMatchObject({
+      name: 'Tên cũ',
+      address: 'Địa chỉ cũ',
+      geo: { type: 'Point', coordinates: [105.5, 21] },
+      status: LocationStatus.PUBLISHED,
+    });
+    expect(fixture.locationRequestModel.create).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          status: LocationRequestStatus.PENDING_RE_APPROVAL,
+          oldData: expect.objectContaining({
+            name: 'Tên cũ',
+            address: 'Địa chỉ cũ',
+          }),
+          newData: expect.objectContaining({
+            name: 'Tên mới',
+            address: 'Địa chỉ mới',
+            geo: { type: 'Point', coordinates: [105.6, 21.1] },
+          }),
+        }),
+      ],
+      { session: fixture.session },
+    );
   });
 });
 

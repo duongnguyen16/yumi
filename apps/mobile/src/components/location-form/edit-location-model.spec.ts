@@ -1,6 +1,9 @@
 import {
   buildSuggestionChanges,
+  EDIT_LOCATION_EVIDENCE_LIMIT,
   getAllowedEditFields,
+  getEditLocationEvidencePickerOptions,
+  getLocationUpdateSuccessMessage,
   validateEditLocationSubmission,
   validatePhoneOtpRequest,
   validatePhoneOtpVerification,
@@ -83,5 +86,31 @@ describe("edit location form model", () => {
         openingHours: "22:00-06:00",
       }).message,
     ).toBe("Giờ đóng cửa phải sau giờ mở cửa.");
+  });
+
+  it("limits edit evidence to five images", () => {
+    expect(EDIT_LOCATION_EVIDENCE_LIMIT).toBe(5);
+    expect(getEditLocationEvidencePickerOptions()).toEqual({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+      quality: 1,
+    });
+  });
+
+  it("uses the API message for updates waiting for Admin review", () => {
+    expect(
+      getLocationUpdateSuccessMessage({
+        success: true,
+        requiresReapproval: true,
+        message: "Đã gửi thay đổi để Admin duyệt.",
+      }),
+    ).toBe("Đã gửi thay đổi để Admin duyệt.");
+    expect(
+      getLocationUpdateSuccessMessage({
+        success: true,
+        requiresReapproval: false,
+      }),
+    ).toBe("Cập nhật địa điểm thành công.");
   });
 });
