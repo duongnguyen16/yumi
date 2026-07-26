@@ -12,11 +12,18 @@ Remove the single `Yêu cầu quyền quản lý` form header and organize the f
    - Keep the existing optional reason field.
 2. `Bằng chứng xác thực`
    - Keep the existing requirement of one to five on-site photos with device location.
+   - Use only the section header and helper text; do not repeat a title, helper, or counter inside the uploader.
+   - Render square image previews in a horizontally scrolling row without file names.
+   - Render the add action as the final square tile in the same row.
+   - Do not wrap the uploader in a card.
 3. `Kiểm tra số điện thoại`
    - When OTP is required, show the complete public contact phone number returned by the API.
-   - Explain that this is the public contact number of the named location.
+   - Combine the destination number and its public-location-contact explanation into the section helper text.
    - Show the six-digit OTP input without a separate verification button.
-   - When the location has no contact phone, explain that OTP is not required.
+   - Do not wrap the phone number in a card.
+   - Hide the entire section while verification is starting or when OTP is not required.
+
+Each visible section contains one header, one concise helper, and its input content. Do not render additional explanatory copy below the inputs.
 
 The bottom action bar contains one action:
 
