@@ -1,18 +1,22 @@
 import { getAccountLocationActions } from "./account-location-actions";
 
 describe("getAccountLocationActions", () => {
-  it("lets a customer register an owned location and contribute a community location", () => {
+  it("gives a Customer the shared ownership workflows without Vendor management", () => {
     expect(getAccountLocationActions("CUSTOMER")).toEqual([
       "register",
       "contribute",
+      "requestAccess",
+      "disputes",
     ]);
   });
 
-  it("keeps management and both creation choices for a vendor", () => {
+  it("keeps Vendor management and the shared ownership workflows", () => {
     expect(getAccountLocationActions("VENDOR")).toEqual([
       "manage",
       "register",
       "contribute",
+      "requestAccess",
+      "disputes",
     ]);
   });
 

@@ -1,7 +1,7 @@
 import { Model, Types } from 'mongoose';
 import { NotificationPort } from 'src/common/contracts/notification.port';
 import { AuditService } from 'src/common/services/audit.service';
-import { DisputeStatus } from 'src/common/schemas/common.enums';
+import { DisputeStatus, UserRole } from 'src/common/schemas/common.enums';
 import { DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { LocationDocument } from 'src/common/schemas/location.schema';
 import { DisputeOutcome } from './dto/resolve-dispute.dto';
@@ -32,13 +32,17 @@ describe('Kiểm thử DisputeService', () => {
     const locModel = { findById: jest.fn() };
     const audit = { log: jest.fn().mockResolvedValue({}) };
     const notify = { notify: jest.fn().mockResolvedValue(undefined) };
+    const userModel = {
+      findById: jest.fn().mockReturnValue(query(null)),
+    };
     const service = new DisputeService(
       disputeModel as unknown as Model<DisputeDocument>,
       locModel as unknown as Model<LocationDocument>,
       audit as unknown as AuditService,
       notify as NotificationPort,
+      userModel as never,
     );
-    return { service, disputeModel, locModel, audit, notify };
+    return { service, disputeModel, locModel, audit, notify, userModel };
   }
 
   function dispute(data: Record<string, unknown> = {}) {
@@ -79,12 +83,16 @@ describe('Kiểm thử DisputeService', () => {
     expect(result).toMatchObject({ success: false, statusCode: 403 });
   });
 
-  it('cho phép bên tham gia xem tranh chấp khi vendor đã được populate', async () => {
+  it('cho phép Customer tham gia xem tranh chấp khi user đã được populate', async () => {
     const { service, disputeModel } = setup();
     disputeModel.findById.mockReturnValue(
       query(
         dispute({
-          vendorAId: { _id: vendorA, email: 'duong@gmail.com' },
+          vendorAId: {
+            _id: vendorA,
+            email: 'duong@gmail.com',
+            role: UserRole.CUSTOMER,
+          },
           vendorBId: { _id: vendorB },
         }),
       ),
@@ -222,6 +230,28 @@ describe('Kiểm thử DisputeService', () => {
       }),
     );
     expect(notify.notify).toHaveBeenCalledTimes(2);
+  });
+
+  it('chuyển Customer thành Vendor khi Admin chuyển ownership cho người yêu cầu', async () => {
+    const { service, disputeModel, locModel, userModel } = setup();
+    const item = dispute();
+    const loc = location();
+    const requester = {
+      role: UserRole.CUSTOMER,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    userModel.findById.mockReturnValue(query(requester));
+    disputeModel.findById.mockReturnValue(query(item));
+    locModel.findById.mockReturnValue(query(loc));
+
+    const result = await service.resolve(String(disputeId), String(adminId), {
+      outcome: DisputeOutcome.TRANSFER,
+      reason: 'Đã kiểm tra bằng chứng hai bên',
+    });
+
+    expect(result.success).toBe(true);
+    expect(requester.role).toBe(UserRole.VENDOR);
+    expect(requester.save).toHaveBeenCalledTimes(1);
   });
 
   it('chặn giải quyết khi chủ sở hữu hiện tại đã thay đổi', async () => {

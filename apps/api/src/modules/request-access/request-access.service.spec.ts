@@ -133,8 +133,8 @@ describe('Kiểm thử RequestAccessService', () => {
     expect(reqModel.create).not.toHaveBeenCalled();
   });
 
-  it('chặn người dùng không phải Vendor tạo yêu cầu chuyển quyền', async () => {
-    const { service, userModel, locModel } = setup();
+  it('cho phép Customer đang hoạt động và đã xác minh số điện thoại tạo yêu cầu chuyển quyền', async () => {
+    const { service, userModel, locModel, claimModel, reqModel } = setup();
     userModel.findById.mockReturnValue(
       query({
         role: UserRole.CUSTOMER,
@@ -142,6 +142,10 @@ describe('Kiểm thử RequestAccessService', () => {
         phoneVerified: true,
       }),
     );
+    locModel.findById.mockReturnValue(query(location()));
+    claimModel.exists.mockResolvedValue(null);
+    reqModel.exists.mockResolvedValue(null);
+    reqModel.create.mockResolvedValue(request());
 
     const result = await service.createRequest(String(userId), {
       locationId: String(locId),
@@ -155,8 +159,10 @@ describe('Kiểm thử RequestAccessService', () => {
       ],
     });
 
-    expect(result).toMatchObject({ success: false, statusCode: 403 });
-    expect(locModel.findById).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(reqModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({ requesterId: userId }),
+    );
   });
 
   it('yêu cầu bằng chứng tại chỗ ngay khi tạo yêu cầu chuyển quyền', async () => {
@@ -297,11 +303,16 @@ describe('Kiểm thử RequestAccessService', () => {
   });
 
   it('chuyển quyền sở hữu và bắt đầu khóa bảy ngày', async () => {
-    const { service, reqModel, locModel, notify, logModel } = setup();
+    const { service, reqModel, locModel, userModel, notify, logModel } = setup();
     const req = request();
     const loc = location();
+    const requester = {
+      role: UserRole.CUSTOMER,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
     reqModel.findById.mockReturnValue(query(req));
     locModel.findById.mockReturnValue(query(loc));
+    userModel.findById.mockReturnValue(query(requester));
 
     const result = await service.respond(String(reqId), String(ownerId), {
       action: RespondAction.GRANT,
@@ -311,6 +322,8 @@ describe('Kiểm thử RequestAccessService', () => {
     expect(req.status).toBe(RequestAccessStatus.GRANTED);
     expect(loc.ownerId).toEqual(userId);
     expect(loc.holdExpiresAt).toBeInstanceOf(Date);
+    expect(requester.role).toBe(UserRole.VENDOR);
+    expect(requester.save).toHaveBeenCalledTimes(1);
     expect(notify.notify).toHaveBeenCalledTimes(2);
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
@@ -382,11 +395,16 @@ describe('Kiểm thử RequestAccessService', () => {
   });
 
   it('tự động cấp quyền sau khi hết hạn khi có bằng chứng tại chỗ và thời hạn khóa', async () => {
-    const { service, reqModel, locModel, notify, logModel } = setup();
+    const { service, reqModel, locModel, userModel, notify, logModel } = setup();
     const req = request({ timeoutAt: new Date(Date.now() - 60_000) });
     const loc = location();
+    const requester = {
+      role: UserRole.CUSTOMER,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
     reqModel.findById.mockReturnValue(query(req));
     locModel.findById.mockReturnValue(query(loc));
+    userModel.findById.mockReturnValue(query(requester));
 
     const result = await service.verifyTakeover(String(reqId), String(userId), {
       verificationSessionId: new Types.ObjectId().toHexString(),
@@ -404,6 +422,8 @@ describe('Kiểm thử RequestAccessService', () => {
     expect(req.status).toBe(RequestAccessStatus.AUTO_GRANTED);
     expect(loc.ownerId).toEqual(userId);
     expect(loc.holdExpiresAt).toBeInstanceOf(Date);
+    expect(requester.role).toBe(UserRole.VENDOR);
+    expect(requester.save).toHaveBeenCalledTimes(1);
     expect(notify.notify).toHaveBeenCalledTimes(2);
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });

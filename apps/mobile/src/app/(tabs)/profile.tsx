@@ -223,21 +223,21 @@ export default function AccountScreen() {
               onPress={() => router.push("/appeals" as never)}
               supportingText="Theo dõi quyết định đang được xem xét lại"
             />
-            {isVendor ? (
-              <>
-                <ListRow
-                  icon="account-key-outline"
-                  label="Yêu cầu quyền quản lý"
-                  onPress={() => router.push("/request-access" as never)}
-                  supportingText="Yêu cầu đã nhận và đã gửi"
-                />
-                <ListRow
-                  icon="shield-account-outline"
-                  label="Tranh chấp sở hữu"
-                  onPress={() => router.push("/disputes" as never)}
-                  supportingText="Bằng chứng hai bên và phán quyết cuối cùng"
-                />
-              </>
+            {locationActions.includes("requestAccess") ? (
+              <ListRow
+                icon="account-key-outline"
+                label="Yêu cầu quyền quản lý"
+                onPress={() => router.push("/request-access" as never)}
+                supportingText="Yêu cầu đã nhận và đã gửi"
+              />
+            ) : null}
+            {locationActions.includes("disputes") ? (
+              <ListRow
+                icon="shield-account-outline"
+                label="Tranh chấp sở hữu"
+                onPress={() => router.push("/disputes" as never)}
+                supportingText="Bằng chứng hai bên và phán quyết cuối cùng"
+              />
             ) : null}
           </GroupedList>
         </Stack>

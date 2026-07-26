@@ -6,9 +6,10 @@ import {
   NotificationPort,
 } from 'src/common/contracts/notification.port';
 import { AuditService } from 'src/common/services/audit.service';
-import { DisputeStatus } from 'src/common/schemas/common.enums';
+import { DisputeStatus, UserRole } from 'src/common/schemas/common.enums';
 import { Dispute, DisputeDocument } from 'src/common/schemas/dispute.schema';
 import { Location, LocationDocument } from 'src/common/schemas/location.schema';
+import { User, UserDocument } from 'src/common/schemas/user.schema';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { DisputeOutcome, ResolveDisputeDTO } from './dto/resolve-dispute.dto';
@@ -26,6 +27,8 @@ export class DisputeService {
     private readonly audit: AuditService,
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   // list disputes của user
@@ -214,6 +217,9 @@ export class DisputeService {
         decidedAt: new Date(),
       };
       await item.save();
+      if (dto.outcome === DisputeOutcome.TRANSFER) {
+        await this.promoteOwner(item.vendorBId);
+      }
 
       await this.audit.log({
         actorId: adminId,
@@ -273,6 +279,14 @@ export class DisputeService {
       return String((participant as { _id: unknown })._id);
     }
     return String(participant);
+  }
+
+  private async promoteOwner(userId: Types.ObjectId) {
+    const user = await this.userModel.findById(userId).exec();
+    if (user?.role === UserRole.CUSTOMER) {
+      user.role = UserRole.VENDOR;
+      await user.save();
+    }
   }
 
   private fail(statusCode: number, message: string) {

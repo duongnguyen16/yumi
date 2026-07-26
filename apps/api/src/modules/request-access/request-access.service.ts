@@ -443,7 +443,16 @@ export class RequestAccessService {
     req.respondedAt = now;
     req.status = status;
     await req.save();
+    await this.promoteOwner(req.requesterId);
     await this.notifyTransfer(loc, req, oldOwner, auto);
+  }
+
+  private async promoteOwner(userId: Types.ObjectId) {
+    const user = await this.userModel.findById(userId).exec();
+    if (user?.role === UserRole.CUSTOMER) {
+      user.role = UserRole.VENDOR;
+      await user.save();
+    }
   }
 
   private async writeLog(
@@ -465,14 +474,14 @@ export class RequestAccessService {
 
   private async getEligibilityFailure(userId: string) {
     const user = await this.userModel.findById(userId).exec();
-    if (!user || user.role !== UserRole.VENDOR) {
-      return this.fail(
-        403,
-        'Chỉ tài khoản Vendor mới có thể xin quyền quản lý',
-      );
+    if (
+      !user ||
+      ![UserRole.CUSTOMER, UserRole.VENDOR].includes(user.role)
+    ) {
+      return this.fail(403, 'Tài khoản không thể xin quyền quản lý');
     }
     if (user.status !== UserStatus.ACTIVE) {
-      return this.fail(403, 'Tài khoản Vendor không ở trạng thái hoạt động');
+      return this.fail(403, 'Tài khoản không ở trạng thái hoạt động');
     }
     if (user.phoneVerified !== true) {
       return this.fail(
