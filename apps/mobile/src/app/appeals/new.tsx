@@ -15,6 +15,7 @@ import {
   PageContent,
   TextArea,
 } from "@/ui/components";
+import { getKeyboardSafeAreaBehavior } from "@/ui/keyboard-safe-area";
 import { getNoticeMessage } from "@/ui/feedback";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
 import * as ImagePicker from "expo-image-picker";
@@ -24,6 +25,7 @@ import {
   useRouter,
 } from "expo-router";
 import { useState } from "react";
+import { KeyboardAvoidingView, Platform } from "react-native";
 
 type Proof = {
   uri: string;
@@ -132,41 +134,46 @@ export default function NewAppealScreen() {
     <Page>
       <RouterStack.Screen options={{ headerShown: false }} />
       <NavigationBar onBack={() => router.back()} title="Gửi kháng cáo" />
-      <PageContent>
-        <FormSection
-          supportingText={presentation.description}
-          title={presentation.label}
-        >
-          <TextArea
-            label="Nội dung kháng cáo"
-            maxLength={500}
-            onChangeText={setArgument}
-            value={argument}
+      <KeyboardAvoidingView
+        behavior={getKeyboardSafeAreaBehavior(Platform.OS)}
+        style={{ flex: 1 }}
+      >
+        <PageContent>
+          <FormSection
+            supportingText={presentation.description}
+            title={presentation.label}
+          >
+            <TextArea
+              label="Nội dung kháng cáo"
+              maxLength={500}
+              onChangeText={setArgument}
+              value={argument}
+            />
+            <MediaPicker
+              addLabel="Chụp thêm bằng chứng"
+              items={proofItems}
+              maxCount={5}
+              onAdd={pick}
+              onRemove={(uri) =>
+                setProofs((current) =>
+                  current.filter((proof) => proof.uri !== uri),
+                )
+              }
+              supportingText="Chụp từ 1 đến 5 ảnh bổ sung cho nội dung kháng cáo."
+              title="Bằng chứng kháng cáo"
+            />
+          </FormSection>
+        </PageContent>
+        <BottomActionBar>
+          <Button
+            disabled={loading || !canSubmit}
+            label="Gửi kháng cáo"
+            loading={loading}
+            onPress={submit}
+            width="full"
           />
-          <MediaPicker
-            addLabel="Chụp thêm bằng chứng"
-            items={proofItems}
-            maxCount={5}
-            onAdd={pick}
-            onRemove={(uri) =>
-              setProofs((current) =>
-                current.filter((proof) => proof.uri !== uri),
-              )
-            }
-            supportingText="Chụp từ 1 đến 5 ảnh bổ sung cho nội dung kháng cáo."
-            title="Bằng chứng kháng cáo"
-          />
-        </FormSection>
-      </PageContent>
-      <BottomActionBar>
-        <Button
-          disabled={loading || !canSubmit}
-          label="Gửi kháng cáo"
-          loading={loading}
-          onPress={submit}
-          width="full"
-        />
-      </BottomActionBar>
+        </BottomActionBar>
+      </KeyboardAvoidingView>
       <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );

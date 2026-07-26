@@ -266,6 +266,7 @@ export default function AccessDetailScreen() {
   return (
     <WorkflowDetailScreen
       loading={loading && !item}
+      keyboardSafe={canOwnerRespond || canVerifyTakeover}
       message={message}
       navigationTitle="Chi tiết chuyển quyền"
       onBack={() => router.back()}
