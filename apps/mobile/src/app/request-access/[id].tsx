@@ -4,7 +4,7 @@ import EvidenceGallery from "@/components/workflow/evidence-gallery";
 import { getWorkflowStatus } from "@/components/workflow/status";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
 import { userContext } from "@/contexts/userContext";
-import { uploadContributionImage } from "@/service/contributePlaceService";
+import { uploadOwnershipImage } from "@/service/ownershipImageService";
 import {
   getAccess,
   respondAccess,
@@ -179,7 +179,7 @@ export default function AccessDetailScreen() {
       const position = await ExpoLocation.getCurrentPositionAsync({
         accuracy: ExpoLocation.Accuracy.High,
       });
-      const url = await uploadContributionImage(proof);
+      const url = await uploadOwnershipImage(proof);
       const coordinates: [number, number] = [
         position.coords.longitude,
         position.coords.latitude,

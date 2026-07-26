@@ -3,7 +3,7 @@ import {
   isAppealType,
 } from "@/components/workflow/appeal-presentation";
 import { submitAppeal } from "@/service/appealService";
-import { uploadAppealImage } from "@/service/contributePlaceService";
+import { uploadAppealOwnershipImage } from "@/service/ownershipImageService";
 import {
   BottomActionBar,
   Button,
@@ -88,7 +88,7 @@ export default function NewAppealScreen() {
     try {
       const additionalEvidenceFiles = await Promise.all(
         proofs.map(async (proof) => ({
-          url: await uploadAppealImage(proof),
+          url: await uploadAppealOwnershipImage(proof),
           fileType: "IMAGE" as const,
           capturedAt: proof.capturedAt,
         })),

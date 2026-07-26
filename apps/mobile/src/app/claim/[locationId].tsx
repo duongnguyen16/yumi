@@ -4,7 +4,7 @@ import {
   verifyClaimOtp,
   type ClaimEvidence,
 } from "@/service/claimService";
-import { uploadContributionImage } from "@/service/contributePlaceService";
+import { uploadOwnershipImage } from "@/service/ownershipImageService";
 import {
   getClaimProof,
   type ClaimProof,
@@ -52,7 +52,7 @@ export default function ClaimLocationScreen() {
   const [otp, setOtp] = useState("");
   const [proof, setProof] = useState<ClaimProof | null>(null);
   const [license, setLicense] = useState<ClaimProof | null>(null);
-  const [message, setMessage] = useState("");
+const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const step = getStep(siteCode, otpRequired, otpVerified);
 
@@ -163,8 +163,8 @@ export default function ClaimLocationScreen() {
         accuracy: ExpoLocation.Accuracy.High,
       });
       const [url, licenseUrl] = await Promise.all([
-        uploadContributionImage(proof),
-        license ? uploadContributionImage(license) : undefined,
+        uploadOwnershipImage(proof),
+        license ? uploadOwnershipImage(license) : undefined,
       ]);
       const coordinates: [number, number] = [
         location.coords.longitude,
