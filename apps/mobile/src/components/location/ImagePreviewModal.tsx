@@ -43,10 +43,11 @@ export function ImagePreviewModal({
       Math.max(initialIndex, 0),
       Math.max(images.length - 1, 0),
     );
-    setIndex(nextIndex);
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
+      setIndex(nextIndex);
       scrollRef.current?.scrollTo({ animated: false, x: nextIndex * width });
     });
+    return () => cancelAnimationFrame(frame);
   }, [images.length, initialIndex, visible, width]);
 
   if (!visible || !current) return null;
@@ -58,18 +59,26 @@ export function ImagePreviewModal({
       transparent
       visible={visible}
     >
-      <Pressable
-        accessibilityLabel="Đóng xem ảnh"
-        accessibilityRole="button"
-        onPress={onDismiss}
+      <View
         style={{
-          backgroundColor: "rgba(20, 20, 19, 0.72)",
           flex: 1,
           justifyContent: "flex-end",
         }}
       >
         <Pressable
-          onPress={(event) => event.stopPropagation()}
+          accessibilityLabel="Đóng xem ảnh"
+          accessibilityRole="button"
+          onPress={onDismiss}
+          style={{
+            backgroundColor: "rgba(20, 20, 19, 0.72)",
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            top: 0,
+          }}
+        />
+        <View
           style={{
             backgroundColor: colors.surfaceRaised,
             borderTopLeftRadius: radius.sheet,
@@ -161,8 +170,8 @@ export function ImagePreviewModal({
               </Inline>
             ) : null}
           </Inline>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
