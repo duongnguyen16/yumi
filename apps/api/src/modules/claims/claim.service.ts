@@ -30,9 +30,7 @@ import {
   NotificationPort,
 } from 'src/common/contracts/notification.port';
 import { SmsService } from '../auth/services/sms.service';
-import { OwnershipImagesService } from '../ownership-images/ownership-images.service';
 import { SubmitClaimDto } from './dto/submit-claim.dto';
-import { SubmitClaimUploadDto } from './dto/submit-claim-upload.dto';
 
 const SESSION_TTL_MINUTES = 30;
 const MAX_OTP_ATTEMPTS = 5;
@@ -55,7 +53,6 @@ export class ClaimService {
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
     private readonly sms: SmsService,
-    private readonly ownershipImages: OwnershipImagesService,
   ) {}
 
   // bắt đầu, nói chung là có sdt thì cần otp, ko thì th
@@ -199,9 +196,61 @@ export class ClaimService {
 
   async submit(dto: SubmitClaimDto, requesterId: string) {
     try {
-      const checked = await this.checkSubmission(dto, requesterId);
-      if (!checked.success) return checked;
-      const { location, session, siteCodeFile } = checked;
+      if (
+        !Types.ObjectId.isValid(dto.locationId) ||
+        !Types.ObjectId.isValid(requesterId)
+      ) {
+        return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
+      }
+      const eligibilityFailure = await this.getEligibilityFailure(requesterId);
+      if (eligibilityFailure) return eligibilityFailure;
+      const location = await this.locationModel
+        .findById(dto.locationId)
+        .lean()
+        .exec();
+      if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
+      if (location.ownerId)
+        return this.failure(409, 'Địa điểm này đã có chủ sở hữu');
+      if (location.status !== LocationStatus.PUBLISHED) {
+        return this.failure(409, 'Chỉ có thể claim địa điểm đã được công khai');
+      }
+
+      const session = await this.sessionModel
+        .findOne({
+          vendorId: new Types.ObjectId(requesterId),
+          locationId: new Types.ObjectId(dto.locationId),
+        })
+        .exec();
+      if (!session) return this.failure(410, 'Phiên xác minh đã hết hạn');
+      if (session.otpRequired && !session.otpVerified) {
+        return this.failure(
+          400,
+          'Bạn cần xác minh OTP trước khi nộp bằng chứng',
+        );
+      }
+
+      // ảnh phải có vị trí, thời điểm chụp và siteCode hợp lệ
+      const hasGeoPhoto = dto.evidenceFiles.some((file) => {
+        if (file.fileType !== 'IMAGE') return false;
+        if (file.geo?.coordinates.length !== 2) return false;
+        return Boolean(file.capturedAt);
+      });
+      if (!hasGeoPhoto) {
+        return this.failure(
+          400,
+          'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
+        );
+      }
+      const siteCodeFile = this.findSiteCodeFile(
+        dto.evidenceFiles,
+        session.siteCode,
+      );
+      if (!siteCodeFile) {
+        return this.failure(400, 'Metadata ảnh không có mã hệ thống hợp lệ');
+      }
+      if (await this.hasPendingSlot(dto.locationId)) {
+        return this.failure(409, 'Địa điểm đang có yêu cầu chờ xử lý');
+      }
 
       // tạo claim request
       const evidenceFiles = dto.evidenceFiles.map((file) => ({
@@ -257,44 +306,6 @@ export class ClaimService {
     }
   }
 
-  async submitWithImages(
-    dto: SubmitClaimUploadDto,
-    requesterId: string,
-    images: Express.Multer.File[],
-    license?: Express.Multer.File,
-  ) {
-    if (images.length !== dto.evidenceFiles.length) {
-      return this.failure(400, 'Số lượng ảnh và metadata không khớp');
-    }
-
-    const draft: SubmitClaimDto = {
-      locationId: dto.locationId,
-      evidenceFiles: dto.evidenceFiles.map((file) => ({
-        ...file,
-        url: '',
-        fileType: 'IMAGE',
-      })),
-    };
-    const checked = await this.checkSubmission(draft, requesterId);
-    if (!checked.success) return checked;
-
-    const urls = await this.ownershipImages.uploadMany(requesterId, [
-      ...images,
-      ...(license ? [license] : []),
-    ]);
-    return this.submit(
-      {
-        ...draft,
-        evidenceFiles: draft.evidenceFiles.map((file, index) => ({
-          ...file,
-          url: urls[index],
-        })),
-        licenseUrl: license ? urls[images.length] : undefined,
-      },
-      requesterId,
-    );
-  }
-
   // ktra xem có cái pending claim hay request access nào chưa, nếu có thì ko cho tạo mới
   private async hasPendingSlot(locationId: string) {
     const id = new Types.ObjectId(locationId);
@@ -311,65 +322,6 @@ export class ClaimService {
 
     if (claim || requestAccess) return true;
     return false;
-  }
-
-  private async checkSubmission(dto: SubmitClaimDto, requesterId: string) {
-    if (
-      !Types.ObjectId.isValid(dto.locationId) ||
-      !Types.ObjectId.isValid(requesterId)
-    ) {
-      return this.failure(400, 'ID địa điểm hoặc người yêu cầu không hợp lệ');
-    }
-    const eligibilityFailure = await this.getEligibilityFailure(requesterId);
-    if (eligibilityFailure) return eligibilityFailure;
-    const location = await this.locationModel
-      .findById(dto.locationId)
-      .lean()
-      .exec();
-    if (!location) return this.failure(404, 'Không tìm thấy địa điểm');
-    if (location.ownerId)
-      return this.failure(409, 'Địa điểm này đã có chủ sở hữu');
-    if (location.status !== LocationStatus.PUBLISHED) {
-      return this.failure(409, 'Chỉ có thể claim địa điểm đã được công khai');
-    }
-
-    const session = await this.sessionModel
-      .findOne({
-        vendorId: new Types.ObjectId(requesterId),
-        locationId: new Types.ObjectId(dto.locationId),
-      })
-      .exec();
-    if (!session) return this.failure(410, 'Phiên xác minh đã hết hạn');
-    if (session.otpRequired && !session.otpVerified) {
-      return this.failure(
-        400,
-        'Bạn cần xác minh OTP trước khi nộp bằng chứng',
-      );
-    }
-
-    const hasGeoPhoto = dto.evidenceFiles.some((file) => {
-      if (file.fileType !== 'IMAGE') return false;
-      if (file.geo?.coordinates.length !== 2) return false;
-      return Boolean(file.capturedAt);
-    });
-    if (!hasGeoPhoto) {
-      return this.failure(
-        400,
-        'Cần ít nhất một ảnh hiện trường có vị trí và thời điểm chụp',
-      );
-    }
-    const siteCodeFile = this.findSiteCodeFile(
-      dto.evidenceFiles,
-      session.siteCode,
-    );
-    if (!siteCodeFile) {
-      return this.failure(400, 'Metadata ảnh không có mã hệ thống hợp lệ');
-    }
-    if (await this.hasPendingSlot(dto.locationId)) {
-      return this.failure(409, 'Địa điểm đang có yêu cầu chờ xử lý');
-    }
-
-    return { success: true as const, location, session, siteCodeFile };
   }
 
   private findSiteCodeFile(
@@ -424,7 +376,7 @@ export class ClaimService {
   }
 
   private failure(statusCode: number, message: string) {
-    return { success: false as const, statusCode, message };
+    return { success: false, statusCode, message };
   }
 
   private isDuplicateKeyError(error: unknown): error is { code: number } {
