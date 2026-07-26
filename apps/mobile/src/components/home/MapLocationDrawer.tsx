@@ -17,6 +17,7 @@ import GeneralTab, {
 import ReviewTab from "@/components/location/tabs/ReviewTab";
 import { getLocationReportAction } from "@/components/location/location-report";
 import { userContext } from "@/contexts/userContext";
+import { addBookmark, checkBookmark, removeBookmark } from "@/service/bookmarkService";
 import { getLocationById } from "@/service/locationService";
 import { toAbsoluteUrl } from "@/service/url";
 import { AppText, Button, IconButton, Inline, NoticeSnackbar, Stack } from "@/ui/components";
@@ -36,6 +37,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { getLocationBookmarkAction } from "./location-bookmark-action";
 
 type Product = {
   _id?: string;
@@ -77,6 +79,8 @@ export function MapLocationDrawer({
   const [detent, setDetent] = useState<DrawerDetent>("half");
   const [reportVisible, setReportVisible] = useState(false);
   const [imageManagerVisible, setImageManagerVisible] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [message, setMessage] = useState("");
   const halfHeight = getDrawerDetentHeight("half", windowHeight, insets.top);
   const fullHeight = getDrawerDetentHeight("full", windowHeight, insets.top);
@@ -93,6 +97,11 @@ export function MapLocationDrawer({
   const imageUrls = getImageUrls(current);
   const locationId = current._id ?? current.id;
   const ownerId = getId(current.ownerId);
+  const canBookmark = Boolean(user);
+  const bookmarkAction = getLocationBookmarkAction({
+    canBookmark,
+    isBookmarked,
+  });
   const reportAction = userLoading
     ? "hidden"
     : getLocationReportAction({
@@ -123,6 +132,22 @@ export function MapLocationDrawer({
     };
   }, [location.id]);
 
+  useEffect(() => {
+    let active = true;
+    setIsBookmarked(false);
+    if (!locationId || !canBookmark) return;
+
+    checkBookmark(locationId).then((response) => {
+      if (!active) return;
+      if (response.success) setIsBookmarked(response.isBookmarked);
+      else setMessage("Không thể kiểm tra trạng thái đã lưu.");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [canBookmark, locationId]);
+
   const setDrawerDetent = useCallback(
     (next: DrawerDetent) => {
       setDetent(next);
@@ -149,6 +174,25 @@ export function MapLocationDrawer({
     } catch (error) {
       setMessage(getNoticeMessage(error, "Không thể mở ứng dụng chỉ đường."));
     }
+  };
+  const toggleBookmark = async () => {
+    if (!locationId || bookmarkLoading) return;
+
+    setBookmarkLoading(true);
+    const response = isBookmarked
+      ? await removeBookmark(locationId)
+      : await addBookmark(locationId);
+
+    if (response.success) {
+      setIsBookmarked(!isBookmarked);
+      setMessage(bookmarkAction?.nextMessage ?? "Đã cập nhật bookmark.");
+    } else {
+      setMessage(
+        response.message ||
+          (isBookmarked ? "Không thể bỏ lưu địa điểm." : "Không thể lưu địa điểm."),
+      );
+    }
+    setBookmarkLoading(false);
   };
   const panGesture = Gesture.Pan()
     .activeOffsetY([-6, 6])
@@ -294,6 +338,16 @@ export function MapLocationDrawer({
             label="Chỉ đường"
             onPress={() => void openDirections()}
           />
+          {bookmarkAction ? (
+            <Button
+              disabled={bookmarkLoading}
+              icon={bookmarkAction.icon}
+              label={bookmarkAction.label}
+              loading={bookmarkLoading}
+              onPress={() => void toggleBookmark()}
+              variant="secondary"
+            />
+          ) : null}
           {reportAction !== "hidden" ? (
             <Button
               icon="flag-outline"
