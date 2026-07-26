@@ -1,6 +1,5 @@
 import { userContext } from "@/contexts/userContext";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
-import { uploadOwnershipImage } from "@/service/ownershipImageService";
 import EvidenceGallery from "@/components/workflow/evidence-gallery";
 import Timeline from "@/components/workflow/Timeline";
 import WorkflowDetailScreen from "@/components/workflow/WorkflowDetailScreen";
@@ -150,15 +149,12 @@ export default function DisputeDetailScreen() {
         position.coords.longitude,
         position.coords.latitude,
       ];
-      const evidenceFiles = await Promise.all(
-        proofs.map(async (proof) => ({
-          url: await uploadOwnershipImage(proof),
-          fileType: "IMAGE" as const,
+      const evidenceFiles = proofs.map((proof) => ({
+          ...proof,
           geo: { type: "Point" as const, coordinates },
           accuracyMeters: position.coords.accuracy || undefined,
           capturedAt: proof.capturedAt,
-        })),
-      );
+        }));
       const response = await addDisputeEvidence(id, evidenceFiles);
       if (!response.success) {
         setMessage(response.message || "Không thể thêm bằng chứng.");

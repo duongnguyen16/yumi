@@ -60,6 +60,9 @@ describe('Kiểm thử AppealService', () => {
     const restore = { restore: jest.fn() };
     const audit = { log: jest.fn().mockResolvedValue({}) };
     const notify = { notify: jest.fn().mockResolvedValue(undefined) };
+    const ownershipImages = {
+      uploadMany: jest.fn().mockResolvedValue(['https://example.com/proof.jpg']),
+    };
     const service = new AppealService(
       appealModel as unknown as Model<AppealDocument>,
       reqModel as unknown as Model<RequestAccessDocument>,
@@ -68,6 +71,7 @@ describe('Kiểm thử AppealService', () => {
       restore as unknown as AppealRestoreService,
       audit as unknown as AuditService,
       notify as NotificationPort,
+      ownershipImages as never,
     );
     return {
       service,
@@ -78,6 +82,7 @@ describe('Kiểm thử AppealService', () => {
       restore,
       audit,
       notify,
+      ownershipImages,
     };
   }
 
@@ -131,6 +136,29 @@ describe('Kiểm thử AppealService', () => {
         ],
       }),
     );
+  });
+
+  it('không upload ảnh khi người gửi không có quyền kháng cáo', async () => {
+    const { service, source, ownershipImages } = setup();
+    source.load.mockResolvedValue(
+      sourceData({ affectedUserId: String(new Types.ObjectId()) }),
+    );
+
+    const result = await service.submitWithImages(
+      String(userId),
+      {
+        type: AppealType.REQUEST_ACCESS_REJECTED,
+        targetId: String(targetId),
+        argument: 'Tôi có thêm bằng chứng tại địa điểm',
+        additionalEvidenceFiles: [
+          { capturedAt: new Date().toISOString() },
+        ],
+      },
+      [{} as Express.Multer.File],
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 403 });
+    expect(ownershipImages.uploadMany).not.toHaveBeenCalled();
   });
 
   it('chặn người dùng không bị ảnh hưởng bởi quyết định', async () => {

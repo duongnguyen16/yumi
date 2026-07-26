@@ -24,6 +24,8 @@ import { ListAppealsDTO } from './dto/list-appeals.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { ResolveAppealDTO } from './dto/resolve-appeal.dto';
 import { SubmitAppealDTO } from './dto/submit-appeal.dto';
+import { SubmitAppealUploadDTO } from './dto/submit-appeal-upload.dto';
+import { OwnershipImagesService } from '../ownership-images/ownership-images.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const APPEAL_DAYS = 14;
@@ -44,33 +46,14 @@ export class AppealService {
     private readonly audit: AuditService,
     @Inject(NOTIFICATION_PORT)
     private readonly notification: NotificationPort,
+    private readonly ownershipImages: OwnershipImagesService,
   ) {}
 
   async submit(userId: string, dto: SubmitAppealDTO) {
     try {
-      if (
-        !Types.ObjectId.isValid(userId) ||
-        !Types.ObjectId.isValid(dto.targetId)
-      ) {
-        return this.fail(400, 'ID kháng cáo không hợp lệ');
-      }
-      const targetId = new Types.ObjectId(dto.targetId);
-      const source = await this.source.load(dto.type, targetId);
-      if (!source.success) return source;
-      if (source.affectedUserId !== userId) {
-        return this.fail(403, 'Bạn không có quyền kháng cáo quyết định này');
-      }
-      const deadline = new Date(
-        source.decidedAt.getTime() + APPEAL_DAYS * DAY_MS,
-      );
-      if (Date.now() > deadline.getTime()) {
-        return this.fail(410, 'Đã quá hạn kháng cáo 14 ngày');
-      }
-      const existed = await this.appealModel
-        .findOne({ targetCollection: source.targetCollection, targetId })
-        .lean()
-        .exec();
-      if (existed) return this.fail(409, 'Quyết định này đã được kháng cáo');
+      const checked = await this.checkSubmit(userId, dto);
+      if (!checked.success) return checked;
+      const { targetId, source, deadline } = checked;
 
       const additionalEvidenceFiles = dto.additionalEvidenceFiles.map(
         (file) => ({
@@ -111,6 +94,30 @@ export class AppealService {
     }
   }
 
+  async submitWithImages(
+    userId: string,
+    dto: SubmitAppealUploadDTO,
+    images: Express.Multer.File[],
+  ) {
+    if (images.length !== dto.additionalEvidenceFiles.length) {
+      return this.fail(400, 'Số lượng ảnh và metadata không khớp');
+    }
+    const checked = await this.checkSubmit(userId, dto);
+    if (!checked.success) return checked;
+
+    const urls = await this.ownershipImages.uploadMany(userId, images);
+    return this.submit(userId, {
+      ...dto,
+      additionalEvidenceFiles: dto.additionalEvidenceFiles.map(
+        (file, index) => ({
+          ...file,
+          url: urls[index],
+          fileType: 'IMAGE',
+        }),
+      ),
+    });
+  }
+
   async listMine(userId: string) {
     if (!Types.ObjectId.isValid(userId))
       return this.fail(400, 'ID không hợp lệ');
@@ -120,6 +127,37 @@ export class AppealService {
       .lean()
       .exec();
     return { success: true, items };
+  }
+
+  private async checkSubmit(
+    userId: string,
+    dto: Pick<SubmitAppealDTO, 'type' | 'targetId'>,
+  ) {
+    if (
+      !Types.ObjectId.isValid(userId) ||
+      !Types.ObjectId.isValid(dto.targetId)
+    ) {
+      return this.fail(400, 'ID kháng cáo không hợp lệ');
+    }
+    const targetId = new Types.ObjectId(dto.targetId);
+    const source = await this.source.load(dto.type, targetId);
+    if (!source.success) return source;
+    if (source.affectedUserId !== userId) {
+      return this.fail(403, 'Bạn không có quyền kháng cáo quyết định này');
+    }
+    const deadline = new Date(
+      source.decidedAt.getTime() + APPEAL_DAYS * DAY_MS,
+    );
+    if (Date.now() > deadline.getTime()) {
+      return this.fail(410, 'Đã quá hạn kháng cáo 14 ngày');
+    }
+    const existed = await this.appealModel
+      .findOne({ targetCollection: source.targetCollection, targetId })
+      .lean()
+      .exec();
+    if (existed) return this.fail(409, 'Quyết định này đã được kháng cáo');
+
+    return { success: true as const, targetId, source, deadline };
   }
 
   async getMine(id: string, userId: string) {

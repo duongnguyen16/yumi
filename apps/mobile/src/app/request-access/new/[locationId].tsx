@@ -4,10 +4,11 @@ import {
   verifyAccessOtp,
 } from "@/service/requestAccessService";
 import {
+  getAccessVerificationState,
   getRequestAccessPhoneHelper,
   getRequestAccessSubmitAction,
 } from "@/navigation/request-access-verification";
-import { uploadOwnershipImage } from "@/service/ownershipImageService";
+import { getRequestAccessKeyboardBehavior } from "@/navigation/request-access-keyboard";
 import {
   BottomActionBar,
   Button,
@@ -30,6 +31,7 @@ import {
   useRouter,
 } from "expo-router";
 import { useEffect, useState } from "react";
+import { KeyboardAvoidingView, Platform } from "react-native";
 
 type Proof = {
   uri: string;
@@ -91,6 +93,12 @@ export default function NewAccessScreen() {
     proofCount: proofs.length,
     submitting: loading,
   });
+  const verificationState = getAccessVerificationState({
+    sessionId,
+    otpRequired,
+    otpVerified,
+    submitting: loading,
+  });
 
   const takeProof = async () => {
     if (proofs.length >= 5) return;
@@ -150,15 +158,12 @@ export default function NewAccessScreen() {
         position.coords.longitude,
         position.coords.latitude,
       ];
-      const evidenceFiles = await Promise.all(
-        proofs.map(async (proof) => ({
-          url: await uploadOwnershipImage(proof),
-          fileType: "IMAGE" as const,
+      const evidenceFiles = proofs.map((proof) => ({
+          ...proof,
           geo: { type: "Point" as const, coordinates },
           accuracyMeters: position.coords.accuracy || undefined,
           capturedAt: proof.capturedAt,
-        })),
-      );
+        }));
       const response = await createAccess(
         locationId,
         reason.trim() || undefined,
@@ -190,10 +195,8 @@ export default function NewAccessScreen() {
     name: proof.fileName,
     uri: proof.uri,
   }));
-  return (
-    <Page>
-      <RouterStack.Screen options={{ headerShown: false }} />
-      <NavigationBar onBack={() => router.back()} title="Xin chuyển quyền" />
+  const form = (
+    <>
       <PageContent>
         <FormSection
           supportingText={supportingText}
@@ -251,6 +254,22 @@ export default function NewAccessScreen() {
           width="full"
         />
       </BottomActionBar>
+    </>
+  );
+  return (
+    <Page>
+      <RouterStack.Screen options={{ headerShown: false }} />
+      <NavigationBar onBack={() => router.back()} title="Xin chuyển quyền" />
+      {verificationState === "OTP_REQUIRED" ? (
+        <KeyboardAvoidingView
+          behavior={getRequestAccessKeyboardBehavior(Platform.OS)}
+          style={{ flex: 1 }}
+        >
+          {form}
+        </KeyboardAvoidingView>
+      ) : (
+        form
+      )}
       <NoticeSnackbar message={message} onDismiss={() => setMessage("")} />
     </Page>
   );

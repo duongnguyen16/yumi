@@ -1,5 +1,10 @@
 import api from "./aixos";
 import { getNoticeMessage } from "@/ui/feedback";
+import {
+  createOwnershipFormData,
+  ownershipEvidenceMetadata,
+  type PendingOwnershipEvidence,
+} from "./ownershipImageService";
 
 export type AppealEvidence = {
   url: string;
@@ -27,10 +32,21 @@ export async function submitAppeal(data: {
   type: string;
   targetId: string;
   argument: string;
-  additionalEvidenceFiles: AppealEvidence[];
+  additionalEvidenceFiles: PendingOwnershipEvidence[];
 }) {
   try {
-    const res = await api.post("/appeals", data);
+    const formData = createOwnershipFormData(
+      {
+        ...data,
+        additionalEvidenceFiles: data.additionalEvidenceFiles.map(
+          ownershipEvidenceMetadata,
+        ),
+      },
+      data.additionalEvidenceFiles,
+    );
+    const res = await api.post("/appeals", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data as Result & { appeal?: { id: string; status: string } };
   } catch (err) {
     const message = getNoticeMessage(err, "Không thể gửi kháng cáo.");

@@ -138,7 +138,7 @@ export class AdminLocationService {
         this.reqModel.countDocuments(filter).exec(),
       ]);
 
-      const data = list.map((request) => {
+      const data = list.map((request: LocationRequestQueueItem) => {
         const distance = request.deviceDistanceMeters;
         const hasDistance = typeof distance === 'number';
         const farPin = hasDistance && distance > FAR_PIN_THRESHOLD;

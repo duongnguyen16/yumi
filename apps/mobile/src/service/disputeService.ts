@@ -5,6 +5,11 @@ import type {
   AccessUser,
 } from "./requestAccessService";
 import { getNoticeMessage } from "@/ui/feedback";
+import {
+  createOwnershipFormData,
+  ownershipEvidenceMetadata,
+  type PendingOwnershipEvidence,
+} from "./ownershipImageService";
 
 export type DisputeItem = {
   _id: string;
@@ -42,12 +47,17 @@ export async function getDispute(id: string) {
 
 export async function addDisputeEvidence(
   id: string,
-  evidenceFiles: AccessEvidence[],
+  evidenceFiles: PendingOwnershipEvidence[],
 ) {
   try {
-    const res = await api.post(`/disputes/${id}/evidence`, {
-      evidenceFiles,
-    });
+    const data = {
+      evidenceFiles: evidenceFiles.map(ownershipEvidenceMetadata),
+    };
+    const res = await api.post(
+      `/disputes/${id}/evidence`,
+      createOwnershipFormData(data, evidenceFiles),
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
     return res.data as Result;
   } catch (err) {
     const message = getNoticeMessage(err, "Không thể thêm bằng chứng.");

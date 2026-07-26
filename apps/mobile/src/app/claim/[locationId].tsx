@@ -4,7 +4,6 @@ import {
   verifyClaimOtp,
   type ClaimEvidence,
 } from "@/service/claimService";
-import { uploadOwnershipImage } from "@/service/ownershipImageService";
 import {
   getClaimProof,
   type ClaimProof,
@@ -162,18 +161,13 @@ const [message, setMessage] = useState("");
       const location = await ExpoLocation.getCurrentPositionAsync({
         accuracy: ExpoLocation.Accuracy.High,
       });
-      const [url, licenseUrl] = await Promise.all([
-        uploadOwnershipImage(proof),
-        license ? uploadOwnershipImage(license) : undefined,
-      ]);
       const coordinates: [number, number] = [
         location.coords.longitude,
         location.coords.latitude,
       ];
       const capturedAt = new Date(location.timestamp).toISOString();
       const evidence: ClaimEvidence = {
-        url,
-        fileType: "IMAGE",
+        ...proof,
         geo: { type: "Point", coordinates },
         accuracyMeters: location.coords.accuracy || undefined,
         capturedAt,
@@ -182,7 +176,7 @@ const [message, setMessage] = useState("");
         locationId,
         siteCode,
         evidenceFiles: [evidence],
-        licenseUrl,
+        license,
       });
 
       if (!result.success) {

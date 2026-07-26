@@ -3,7 +3,6 @@ import {
   isAppealType,
 } from "@/components/workflow/appeal-presentation";
 import { submitAppeal } from "@/service/appealService";
-import { uploadAppealOwnershipImage } from "@/service/ownershipImageService";
 import {
   BottomActionBar,
   Button,
@@ -86,18 +85,11 @@ export default function NewAppealScreen() {
     setLoading(true);
     setMessage("");
     try {
-      const additionalEvidenceFiles = await Promise.all(
-        proofs.map(async (proof) => ({
-          url: await uploadAppealOwnershipImage(proof),
-          fileType: "IMAGE" as const,
-          capturedAt: proof.capturedAt,
-        })),
-      );
       const payload = {
         type: appealType,
         targetId,
         argument: trimmedArgument,
-        additionalEvidenceFiles,
+        additionalEvidenceFiles: proofs,
       };
       const response = await submitAppeal(payload);
       if (!response.success || !response.appeal) {

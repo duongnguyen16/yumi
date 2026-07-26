@@ -48,6 +48,13 @@ export class OwnershipImagesService {
     };
   }
 
+  async uploadMany(userId: string, files: Express.Multer.File[]) {
+    files.forEach((file) => this.validate(file));
+    return Promise.all(
+      files.map(async (file) => (await this.upload(userId, file)).url),
+    );
+  }
+
   private validate(file: Express.Multer.File) {
     const extension = extname(file.originalname).toLowerCase();
     const isJpeg =

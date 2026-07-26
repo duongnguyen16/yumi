@@ -12,16 +12,20 @@ import {
   Post,
   Query,
   Request as NestRequest,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AdminGuard } from 'src/common/guard/admin.guard';
+import { parseMultipartDto } from 'src/common/utils/parse-multipart-dto';
 import { DisputeService } from './dispute.service';
 import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { ResolveDisputeDTO } from './dto/resolve-dispute.dto';
-import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
+import { AddDisputeEvidenceUploadDTO } from './dto/add-dispute-evidence-upload.dto';
 
 interface UserRequest extends Request {
   user: { userId: string };
@@ -62,12 +66,24 @@ export class DisputeController {
   }
 
   @Post(':id/evidence')
+  @UseInterceptors(
+    FilesInterceptor('images', 5, { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   async addEvidence(
     @Param('id') id: string,
-    @Body() dto: AddDisputeEvidenceDTO,
+    @Body('data') data: string,
+    @UploadedFiles() images: Express.Multer.File[] | undefined,
     @NestRequest() req: UserRequest,
   ) {
-    return handle(await this.service.addEvidence(id, req.user.userId, dto));
+    const dto = parseMultipartDto(data, AddDisputeEvidenceUploadDTO);
+    return handle(
+      await this.service.addEvidenceWithImages(
+        id,
+        req.user.userId,
+        dto,
+        images ?? [],
+      ),
+    );
   }
 }
 

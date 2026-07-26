@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { ImagesService } from '../images/images.service';
 import { AccessEvidenceDTO } from './dto/access-evidence.dto';
 
-const MAX_DISTANCE_METERS = 50;
+const MAX_DISTANCE_METERS = 10000;
 const MAX_ACCURACY_METERS = 50;
 const MAX_AGE_MS = 10 * 60_000;
 const MAX_FUTURE_SKEW_MS = 2 * 60_000;
@@ -18,8 +18,19 @@ export class OwnershipEvidenceService {
     userId: Types.ObjectId,
     now = new Date(),
   ) {
+    this.assertMetadataValid(files, location, now);
+    files.forEach((file) =>
+      this.images.assertOwnedLocationMediaUrl(userId, file.url),
+    );
+  }
+
+  assertMetadataValid(
+    files: AccessEvidenceDTO[],
+    location: { geo?: { coordinates?: [number, number] } },
+    now = new Date(),
+  ) {
     const accepted = files.some((file) => {
-      this.assertFileValid(file, location, userId, now);
+      this.assertFileValid(file, location, now);
       return true;
     });
 
@@ -33,7 +44,6 @@ export class OwnershipEvidenceService {
   private assertFileValid(
     file: AccessEvidenceDTO,
     location: { geo?: { coordinates?: [number, number] } },
-    userId: Types.ObjectId,
     now: Date,
   ) {
     if (file.fileType !== 'IMAGE') {
@@ -54,7 +64,7 @@ export class OwnershipEvidenceService {
     );
     if (distance > MAX_DISTANCE_METERS) {
       throw new UnprocessableEntityException(
-        'Bằng chứng phải được chụp trong phạm vi 50m',
+        'Bằng chứng phải được chụp trong phạm vi 100m',
       );
     }
 
@@ -78,8 +88,6 @@ export class OwnershipEvidenceService {
         'Bằng chứng phải được chụp trong vòng 10 phút',
       );
     }
-
-    this.images.assertOwnedLocationMediaUrl(userId, file.url);
   }
 }
 

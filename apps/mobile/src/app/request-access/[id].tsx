@@ -4,14 +4,12 @@ import EvidenceGallery from "@/components/workflow/evidence-gallery";
 import { getWorkflowStatus } from "@/components/workflow/status";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
 import { userContext } from "@/contexts/userContext";
-import { uploadOwnershipImage } from "@/service/ownershipImageService";
 import {
   getAccess,
   respondAccess,
   startAccessVerification,
   verifyAccess,
   verifyAccessOtp,
-  type AccessEvidence,
   type AccessLocation,
   type AccessRequest,
   type AccessUser,
@@ -179,16 +177,14 @@ export default function AccessDetailScreen() {
       const position = await ExpoLocation.getCurrentPositionAsync({
         accuracy: ExpoLocation.Accuracy.High,
       });
-      const url = await uploadOwnershipImage(proof);
       const coordinates: [number, number] = [
         position.coords.longitude,
         position.coords.latitude,
       ];
       const capturedAt = new Date(position.timestamp).toISOString();
-      const evidence: AccessEvidence = {
-        url,
-        fileType: "IMAGE",
-        geo: { type: "Point", coordinates },
+      const evidence = {
+        ...proof,
+        geo: { type: "Point" as const, coordinates },
         accuracyMeters: position.coords.accuracy || undefined,
         capturedAt,
       };

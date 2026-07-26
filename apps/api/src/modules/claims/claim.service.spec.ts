@@ -28,6 +28,49 @@ function attachUserModel(service: ClaimService, user = eligibleUser) {
 }
 
 describe('Kiểm thử ClaimService', () => {
+  it('không upload ảnh khi địa điểm đã có chủ sở hữu', async () => {
+    const locationId = new Types.ObjectId();
+    const vendorId = new Types.ObjectId();
+    const ownershipImages = { uploadMany: jest.fn() };
+    const service = new ClaimService(
+      {
+        findById: jest.fn().mockReturnValue(
+          query({
+            _id: locationId,
+            status: LocationStatus.PUBLISHED,
+            ownerId: new Types.ObjectId(),
+          }),
+        ),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      { notify: jest.fn() } as never,
+      { sendOtp: jest.fn() } as never,
+      ownershipImages as never,
+    );
+    attachUserModel(service);
+
+    const result = await service.submitWithImages(
+      {
+        locationId: String(locationId),
+        evidenceFiles: [
+          {
+            geo: { type: 'Point', coordinates: [106.7, 10.7] },
+            capturedAt: new Date().toISOString(),
+            metadata: { siteCode: 'CLG-ABC123' },
+          },
+        ],
+      },
+      String(vendorId),
+      [{} as Express.Multer.File],
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+    expect(ownershipImages.uploadMany).not.toHaveBeenCalled();
+  });
+
   it('khởi tạo phiên claim đã xác thực cho địa điểm công khai chưa có chủ', async () => {
     const locationId = new Types.ObjectId();
     const vendorId = new Types.ObjectId();

@@ -36,6 +36,9 @@ import {
 import { VerifyTakeoverDTO } from './dto/verify-takeover.dto';
 import { OwnershipEvidenceService } from './ownership-evidence.service';
 import { RequestAccessVerificationService } from './request-access-verification.service';
+import { OwnershipImagesService } from '../ownership-images/ownership-images.service';
+import { CreateRequestAccessUploadDTO } from './dto/create-request-access-upload.dto';
+import { VerifyTakeoverUploadDTO } from './dto/verify-takeover-upload.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RESPONSE_DAYS = 3;
@@ -71,6 +74,7 @@ export class RequestAccessService {
     private readonly verification: RequestAccessVerificationService,
     @InjectModel(Dispute.name)
     private readonly disputeModel: Model<DisputeDocument>,
+    private readonly ownershipImages: OwnershipImagesService,
   ) {}
 
   resolveEffectiveState(
@@ -87,43 +91,13 @@ export class RequestAccessService {
   // tạo request access
   async createRequest(userId: string, dto: CreateRequestAccessDTO) {
     try {
-      // validate userId
-      if (!Types.ObjectId.isValid(userId)) {
-        return this.fail(400, 'ID người yêu cầu không hợp lệ');
-      }
-
-      const eligibilityFailure = await this.getEligibilityFailure(userId);
-      if (eligibilityFailure) return eligibilityFailure;
-
-      // lấy location
-      const loc = await this.locModel.findById(dto.locationId).exec();
-      if (!loc) return this.fail(404, 'Không tìm thấy địa điểm');
-      if (loc.status !== LocationStatus.PUBLISHED) {
-        return this.fail(409, 'Chỉ có thể xin quyền địa điểm đang công khai');
-      }
-      if (!loc.ownerId) {
-        return this.fail(409, 'Địa điểm chưa có chủ, hãy dùng luồng claim');
-      }
-      if (String(loc.ownerId) === userId) {
-        return this.fail(409, 'Bạn đã là chủ địa điểm này');
-      }
-
-      // check xem có claim hoặc request đang chờ xử lý không
-      const [claim, req] = await Promise.all([
-        this.claimModel.exists({
-          locationId: loc._id,
-          status: ClaimRequestStatus.PENDING,
-        }),
-        this.reqModel.exists({
-          locationId: loc._id,
-          status: RequestAccessStatus.PENDING,
-        }),
-      ]);
-      if (claim) return this.fail(409, 'Địa điểm đang có claim chờ xử lý');
-      if (req) return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
-      if (await this.hasOwnershipWorkflowLock(loc._id, new Date())) {
-        return this.fail(409, 'Địa điểm đang có quy trình chuyển quyền');
-      }
+      const checked = await this.checkCreateRequest(
+        userId,
+        dto.locationId,
+        dto.verificationSessionId,
+      );
+      if (!checked.success) return checked;
+      const { loc } = checked;
       this.evidenceVerifier.assertValid(
         dto.evidenceFiles,
         loc,
@@ -179,6 +153,38 @@ export class RequestAccessService {
       this.logger.error('Không thể tạo yêu cầu chuyển quyền', err);
       return this.fail(500, 'Lỗi khi tạo yêu cầu chuyển quyền');
     }
+  }
+
+  async createRequestWithImages(
+    userId: string,
+    dto: CreateRequestAccessUploadDTO,
+    images: Express.Multer.File[],
+  ) {
+    if (images.length !== dto.evidenceFiles.length) {
+      return this.fail(400, 'Số lượng ảnh và metadata không khớp');
+    }
+    const checked = await this.checkCreateRequest(
+      userId,
+      dto.locationId,
+      dto.verificationSessionId,
+    );
+    if (!checked.success) return checked;
+
+    const draft = dto.evidenceFiles.map((file) => ({
+      ...file,
+      capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
+      url: '',
+      fileType: 'IMAGE' as const,
+    }));
+    this.evidenceVerifier.assertMetadataValid(draft, checked.loc);
+    const urls = await this.ownershipImages.uploadMany(userId, images);
+    return this.createRequest(userId, {
+      ...dto,
+      evidenceFiles: draft.map((file, index) => ({
+        ...file,
+        url: urls[index],
+      })),
+    });
   }
 
   // list request access của owner hoặc requester
@@ -327,21 +333,13 @@ export class RequestAccessService {
 
   async verifyTakeover(id: string, userId: string, dto: VerifyTakeoverDTO) {
     try {
-      // ktra như bthg
-      const data = await this.loadPendingRequest(id);
-      if (!data.success) return data;
-      const { req } = data;
-      if (String(req.requesterId) !== userId) {
-        return this.fail(403, 'Chỉ người gửi yêu cầu mới được xác minh');
-      }
-      if (this.resolveEffectiveState(req) !== 'PENDING_TIMED_OUT') {
-        return this.fail(409, 'Chưa hết hạn 3 ngày');
-      }
-      const loc = await this.locModel.findById(req.locationId).exec();
-      if (!loc) return this.fail(404, 'Không tìm thấy địa điểm');
-      if (String(loc.ownerId) !== String(req.currentOwnerId)) {
-        return this.fail(409, 'Chủ địa điểm đã thay đổi');
-      }
+      const checked = await this.checkTakeover(
+        id,
+        userId,
+        dto.verificationSessionId,
+      );
+      if (!checked.success) return checked;
+      const { req, loc } = checked;
       this.evidenceVerifier.assertValid(
         dto.evidenceFiles,
         loc,
@@ -390,6 +388,39 @@ export class RequestAccessService {
     }
   }
 
+  async verifyTakeoverWithImages(
+    id: string,
+    userId: string,
+    dto: VerifyTakeoverUploadDTO,
+    images: Express.Multer.File[],
+  ) {
+    if (images.length !== dto.evidenceFiles.length) {
+      return this.fail(400, 'Số lượng ảnh và metadata không khớp');
+    }
+    const checked = await this.checkTakeover(
+      id,
+      userId,
+      dto.verificationSessionId,
+    );
+    if (!checked.success) return checked;
+
+    const draft = dto.evidenceFiles.map((file) => ({
+      ...file,
+      capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
+      url: '',
+      fileType: 'IMAGE' as const,
+    }));
+    this.evidenceVerifier.assertMetadataValid(draft, checked.loc);
+    const urls = await this.ownershipImages.uploadMany(userId, images);
+    return this.verifyTakeover(id, userId, {
+      verificationSessionId: dto.verificationSessionId,
+      evidenceFiles: draft.map((file, index) => ({
+        ...file,
+        url: urls[index],
+      })),
+    });
+  }
+
   // check xem có tồn tại request access pending không, nếu có thì trả về req, nếu không thì trả về fail
   private async loadPendingRequest(id: string) {
     if (!Types.ObjectId.isValid(id)) return this.fail(400, 'ID không hợp lệ');
@@ -399,6 +430,88 @@ export class RequestAccessService {
       return this.fail(409, `Yêu cầu đang ở trạng thái ${req.status}`);
     }
     return { success: true as const, req };
+  }
+
+  private async checkCreateRequest(
+    userId: string,
+    locationId: string,
+    verificationSessionId: string,
+  ) {
+    if (!Types.ObjectId.isValid(userId)) {
+      return this.fail(400, 'ID người yêu cầu không hợp lệ');
+    }
+
+    const eligibilityFailure = await this.getEligibilityFailure(userId);
+    if (eligibilityFailure) return eligibilityFailure;
+
+    const loc = await this.locModel.findById(locationId).exec();
+    if (!loc) return this.fail(404, 'Không tìm thấy địa điểm');
+    if (loc.status !== LocationStatus.PUBLISHED) {
+      return this.fail(409, 'Chỉ có thể xin quyền địa điểm đang công khai');
+    }
+    if (!loc.ownerId) {
+      return this.fail(409, 'Địa điểm chưa có chủ, hãy dùng luồng claim');
+    }
+    if (String(loc.ownerId) === userId) {
+      return this.fail(409, 'Bạn đã là chủ địa điểm này');
+    }
+
+    const [claim, req] = await Promise.all([
+      this.claimModel.exists({
+        locationId: loc._id,
+        status: ClaimRequestStatus.PENDING,
+      }),
+      this.reqModel.exists({
+        locationId: loc._id,
+        status: RequestAccessStatus.PENDING,
+      }),
+    ]);
+    if (claim) return this.fail(409, 'Địa điểm đang có claim chờ xử lý');
+    if (req) return this.fail(409, 'Địa điểm đang có yêu cầu chuyển quyền');
+    if (await this.hasOwnershipWorkflowLock(loc._id, new Date())) {
+      return this.fail(409, 'Địa điểm đang có quy trình chuyển quyền');
+    }
+
+    const verification = await this.verification.check({
+      sessionId: verificationSessionId,
+      userId,
+      locationId: String(loc._id),
+      purpose: 'CREATE',
+    });
+    if (!verification.success) return verification;
+
+    return { success: true as const, loc };
+  }
+
+  private async checkTakeover(
+    id: string,
+    userId: string,
+    verificationSessionId: string,
+  ) {
+    const data = await this.loadPendingRequest(id);
+    if (!data.success) return data;
+    const { req } = data;
+    if (String(req.requesterId) !== userId) {
+      return this.fail(403, 'Chỉ người gửi yêu cầu mới được xác minh');
+    }
+    if (this.resolveEffectiveState(req) !== 'PENDING_TIMED_OUT') {
+      return this.fail(409, 'Chưa hết hạn 3 ngày');
+    }
+    const loc = await this.locModel.findById(req.locationId).exec();
+    if (!loc) return this.fail(404, 'Không tìm thấy địa điểm');
+    if (String(loc.ownerId) !== String(req.currentOwnerId)) {
+      return this.fail(409, 'Chủ địa điểm đã thay đổi');
+    }
+    const verification = await this.verification.check({
+      sessionId: verificationSessionId,
+      userId,
+      locationId: String(loc._id),
+      purpose: 'TAKEOVER',
+      requestAccessId: String(req._id),
+    });
+    if (!verification.success) return verification;
+
+    return { success: true as const, req, loc };
   }
 
   private async notifyTransfer(

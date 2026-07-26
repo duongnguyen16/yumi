@@ -3,7 +3,10 @@ import { RequestAccessVerificationService } from './request-access-verification.
 import { RequestAccessVerificationPurpose } from 'src/common/schemas/request-access-verification-session.schema';
 
 function query<T>(value: T) {
-  return { exec: jest.fn().mockResolvedValue(value) };
+  return {
+    lean: jest.fn().mockReturnThis(),
+    exec: jest.fn().mockResolvedValue(value),
+  };
 }
 
 describe('RequestAccessVerificationService', () => {
@@ -20,6 +23,7 @@ describe('RequestAccessVerificationService', () => {
         expiresAt: new Date(now.getTime() + 5 * 60_000),
       }),
       findById: jest.fn(),
+      findOne: jest.fn(),
       findOneAndDelete: jest.fn(),
     };
     const locModel = {
@@ -101,6 +105,23 @@ describe('RequestAccessVerificationService', () => {
         expiresAt: { $gt: now },
       }),
     );
+  });
+
+  it('kiểm tra phiên hợp lệ mà chưa consume', async () => {
+    const { service, sessionModel } = setup();
+    sessionModel.findOne.mockReturnValue(query(session()));
+
+    const result = await service.check({
+      sessionId: new Types.ObjectId().toHexString(),
+      userId: String(userId),
+      locationId: String(locationId),
+      purpose: 'TAKEOVER',
+      requestAccessId: String(requestAccessId),
+      now,
+    });
+
+    expect(result).toMatchObject({ success: true, otpVerified: true });
+    expect(sessionModel.findOneAndDelete).not.toHaveBeenCalled();
   });
 
   it('rejects a session owned by another user', async () => {

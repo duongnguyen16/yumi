@@ -30,7 +30,6 @@ import { AppealModule } from './modules/appeals/appeal.module';
 import { DisputeModule } from './modules/disputes/dispute.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
-import { OwnershipImagesModule } from './modules/ownership-images/ownership-images.module';
 
 @Module({
   imports: [
@@ -75,7 +74,6 @@ import { OwnershipImagesModule } from './modules/ownership-images/ownership-imag
     DisputeModule,
     NotificationsModule,
     BookmarksModule,
-    OwnershipImagesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

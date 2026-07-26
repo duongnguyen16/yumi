@@ -14,6 +14,8 @@ import { ListDisputesDTO } from './dto/list-disputes.dto';
 import { AdminListView } from 'src/common/dto/admin-list-view.dto';
 import { DisputeOutcome, ResolveDisputeDTO } from './dto/resolve-dispute.dto';
 import { AddDisputeEvidenceDTO } from './dto/add-dispute-evidence.dto';
+import { AddDisputeEvidenceUploadDTO } from './dto/add-dispute-evidence-upload.dto';
+import { OwnershipImagesService } from '../ownership-images/ownership-images.service';
 
 @Injectable()
 export class DisputeService {
@@ -29,6 +31,7 @@ export class DisputeService {
     private readonly notification: NotificationPort,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    private readonly ownershipImages: OwnershipImagesService,
   ) {}
 
   // list disputes của user
@@ -64,21 +67,9 @@ export class DisputeService {
   }
 
   async addEvidence(id: string, userId: string, dto: AddDisputeEvidenceDTO) {
-    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) {
-      return this.fail(400, 'ID không hợp lệ');
-    }
-    const item = await this.disputeModel.findById(id).exec();
-    if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
-    if (item.status !== DisputeStatus.OPEN) {
-      return this.fail(
-        409,
-        'Chỉ có thể thêm bằng chứng khi tranh chấp đang mở',
-      );
-    }
-    const side = this.sideOf(item, userId);
-    if (!side) {
-      return this.fail(403, 'Bạn không có quyền thêm bằng chứng');
-    }
+    const checked = await this.checkAddEvidence(id, userId);
+    if (!checked.success) return checked;
+    const { item, side } = checked;
     if (side === 'A') {
       item.evidenceA.push(...dto.evidenceFiles);
     } else {
@@ -94,6 +85,29 @@ export class DisputeService {
         evidenceB: item.evidenceB.length,
       },
     };
+  }
+
+  async addEvidenceWithImages(
+    id: string,
+    userId: string,
+    dto: AddDisputeEvidenceUploadDTO,
+    images: Express.Multer.File[],
+  ) {
+    if (images.length !== dto.evidenceFiles.length) {
+      return this.fail(400, 'Số lượng ảnh và metadata không khớp');
+    }
+    const checked = await this.checkAddEvidence(id, userId);
+    if (!checked.success) return checked;
+
+    const urls = await this.ownershipImages.uploadMany(userId, images);
+    return this.addEvidence(id, userId, {
+      evidenceFiles: dto.evidenceFiles.map((file, index) => ({
+        ...file,
+        capturedAt: file.capturedAt ? new Date(file.capturedAt) : undefined,
+        url: urls[index],
+        fileType: 'IMAGE',
+      })),
+    });
   }
 
   // list tranh chấp cho admin
@@ -262,6 +276,25 @@ export class DisputeService {
 
   private isParty(item: Dispute, userId: string) {
     return Boolean(this.sideOf(item, userId));
+  }
+
+  private async checkAddEvidence(id: string, userId: string) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(userId)) {
+      return this.fail(400, 'ID không hợp lệ');
+    }
+    const item = await this.disputeModel.findById(id).exec();
+    if (!item) return this.fail(404, 'Không tìm thấy tranh chấp');
+    if (item.status !== DisputeStatus.OPEN) {
+      return this.fail(
+        409,
+        'Chỉ có thể thêm bằng chứng khi tranh chấp đang mở',
+      );
+    }
+    const side = this.sideOf(item, userId);
+    if (!side) {
+      return this.fail(403, 'Bạn không có quyền thêm bằng chứng');
+    }
+    return { success: true as const, item, side };
   }
 
   private sideOf(item: Dispute, userId: string) {

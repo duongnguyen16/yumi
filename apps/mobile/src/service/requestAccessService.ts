@@ -1,5 +1,10 @@
 import api from "./aixos";
 import { getNoticeMessage } from "@/ui/feedback";
+import {
+  createOwnershipFormData,
+  ownershipEvidenceMetadata,
+  type PendingOwnershipEvidence,
+} from "./ownershipImageService";
 
 export type AccessSide = "owner" | "requester";
 export type AccessState =
@@ -103,16 +108,21 @@ export async function verifyAccessOtp(
 export async function createAccess(
   locationId: string,
   reason: string | undefined,
-  evidenceFiles: AccessEvidence[],
+  evidenceFiles: PendingOwnershipEvidence[],
   verificationSessionId: string,
 ) {
   try {
-    const res = await api.post("/request-access", {
+    const data = {
       locationId,
       reason,
-      evidenceFiles,
+      evidenceFiles: evidenceFiles.map(ownershipEvidenceMetadata),
       verificationSessionId,
-    });
+    };
+    const res = await api.post(
+      "/request-access",
+      createOwnershipFormData(data, evidenceFiles),
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
     return res.data as ApiResult & {
       request?: { id: string; status: string; timeoutAt: string };
     };
@@ -168,14 +178,19 @@ export async function respondAccess(
 
 export async function verifyAccess(
   id: string,
-  evidenceFiles: AccessEvidence[],
+  evidenceFiles: PendingOwnershipEvidence[],
   verificationSessionId: string,
 ) {
   try {
-    const res = await api.patch(`/request-access/${id}/verify-takeover`, {
-      evidenceFiles,
+    const data = {
+      evidenceFiles: evidenceFiles.map(ownershipEvidenceMetadata),
       verificationSessionId,
-    });
+    };
+    const res = await api.patch(
+      `/request-access/${id}/verify-takeover`,
+      createOwnershipFormData(data, evidenceFiles),
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
     return res.data as ApiResult;
   } catch (err) {
     const message = getNoticeMessage(err, "Không thể xác minh chuyển quyền.");

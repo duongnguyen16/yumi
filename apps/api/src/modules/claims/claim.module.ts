@@ -5,11 +5,12 @@ import {
 } from 'src/common/contracts/notification.port';
 import { SchemaModule } from 'src/common/schemas/schema.module';
 import { SmsService } from '../auth/services/sms.service';
+import { OwnershipImagesModule } from '../ownership-images/ownership-images.module';
 import { ClaimController } from './claim.controller';
 import { ClaimService } from './claim.service';
 
 @Module({
-  imports: [SchemaModule],
+  imports: [SchemaModule, OwnershipImagesModule],
   controllers: [ClaimController],
   providers: [
     ClaimService,

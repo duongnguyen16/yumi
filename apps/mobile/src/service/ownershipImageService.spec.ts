@@ -1,14 +1,6 @@
-jest.mock("./aixos", () => ({
-  __esModule: true,
-  default: {
-    post: jest.fn(),
-  },
-}));
-
-import api from "./aixos";
 import {
-  uploadAppealOwnershipImage,
-  uploadOwnershipImage,
+  createOwnershipFormData,
+  ownershipEvidenceMetadata,
 } from "./ownershipImageService";
 
 class RecordingFormData {
@@ -44,32 +36,15 @@ describe("Kiểm thử ownershipImageService", () => {
 
   beforeEach(() => {
     RecordingFormData.instances = [];
-    jest.clearAllMocks();
-    (api.post as jest.Mock).mockResolvedValue({
-      data: {
-        success: true,
-        url: "https://example.com/proof.jpg",
-      },
-    });
   });
 
-  it.each([
-    {
-      endpoint: "/ownership-images/upload",
-      name: "JWT thường",
-      upload: uploadOwnershipImage,
-    },
-    {
-      endpoint: "/ownership-images/appeal/upload",
-      name: "JWT appeal",
-      upload: uploadAppealOwnershipImage,
-    },
-  ])("gửi multipart bằng $name", async ({ upload, endpoint }) => {
-    const url = await upload(image);
+  it("tạo multipart dùng chung cho endpoint nghiệp vụ", () => {
+    createOwnershipFormData({ targetId: "target-1" }, [image]);
 
     expect(RecordingFormData.instances[0].entries).toEqual([
+      ["data", JSON.stringify({ targetId: "target-1" })],
       [
-        "file",
+        "images",
         {
           uri: image.uri,
           name: image.fileName,
@@ -77,15 +52,14 @@ describe("Kiểm thử ownershipImageService", () => {
         },
       ],
     ]);
-    expect(api.post).toHaveBeenCalledWith(
-      endpoint,
-      RecordingFormData.instances[0],
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      },
-    );
-    expect(url).toBe("https://example.com/proof.jpg");
+  });
+
+  it("tách metadata khỏi thông tin file local", () => {
+    expect(
+      ownershipEvidenceMetadata({
+        ...image,
+        capturedAt: "2026-07-26T00:00:00.000Z",
+      }),
+    ).toEqual({ capturedAt: "2026-07-26T00:00:00.000Z" });
   });
 });

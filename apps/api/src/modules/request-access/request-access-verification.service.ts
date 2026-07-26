@@ -117,6 +117,32 @@ export class RequestAccessVerificationService {
   }
 
   async consume(input: ConsumeInput) {
+    const filter = this.buildFilter(input);
+    if (!filter.success) return filter;
+
+    const session = await this.sessionModel
+      .findOneAndDelete(filter.value)
+      .exec();
+    if (!session) {
+      return this.fail(410, 'Phiên xác minh đã hết hạn hoặc đã được sử dụng');
+    }
+
+    return { success: true as const, otpVerified: session.otpVerified };
+  }
+
+  async check(input: ConsumeInput) {
+    const filter = this.buildFilter(input);
+    if (!filter.success) return filter;
+
+    const session = await this.sessionModel.findOne(filter.value).lean().exec();
+    if (!session) {
+      return this.fail(410, 'Phiên xác minh đã hết hạn hoặc đã được sử dụng');
+    }
+
+    return { success: true as const, otpVerified: session.otpVerified };
+  }
+
+  private buildFilter(input: ConsumeInput) {
     const now = input.now ?? new Date();
     if (
       !Types.ObjectId.isValid(input.sessionId) ||
@@ -126,7 +152,7 @@ export class RequestAccessVerificationService {
       return this.fail(400, 'Phiên xác minh không hợp lệ');
     }
 
-    const filter: Record<string, unknown> = {
+    const value: Record<string, unknown> = {
       _id: new Types.ObjectId(input.sessionId),
       userId: new Types.ObjectId(input.userId),
       locationId: new Types.ObjectId(input.locationId),
@@ -136,18 +162,16 @@ export class RequestAccessVerificationService {
     };
 
     if (input.purpose === 'TAKEOVER') {
-      if (!input.requestAccessId || !Types.ObjectId.isValid(input.requestAccessId)) {
+      if (
+        !input.requestAccessId ||
+        !Types.ObjectId.isValid(input.requestAccessId)
+      ) {
         return this.fail(400, 'Phiên tiếp quản không hợp lệ');
       }
-      filter.requestAccessId = new Types.ObjectId(input.requestAccessId);
+      value.requestAccessId = new Types.ObjectId(input.requestAccessId);
     }
 
-    const session = await this.sessionModel.findOneAndDelete(filter).exec();
-    if (!session) {
-      return this.fail(410, 'Phiên xác minh đã hết hạn hoặc đã được sử dụng');
-    }
-
-    return { success: true as const, otpVerified: session.otpVerified };
+    return { success: true as const, value };
   }
 
   private fail(statusCode: number, message: string) {

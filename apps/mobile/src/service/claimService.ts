@@ -1,13 +1,15 @@
 import api from "./aixos";
 import { getNoticeMessage } from "@/ui/feedback";
+import {
+  createOwnershipFormData,
+  ownershipEvidenceMetadata,
+  type PendingOwnershipEvidence,
+  type PendingOwnershipImage,
+} from "./ownershipImageService";
 
-export type ClaimEvidence = {
-  url: string;
-  fileType: "IMAGE";
+export type ClaimEvidence = PendingOwnershipEvidence & {
   geo: { type: "Point"; coordinates: [number, number] };
-  accuracyMeters?: number;
   capturedAt: string;
-  metadata?: Record<string, unknown>;
 };
 
 type ClaimApiResponse = {
@@ -49,17 +51,22 @@ export const submitClaim = async (payload: {
   locationId: string;
   siteCode: string;
   evidenceFiles: ClaimEvidence[];
-  licenseUrl?: string;
+  license?: PendingOwnershipImage;
 }) => {
   try {
-    const { siteCode, evidenceFiles, ...claim } = payload;
-    const response = await api.post("/claims/submit", {
-      ...claim,
+    const { locationId, siteCode, evidenceFiles, license } = payload;
+    const data = {
+      locationId,
       evidenceFiles: evidenceFiles.map((file) => ({
-        ...file,
+        ...ownershipEvidenceMetadata(file),
         metadata: { ...file.metadata, siteCode },
       })),
-    });
+    };
+    const response = await api.post(
+      "/claims/submit",
+      createOwnershipFormData(data, evidenceFiles, license),
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
     return response.data as ClaimApiResponse & {
       claim?: { id: string; status: string };
     };

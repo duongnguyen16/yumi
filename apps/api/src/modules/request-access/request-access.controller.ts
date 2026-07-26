@@ -13,17 +13,21 @@ import {
   Query,
   Request as NestRequest,
   UnprocessableEntityException,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { CreateRequestAccessDTO } from './dto/create-request-access.dto';
+import { parseMultipartDto } from 'src/common/utils/parse-multipart-dto';
+import { CreateRequestAccessUploadDTO } from './dto/create-request-access-upload.dto';
 import { ListRequestAccessDTO } from './dto/list-request-access.dto';
 import { RespondRequestAccessDTO } from './dto/respond-request-access.dto';
 import { StartAccessVerificationDTO } from './dto/start-access-verification.dto';
 import { VerifyAccessOtpDTO } from './dto/verify-access-otp.dto';
-import { VerifyTakeoverDTO } from './dto/verify-takeover.dto';
+import { VerifyTakeoverUploadDTO } from './dto/verify-takeover-upload.dto';
 import { RequestAccessVerificationService } from './request-access-verification.service';
 import { RequestAccessService } from './request-access.service';
 
@@ -78,11 +82,22 @@ export class RequestAccessController {
 
   // tạo request access
   @Post()
+  @UseInterceptors(
+    FilesInterceptor('images', 5, { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   async create(
-    @Body() dto: CreateRequestAccessDTO,
+    @Body('data') data: string,
+    @UploadedFiles() images: Express.Multer.File[] | undefined,
     @NestRequest() req: UserRequest,
   ) {
-    return this.handle(await this.service.createRequest(req.user.userId, dto));
+    const dto = parseMultipartDto(data, CreateRequestAccessUploadDTO);
+    return this.handle(
+      await this.service.createRequestWithImages(
+        req.user.userId,
+        dto,
+        images ?? [],
+      ),
+    );
   }
 
   // list request access của owner hoặc requester
@@ -114,13 +129,23 @@ export class RequestAccessController {
 
   // gửi yêu cầu tiếp quản
   @Patch(':id/verify-takeover')
+  @UseInterceptors(
+    FilesInterceptor('images', 5, { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
   async verify(
     @Param('id') id: string,
-    @Body() dto: VerifyTakeoverDTO,
+    @Body('data') data: string,
+    @UploadedFiles() images: Express.Multer.File[] | undefined,
     @NestRequest() req: UserRequest,
   ) {
+    const dto = parseMultipartDto(data, VerifyTakeoverUploadDTO);
     return this.handle(
-      await this.service.verifyTakeover(id, req.user.userId, dto),
+      await this.service.verifyTakeoverWithImages(
+        id,
+        req.user.userId,
+        dto,
+        images ?? [],
+      ),
     );
   }
 

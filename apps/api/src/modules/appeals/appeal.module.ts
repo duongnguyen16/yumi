@@ -7,6 +7,7 @@ import { AdminGuard } from 'src/common/guard/admin.guard';
 import { SchemaModule } from 'src/common/schemas/schema.module';
 import { AuditModule } from 'src/common/services/audit.module';
 import { TrustEngineModule } from 'src/modules/trust-engine/trust-engine.module';
+import { OwnershipImagesModule } from '../ownership-images/ownership-images.module';
 import {
   AdminAppealController,
   AppealController,
@@ -16,7 +17,12 @@ import { AppealSourceService } from './appeal-source.service';
 import { AppealService } from './appeal.service';
 
 @Module({
-  imports: [SchemaModule, AuditModule, TrustEngineModule],
+  imports: [
+    SchemaModule,
+    AuditModule,
+    TrustEngineModule,
+    OwnershipImagesModule,
+  ],
   controllers: [AppealController, AdminAppealController],
   providers: [
     AppealService,

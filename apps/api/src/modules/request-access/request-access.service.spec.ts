@@ -48,13 +48,21 @@ describe('Kiểm thử RequestAccessService', () => {
     const notify = { notify: jest.fn().mockResolvedValue(undefined) };
     const evidenceVerifier = {
       assertValid: jest.fn(),
+      assertMetadataValid: jest.fn(),
     };
     const disputeModel = { exists: jest.fn().mockResolvedValue(null) };
     const verification = {
+      check: jest.fn().mockResolvedValue({
+        success: true,
+        otpVerified: true,
+      }),
       consume: jest.fn().mockResolvedValue({
         success: true,
         otpVerified: true,
       }),
+    };
+    const ownershipImages = {
+      uploadMany: jest.fn().mockResolvedValue(['https://example.com/proof.jpg']),
     };
     const service = new RequestAccessService(
       reqModel as unknown as Model<RequestAccessDocument>,
@@ -66,6 +74,7 @@ describe('Kiểm thử RequestAccessService', () => {
       evidenceVerifier as never,
       verification as never,
       disputeModel as unknown as Model<DisputeDocument>,
+      ownershipImages as never,
     );
     return {
       service,
@@ -78,6 +87,7 @@ describe('Kiểm thử RequestAccessService', () => {
       evidenceVerifier,
       verification,
       disputeModel,
+      ownershipImages,
     };
   }
 
@@ -131,6 +141,36 @@ describe('Kiểm thử RequestAccessService', () => {
 
     expect(result).toMatchObject({ success: false, statusCode: 409 });
     expect(reqModel.create).not.toHaveBeenCalled();
+  });
+
+  it('không upload ảnh khi yêu cầu chuyển quyền chưa vượt qua kiểm tra nghiệp vụ', async () => {
+    const {
+      service,
+      locModel,
+      claimModel,
+      ownershipImages,
+    } = setup();
+    locModel.findById.mockReturnValue(query(location()));
+    claimModel.exists.mockResolvedValue({ _id: new Types.ObjectId() });
+
+    const result = await service.createRequestWithImages(
+      String(userId),
+      {
+        locationId: String(locId),
+        verificationSessionId: String(new Types.ObjectId()),
+        evidenceFiles: [
+          {
+            geo: { type: 'Point', coordinates: [106.7, 10.7] },
+            accuracyMeters: 10,
+            capturedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      [{} as Express.Multer.File],
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+    expect(ownershipImages.uploadMany).not.toHaveBeenCalled();
   });
 
   it('cho phép Customer đang hoạt động và đã xác minh số điện thoại tạo yêu cầu chuyển quyền', async () => {
@@ -251,6 +291,46 @@ describe('Kiểm thử RequestAccessService', () => {
         locationId: String(locId),
         purpose: 'CREATE',
       }),
+    );
+  });
+
+  it('upload ảnh sau khi kiểm tra phiên và trước khi consume phiên', async () => {
+    const {
+      service,
+      locModel,
+      claimModel,
+      reqModel,
+      verification,
+      ownershipImages,
+    } = setup();
+    const sessionId = new Types.ObjectId().toHexString();
+    locModel.findById.mockReturnValue(query(location()));
+    claimModel.exists.mockResolvedValue(null);
+    reqModel.exists.mockResolvedValue(null);
+    reqModel.create.mockResolvedValue(request());
+
+    const result = await service.createRequestWithImages(
+      String(userId),
+      {
+        locationId: String(locId),
+        verificationSessionId: sessionId,
+        evidenceFiles: [
+          {
+            geo: { type: 'Point', coordinates: [105.8, 21] },
+            accuracyMeters: 10,
+            capturedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      [{} as Express.Multer.File],
+    );
+
+    expect(result.success).toBe(true);
+    expect(verification.check.mock.invocationCallOrder[0]).toBeLessThan(
+      ownershipImages.uploadMany.mock.invocationCallOrder[0],
+    );
+    expect(ownershipImages.uploadMany.mock.invocationCallOrder[0]).toBeLessThan(
+      verification.consume.mock.invocationCallOrder[0],
     );
   });
 

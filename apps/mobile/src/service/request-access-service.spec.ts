@@ -10,40 +10,68 @@ import api from "./aixos";
 import {
   createAccess,
   startAccessVerification,
-  type AccessEvidence,
 } from "./requestAccessService";
+import type { PendingOwnershipEvidence } from "./ownershipImageService";
+
+class RecordingFormData {
+  entries: Array<[string, unknown]> = [];
+  append(name: string, value: unknown) {
+    this.entries.push([name, value]);
+  }
+}
 
 describe("createAccess", () => {
+  const originalFormData = global.FormData;
+
+  beforeAll(() => {
+    global.FormData = RecordingFormData as unknown as typeof FormData;
+  });
+
+  afterAll(() => {
+    global.FormData = originalFormData;
+  });
+
   it("gửi bằng chứng tại chỗ ngay khi tạo yêu cầu", async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { success: true } });
-    const evidenceFiles: AccessEvidence[] = [
+    const evidenceFiles: PendingOwnershipEvidence[] = [
       {
-        url: "https://example.com/proof.jpg",
-        fileType: "IMAGE",
+        uri: "file:///proof.jpg",
+        fileName: "proof.jpg",
+        mimeType: "image/jpeg",
+        fileSize: 1024,
         geo: { type: "Point", coordinates: [105.8, 21] },
         capturedAt: "2026-07-23T08:00:00.000Z",
       },
     ];
-    const create = createAccess as unknown as (
-      locationId: string,
-      reason: string | undefined,
-      evidenceFiles: AccessEvidence[],
-      verificationSessionId: string,
-    ) => Promise<unknown>;
 
-    await create(
+    await createAccess(
       "location-1",
       "Tôi đang vận hành địa điểm",
       evidenceFiles,
       "session-1",
     );
 
-    expect(api.post).toHaveBeenCalledWith("/request-access", {
-      locationId: "location-1",
-      reason: "Tôi đang vận hành địa điểm",
-      evidenceFiles,
-      verificationSessionId: "session-1",
-    });
+    const formData = (api.post as jest.Mock).mock.calls[0][1] as RecordingFormData;
+    expect(api.post).toHaveBeenCalledWith(
+      "/request-access",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    expect(formData.entries[0]).toEqual([
+      "data",
+      JSON.stringify({
+        locationId: "location-1",
+        reason: "Tôi đang vận hành địa điểm",
+        evidenceFiles: [
+          {
+            geo: { type: "Point", coordinates: [105.8, 21] },
+            capturedAt: "2026-07-23T08:00:00.000Z",
+          },
+        ],
+        verificationSessionId: "session-1",
+      }),
+    ]);
+    expect(formData.entries[1][0]).toBe("images");
   });
 
   it("bắt đầu phiên xác minh request-access", async () => {

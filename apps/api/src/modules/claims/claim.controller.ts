@@ -10,14 +10,18 @@ import {
   NotFoundException,
   Post,
   Request as NestRequest,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { parseMultipartDto } from 'src/common/utils/parse-multipart-dto';
 import { ClaimService } from './claim.service';
 import { StartClaimDto } from './dto/start-claim.dto';
-import { SubmitClaimDto } from './dto/submit-claim.dto';
+import { SubmitClaimUploadDto } from './dto/submit-claim-upload.dto';
 import { VerifyClaimOtpDto } from './dto/verify-claim-otp.dto';
 
 interface AuthenticatedRequest extends Request {
@@ -62,11 +66,33 @@ export class ClaimController {
 
   // gửi req
   @Post('submit')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 5 },
+        { name: 'license', maxCount: 1 },
+      ],
+      { limits: { fileSize: 5 * 1024 * 1024 } },
+    ),
+  )
   async submit(
-    @Body() body: SubmitClaimDto,
+    @Body('data') data: string,
+    @UploadedFiles()
+    files: {
+      images?: Express.Multer.File[];
+      license?: Express.Multer.File[];
+    },
     @NestRequest() req: AuthenticatedRequest,
   ) {
-    return this.handle(await this.service.submit(body, req.user.userId));
+    const dto = parseMultipartDto(data, SubmitClaimUploadDto);
+    return this.handle(
+      await this.service.submitWithImages(
+        dto,
+        req.user.userId,
+        files?.images ?? [],
+        files?.license?.[0],
+      ),
+    );
   }
 
   private handle<T extends ServiceResponse>(result: T) {

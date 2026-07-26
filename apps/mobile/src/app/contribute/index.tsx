@@ -58,7 +58,6 @@ import {
   validateContributionBasics,
   validateVendorVideos,
 } from "@/common/contribute-validation";
-import { requestPhotoMetadataPermission } from "@/service/permissions";
 
 const MAP_STYLE_URL =
   process.env.EXPO_PUBLIC_MAP_API ||
@@ -456,11 +455,6 @@ export default function ContributePlaceScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (permission.status !== "granted") {
         setNotice("Bạn cần cấp quyền thư viện ảnh để chọn ảnh.");
-        return;
-      }
-      const mediaPermission = await requestPhotoMetadataPermission();
-      if (!mediaPermission) {
-        setNotice("Bạn cần cấp quyền truy cập thư viện ảnh để chọn ảnh.");
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({

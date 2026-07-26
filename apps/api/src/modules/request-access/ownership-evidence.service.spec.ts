@@ -34,8 +34,8 @@ describe('OwnershipEvidenceService', () => {
 
   it.each([
     [
-      'tọa độ xa',
-      evidence({ geo: { type: 'Point', coordinates: [105.6, 21.1] } }),
+      'tọa độ cách địa điểm hơn 100m',
+      evidence({ geo: { type: 'Point', coordinates: [105.8, 21.00091] } }),
     ],
     [
       'ảnh quá cũ',
@@ -46,6 +46,14 @@ describe('OwnershipEvidenceService', () => {
     expect(() => verifier.assertValid([file], location, userId, now)).toThrow(
       UnprocessableEntityException,
     );
+  });
+
+  it('chấp nhận bằng chứng trong phạm vi 100m', () => {
+    const file = evidence({
+      geo: { type: 'Point', coordinates: [105.8, 21.00089] },
+    });
+
+    expect(() => verifier.assertValid([file], location, userId, now)).not.toThrow();
   });
 
   it('chấp nhận đúng ngưỡng accuracy và thời gian', () => {

@@ -14,16 +14,20 @@ import {
   Query,
   Request as NestRequest,
   UnprocessableEntityException,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AdminGuard } from 'src/common/guard/admin.guard';
+import { parseMultipartDto } from 'src/common/utils/parse-multipart-dto';
 import { AppealService } from './appeal.service';
 import { ListAppealsDTO } from './dto/list-appeals.dto';
 import { ResolveAppealDTO } from './dto/resolve-appeal.dto';
-import { SubmitAppealDTO } from './dto/submit-appeal.dto';
+import { SubmitAppealUploadDTO } from './dto/submit-appeal-upload.dto';
 
 interface UserRequest extends Request {
   user: { userId: string };
@@ -57,8 +61,22 @@ export class AppealController {
 
   // submit appeal
   @Post()
-  async submit(@Body() dto: SubmitAppealDTO, @NestRequest() req: UserRequest) {
-    return handle(await this.service.submit(req.user.userId, dto));
+  @UseInterceptors(
+    FilesInterceptor('images', 5, { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  async submit(
+    @Body('data') data: string,
+    @UploadedFiles() images: Express.Multer.File[] | undefined,
+    @NestRequest() req: UserRequest,
+  ) {
+    const dto = parseMultipartDto(data, SubmitAppealUploadDTO);
+    return handle(
+      await this.service.submitWithImages(
+        req.user.userId,
+        dto,
+        images ?? [],
+      ),
+    );
   }
 
   @Get('mine')

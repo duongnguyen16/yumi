@@ -35,14 +35,26 @@ describe('Kiểm thử DisputeService', () => {
     const userModel = {
       findById: jest.fn().mockReturnValue(query(null)),
     };
+    const ownershipImages = {
+      uploadMany: jest.fn().mockResolvedValue(['https://example.com/proof.jpg']),
+    };
     const service = new DisputeService(
       disputeModel as unknown as Model<DisputeDocument>,
       locModel as unknown as Model<LocationDocument>,
       audit as unknown as AuditService,
       notify as NotificationPort,
       userModel as never,
+      ownershipImages as never,
     );
-    return { service, disputeModel, locModel, audit, notify, userModel };
+    return {
+      service,
+      disputeModel,
+      locModel,
+      audit,
+      notify,
+      userModel,
+      ownershipImages,
+    };
   }
 
   function dispute(data: Record<string, unknown> = {}) {
@@ -81,6 +93,23 @@ describe('Kiểm thử DisputeService', () => {
     );
 
     expect(result).toMatchObject({ success: false, statusCode: 403 });
+  });
+
+  it('không upload ảnh khi tranh chấp đã đóng', async () => {
+    const { service, disputeModel, ownershipImages } = setup();
+    disputeModel.findById.mockReturnValue(
+      query(dispute({ status: DisputeStatus.RESOLVED_KEEP })),
+    );
+
+    const result = await service.addEvidenceWithImages(
+      String(disputeId),
+      String(vendorA),
+      { evidenceFiles: [{ capturedAt: new Date().toISOString() }] },
+      [{} as Express.Multer.File],
+    );
+
+    expect(result).toMatchObject({ success: false, statusCode: 409 });
+    expect(ownershipImages.uploadMany).not.toHaveBeenCalled();
   });
 
   it('cho phép Customer tham gia xem tranh chấp khi user đã được populate', async () => {
