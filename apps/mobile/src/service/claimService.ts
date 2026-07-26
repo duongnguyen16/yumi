@@ -7,6 +7,7 @@ export type ClaimEvidence = {
   geo: { type: "Point"; coordinates: [number, number] };
   accuracyMeters?: number;
   capturedAt: string;
+  metadata?: Record<string, unknown>;
 };
 
 type ClaimApiResponse = {
@@ -46,11 +47,19 @@ export const verifyClaimOtp = async (locationId: string, otp: string) => {
 
 export const submitClaim = async (payload: {
   locationId: string;
+  siteCode: string;
   evidenceFiles: ClaimEvidence[];
   licenseUrl?: string;
 }) => {
   try {
-    const response = await api.post("/claims/submit", payload);
+    const { siteCode, evidenceFiles, ...claim } = payload;
+    const response = await api.post("/claims/submit", {
+      ...claim,
+      evidenceFiles: evidenceFiles.map((file) => ({
+        ...file,
+        metadata: { ...file.metadata, siteCode },
+      })),
+    });
     return response.data as ClaimApiResponse & {
       claim?: { id: string; status: string };
     };

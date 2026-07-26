@@ -7,14 +7,12 @@ import { SchemaModule } from 'src/common/schemas/schema.module';
 import { SmsService } from '../auth/services/sms.service';
 import { ClaimController } from './claim.controller';
 import { ClaimService } from './claim.service';
-import { SiteCodeImageService } from './site-code-image.service';
 
 @Module({
   imports: [SchemaModule],
   controllers: [ClaimController],
   providers: [
     ClaimService,
-    SiteCodeImageService,
     SmsService,
     { provide: NOTIFICATION_PORT, useClass: NotificationStub },
   ],

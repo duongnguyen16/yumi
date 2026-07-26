@@ -6,7 +6,12 @@ import {
 } from "@/service/claimService";
 import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
+  getClaimProof,
+  type ClaimProof,
+} from "@/components/claim/claim-photo";
+import {
   AppText,
+  FormSection,
   MediaPicker,
   NoticeSnackbar,
   Stack as UIStack,
@@ -20,13 +25,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as ExpoLocation from "expo-location";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-
-type ProofImage = {
-  uri: string;
-  fileName: string;
-  mimeType: string;
-  fileSize: number;
-};
+import { PermissionsAndroid, Platform } from "react-native";
+import { launchCamera } from "react-native-image-picker";
 
 function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -52,8 +52,8 @@ export default function ClaimLocationScreen() {
   const [otpRequired, setOtpRequired] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otp, setOtp] = useState("");
-  const [proof, setProof] = useState<ProofImage | null>(null);
-  const [license, setLicense] = useState<ProofImage | null>(null);
+  const [proof, setProof] = useState<ClaimProof | null>(null);
+  const [license, setLicense] = useState<ClaimProof | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const step = getStep(siteCode, otpRequired, otpVerified);
@@ -94,27 +94,36 @@ export default function ClaimLocationScreen() {
   };
 
   const pickProof = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setMessage("Cần quyền camera để chụp bằng chứng tại địa điểm.");
-      return;
+    try {
+      if (Platform.OS === "android") {
+        const permission = PermissionsAndroid.PERMISSIONS.CAMERA;
+        const hasPermission = await PermissionsAndroid.check(permission);
+        const result = hasPermission
+          ? PermissionsAndroid.RESULTS.GRANTED
+          : await PermissionsAndroid.request(permission);
+        if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+          setMessage("Cần quyền camera để chụp bằng chứng tại địa điểm.");
+          return;
+        }
+      }
+
+      setMessage("");
+      const result = await launchCamera({
+        cameraType: "back",
+        mediaType: "photo",
+        quality: 0.8,
+        saveToPhotos: false,
+      });
+      if (result.errorCode) {
+        setMessage(result.errorMessage || "Không thể mở camera.");
+        return;
+      }
+
+      const nextProof = getClaimProof(result);
+      if (nextProof) setProof(nextProof);
+    } catch (error) {
+      setMessage(getNoticeMessage(error, "Không thể mở camera."));
     }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-
-    const asset = result.assets[0];
-    if (!asset) return;
-
-    const fallbackName = `claim-${Date.now()}.jpg`;
-    setProof({
-      uri: asset.uri,
-      fileName: asset.fileName || fallbackName,
-      mimeType: asset.mimeType || "image/jpeg",
-      fileSize: asset.fileSize || 0,
-    });
   };
 
   const pickLicense = async () => {
@@ -185,6 +194,7 @@ export default function ClaimLocationScreen() {
       };
       const result = await submitClaim({
         locationId,
+        siteCode,
         evidenceFiles: [evidence],
         licenseUrl,
       });
@@ -279,24 +289,34 @@ export default function ClaimLocationScreen() {
                 Chụp ảnh bằng chứng tại địa điểm để gửi yêu cầu xác nhận.
               </AppText>
             </UIStack>
-            <MediaPicker
-              addLabel={proofLabel}
-              items={proofItems}
-              maxCount={1}
-              onAdd={pickProof}
-              onRemove={() => setProof(null)}
+            <FormSection
               supportingText="Ảnh được gửi kèm vị trí hiện tại."
-              title="Bằng chứng sở hữu"
-            />
-            <MediaPicker
-              addLabel={licenseLabel}
-              items={licenseItems}
-              maxCount={1}
-              onAdd={pickLicense}
-              onRemove={() => setLicense(null)}
+              title="Ảnh tại địa điểm"
+            >
+              <MediaPicker
+                addLabel={proofLabel}
+                items={proofItems}
+                layout="horizontal-square"
+                maxCount={1}
+                onAdd={pickProof}
+                onRemove={() => setProof(null)}
+                title="Ảnh tại địa điểm"
+              />
+            </FormSection>
+            <FormSection
               supportingText="Giấy phép kinh doanh giúp yêu cầu được ưu tiên xét duyệt."
               title="Giấy phép kinh doanh (tùy chọn)"
-            />
+            >
+              <MediaPicker
+                addLabel={licenseLabel}
+                items={licenseItems}
+                layout="horizontal-square"
+                maxCount={1}
+                onAdd={pickLicense}
+                onRemove={() => setLicense(null)}
+                title="Giấy phép kinh doanh"
+              />
+            </FormSection>
           </UIStack>
         ) : null}
       </WizardScreen>

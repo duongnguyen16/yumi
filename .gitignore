@@ -35,8 +35,7 @@ npm-debug.log*
 Thumbs.db
 
 # IDE
-.vscode/*
-!.vscode/settings.json
+.vscode/
 .idea/
 
 # Local agent and editor tooling

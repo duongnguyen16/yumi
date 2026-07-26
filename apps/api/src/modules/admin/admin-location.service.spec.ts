@@ -1,12 +1,13 @@
 import { Model, Types } from 'mongoose';
 import { AuditLogDocument } from 'src/common/schemas/audit-log.schema';
 import { LocationDocument } from 'src/common/schemas/location.schema';
+import { UserDocument } from 'src/common/schemas/user.schema';
 import {
   LocationRequestDocument,
   LocationRequestStatus,
   LocationRequestType,
 } from 'src/common/schemas/location-request';
-import { LocationStatus } from 'src/common/schemas/common.enums';
+import { LocationStatus, UserRole } from 'src/common/schemas/common.enums';
 import { NotificationPort } from 'src/common/contracts/notification.port';
 import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { AdminLocationService } from './admin-location.service';
@@ -32,20 +33,31 @@ describe('Kiểm thử AdminLocationService', () => {
     const logModel = { create: jest.fn().mockResolvedValue({}) };
     const trust = { recordEvent: jest.fn().mockResolvedValue({}) };
     const notification = { notify: jest.fn().mockResolvedValue(undefined) };
+    const userModel = {
+      findById: jest.fn().mockReturnValue(
+        query({
+          role: UserRole.VENDOR,
+          save: jest.fn().mockResolvedValue(undefined),
+        }),
+      ),
+    };
+    const service = new AdminLocationService(
+      reqModel as unknown as Model<LocationRequestDocument>,
+      locModel as unknown as Model<LocationDocument>,
+      userModel as unknown as Model<UserDocument>,
+      logModel as unknown as Model<AuditLogDocument>,
+      trust as unknown as TrustEngineService,
+      notification as unknown as NotificationPort,
+    );
 
     return {
-      service: new AdminLocationService(
-        reqModel as unknown as Model<LocationRequestDocument>,
-        locModel as unknown as Model<LocationDocument>,
-        logModel as unknown as Model<AuditLogDocument>,
-        trust as unknown as TrustEngineService,
-        notification as unknown as NotificationPort,
-      ),
+      service,
       reqModel,
       locModel,
       logModel,
       trust,
       notification,
+      userModel,
     };
   }
 
@@ -56,7 +68,7 @@ describe('Kiểm thử AdminLocationService', () => {
         _id: requestId,
         isPotentialDuplicate: true,
         suspectedDuplicateLocationIds: [locationId],
-        deviceDistanceMeters: 501,
+        deviceDistanceMeters: 201,
       },
     ];
     const findChain = {
@@ -95,7 +107,7 @@ describe('Kiểm thử AdminLocationService', () => {
     });
   });
 
-  it('không gắn cờ pin xa khi khoảng cách đúng 500 mét', async () => {
+  it('không gắn cờ pin xa khi khoảng cách đúng 200 mét', async () => {
     const { service, reqModel } = createService();
     const findChain = {
       sort: jest.fn().mockReturnThis(),
@@ -103,7 +115,7 @@ describe('Kiểm thử AdminLocationService', () => {
       limit: jest.fn().mockReturnThis(),
       populate: jest.fn().mockReturnThis(),
       lean: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([{ deviceDistanceMeters: 500 }]),
+      exec: jest.fn().mockResolvedValue([{ deviceDistanceMeters: 200 }]),
     };
     reqModel.find.mockReturnValue(findChain);
     reqModel.countDocuments.mockReturnValue(query(1));
@@ -181,6 +193,40 @@ describe('Kiểm thử AdminLocationService', () => {
     expect(logModel.create).toHaveBeenCalledTimes(1);
   });
 
+  it('gán người gửi làm owner khi duyệt đăng ký có sở hữu', async () => {
+    const { service, reqModel, locModel, userModel } = createService();
+    const submitter = {
+      role: UserRole.CUSTOMER,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      ownershipRequested: true,
+      verificationProof: { proofUrls: ['https://storage/proof.mp4'] },
+      newData: {},
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      status: LocationStatus.SUBMITTED,
+      ownerId: undefined,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    userModel.findById.mockReturnValue(query(submitter));
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.approve(String(request._id), String(adminId));
+
+    expect(result.success).toBe(true);
+    expect(location.ownerId).toEqual(request.submittedBy);
+    expect(submitter.role).toBe(UserRole.VENDOR);
+    expect(submitter.save).toHaveBeenCalledTimes(1);
+  });
+
   it('gán người gửi làm owner khi phiếu có video xác minh sở hữu', async () => {
     const { service, reqModel, locModel } = createService();
     const request = {
@@ -237,7 +283,7 @@ describe('Kiểm thử AdminLocationService', () => {
   });
 
   it('không gán owner khi duyệt đóng góp cộng đồng', async () => {
-    const { service, reqModel, locModel } = createService();
+    const { service, reqModel, locModel, userModel } = createService();
     const request = {
       _id: requestId,
       submittedBy: submitterId,
@@ -259,6 +305,37 @@ describe('Kiểm thử AdminLocationService', () => {
     await service.approve(String(request._id), String(adminId));
 
     expect(location.ownerId).toBeUndefined();
+    expect(userModel.findById).not.toHaveBeenCalled();
+  });
+
+  it('không duyệt đăng ký sở hữu khi không tìm thấy người gửi', async () => {
+    const { service, reqModel, locModel, userModel } = createService();
+    const request = {
+      _id: requestId,
+      submittedBy: submitterId,
+      locationId,
+      status: LocationRequestStatus.PENDING,
+      ownershipRequested: true,
+      verificationProof: { proofUrls: ['https://storage/proof.mp4'] },
+      newData: {},
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    const location = {
+      _id: locationId,
+      status: LocationStatus.SUBMITTED,
+      ownerId: undefined,
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    userModel.findById.mockReturnValue(query(null));
+    reqModel.findById.mockReturnValue(query(request));
+    locModel.findById.mockReturnValue(query(location));
+
+    const result = await service.approve(String(request._id), String(adminId));
+
+    expect(result).toMatchObject({ success: false, statusCode: 404 });
+    expect(location.ownerId).toBeUndefined();
+    expect(request.save).not.toHaveBeenCalled();
+    expect(location.save).not.toHaveBeenCalled();
   });
 
   it('từ chối lý do từ chối rỗng trước khi thay đổi dữ liệu', async () => {
@@ -274,7 +351,11 @@ describe('Kiểm thử AdminLocationService', () => {
     };
     reqModel.findById.mockReturnValue(query(request));
 
-    const result = await service.reject(String(requestId), String(adminId), '   ');
+    const result = await service.reject(
+      String(requestId),
+      String(adminId),
+      '   ',
+    );
 
     expect(result).toMatchObject({
       success: false,

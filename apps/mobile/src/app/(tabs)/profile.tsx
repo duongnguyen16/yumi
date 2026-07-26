@@ -53,7 +53,7 @@ function getSessionAvatarUrl(user: Record<string, unknown> | null) {
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, setUser, handleLogout } = useContext(userContext);
+  const { user, handleLogout } = useContext(userContext);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -100,12 +100,6 @@ export default function AccountScreen() {
         if (!active) return;
         if (response?.success) {
           setProfile(response.user);
-          setUser((current) => ({
-            ...current,
-            phone: response.user?.phone ?? current?.phone,
-            phoneVerified:
-              response.user?.phoneVerified ?? current?.phoneVerified,
-          }));
         } else {
           setMessage(response?.message || "Không thể lấy hồ sơ.");
         }
@@ -114,7 +108,7 @@ export default function AccountScreen() {
       return () => {
         active = false;
       };
-    }, [setUser]),
+    }, []),
   );
 
   if (loading)

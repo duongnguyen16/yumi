@@ -22,7 +22,9 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
       sx={{
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
         mb: 3,
+        rowGap: 1.5,
         animation: 'admin-fade-in 320ms ease both',
       }}
     >
@@ -60,7 +62,7 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
         <Stack
           direction="row"
           spacing={1.5}
-          sx={{ alignItems: 'center', flexShrink: 0 }}
+          sx={{ alignItems: 'center', flexShrink: 0, maxWidth: '100%' }}
         >
           {actions}
         </Stack>

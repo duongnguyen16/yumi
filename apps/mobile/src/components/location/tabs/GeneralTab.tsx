@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import React, { useContext, useState } from "react";
 import { View } from "react-native";
 import { Icon, Surface } from "react-native-paper";
+import { canClaimLocation } from "../location-ownership-actions";
 import EditLocationModal from "../modals/EditLocationModal";
 import ProductSection from "../ProductSection";
 
@@ -63,17 +64,17 @@ export default function GeneralTab({
     value: string;
     onPress?: () => void;
   }[] = [
-    ...(details.openingHours
-      ? [
+      ...(details.openingHours
+        ? [
           {
             icon: "clock-outline" as const,
             label: "Giờ hoạt động",
             value: details.openingHours,
           },
         ]
-      : []),
-    ...(details.phone
-      ? [
+        : []),
+      ...(details.phone
+        ? [
           {
             icon: "phone-outline" as const,
             label: "Điện thoại",
@@ -81,29 +82,29 @@ export default function GeneralTab({
             onPress: () => void Linking.openURL(`tel:${details.phone}`),
           },
         ]
-      : []),
-    ...(details.address
-      ? [
+        : []),
+      ...(details.address
+        ? [
           {
             icon: "map-marker-outline" as const,
             label: "Địa chỉ",
             value: details.address,
           },
         ]
-      : []),
-    ...(category
-      ? [{ icon: "shape-outline" as const, label: "Danh mục", value: category }]
-      : []),
-    ...(details.description
-      ? [
+        : []),
+      ...(category
+        ? [{ icon: "shape-outline" as const, label: "Danh mục", value: category }]
+        : []),
+      ...(details.description
+        ? [
           {
             icon: "information-outline" as const,
             label: "Mô tả",
             value: details.description,
           },
         ]
-      : []),
-  ];
+        : []),
+    ];
 
   return (
     <Stack style={{ padding }}>
@@ -248,10 +249,10 @@ export function LocationManagementActions({
           variant="secondary"
         />
       ) : null}
-      {user?.role === "VENDOR" && !ownerId ? (
+      {canClaimLocation(user?.role, ownerId) ? (
         <Button
           icon="store-check-outline"
-          label="Nhận sở hữu địa điểm"
+          label="Bạn là chủ địa điểm này?"
           onPress={() =>
             router.push({
               pathname: "/claim/[locationId]",
@@ -261,10 +262,10 @@ export function LocationManagementActions({
           variant="secondary"
         />
       ) : null}
-      {user?.role === "VENDOR" && ownerId && userId !== ownerId ? (
+      {ownerId && userId !== ownerId ? (
         <Button
           icon="account-key-outline"
-          label="Xin quyền quản lý"
+          label="Bạn là chủ địa điểm này?"
           onPress={() =>
             router.push({
               pathname: "/request-access/new/[locationId]",

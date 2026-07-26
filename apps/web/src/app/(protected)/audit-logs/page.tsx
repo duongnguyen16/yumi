@@ -27,6 +27,7 @@ import { listAuditLogs, type AuditLogEntry } from "@/lib/admin-api";
 import { Topbar } from "@/components/admin/Topbar";
 import { AdminCard } from "@/components/admin/AdminCard";
 import { EmptyState } from "@/components/admin/EmptyState";
+import { SearchInput } from "@/components/admin/SearchInput";
 import { tokens } from "@/theme/admin-tokens";
 
 function extractMessage(err: unknown): string {
@@ -35,6 +36,14 @@ function extractMessage(err: unknown): string {
     message?: string;
   };
   return e?.response?.data?.message ?? e?.message ?? "Đã xảy ra lỗi";
+}
+
+function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
 }
 
 const headSx: SxProps<Theme> = {
@@ -49,6 +58,15 @@ const headSx: SxProps<Theme> = {
   whiteSpace: "nowrap",
 };
 
+const filterSx: SxProps<Theme> = {
+  minWidth: 190,
+  "& .MuiOutlinedInput-root": {
+    borderRadius: 0,
+    bgcolor: tokens.color.inputBg,
+    fontSize: 14,
+  },
+};
+
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [actions, setActions] = useState<string[]>([]);
@@ -58,6 +76,8 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [actionFilter, setActionFilter] = useState("");
+  const [collectionFilter, setCollectionFilter] = useState("");
+  const [search, setSearch] = useState("");
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -95,6 +115,35 @@ export default function AuditLogsPage() {
     [],
   );
 
+  const filteredLogs = useMemo(() => {
+    const q = normalizeSearch(search.trim());
+
+    return logs.filter(
+      (log) =>
+        (!collectionFilter || log.targetCollection === collectionFilter) &&
+        (!q ||
+          normalizeSearch(
+            [
+              log.actorId?.fullName,
+              log.actorId?.email,
+              log.action,
+              log.targetCollection,
+              log.targetId,
+              log.reason,
+              dayjs(log.createdAt).format("DD/MM/YYYY HH:mm"),
+            ]
+              .filter(Boolean)
+              .join(" "),
+          ).includes(q)),
+    );
+  }, [collectionFilter, logs, search]);
+
+  const collectionOptions = useMemo(
+    () => Array.from(new Set(logs.map((log) => log.targetCollection))).sort(),
+    [logs],
+  );
+  const hasAuditFilter = Boolean(search.trim() || actionFilter || collectionFilter);
+
   return (
     <Box
       sx={{
@@ -109,7 +158,13 @@ export default function AuditLogsPage() {
         title="Lịch sử hoạt động"
         subtitle="Audit log"
         actions={
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", flexWrap: "wrap" }}>
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Tìm kiếm audit log..."
+              sx={{ width: { xs: "100%", sm: 260 } }}
+            />
             <TextField
               select
               size="small"
@@ -118,20 +173,28 @@ export default function AuditLogsPage() {
                 setActionFilter(e.target.value);
                 setPage(0);
               }}
-              sx={{
-                minWidth: 220,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 0,
-                  bgcolor: tokens.color.inputBg,
-                  fontSize: 14,
-                },
-              }}
+              sx={filterSx}
               slotProps={{ select: { displayEmpty: true } }}
             >
               <MenuItem value="">Tất cả hành động</MenuItem>
               {actions.map((a) => (
                 <MenuItem key={a} value={a}>
                   {a}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={collectionFilter}
+              onChange={(e) => setCollectionFilter(e.target.value)}
+              sx={filterSx}
+              slotProps={{ select: { displayEmpty: true } }}
+            >
+              <MenuItem value="">Tất cả đối tượng</MenuItem>
+              {collectionOptions.map((collection) => (
+                <MenuItem key={collection} value={collection}>
+                  {collection}
                 </MenuItem>
               ))}
             </TextField>
@@ -192,18 +255,24 @@ export default function AuditLogsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {logs.length === 0 ? (
+                {filteredLogs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} sx={{ borderBottom: "none" }}>
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
                         title="Không có hoạt động"
-                        subtitle="Chưa có audit log nào."
+                        subtitle={
+                          search.trim()
+                            ? "Không có audit log khớp tìm kiếm."
+                            : hasAuditFilter
+                              ? "Không có audit log khớp bộ lọc."
+                              : "Chưa có audit log nào."
+                        }
                       />
                     </TableCell>
                   </TableRow>
                 ) : (
-                  logs.map((log) => (
+                  filteredLogs.map((log) => (
                     <TableRow
                       key={log._id}
                       sx={{

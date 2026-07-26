@@ -18,7 +18,6 @@ import {
   GeoJSONSource,
   Layer,
   Map,
-  NativeUserLocation,
 } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import {
@@ -70,6 +69,7 @@ type MapStyleLayer = {
   id: string | number;
   type?: string;
   layout?: Record<string, unknown>;
+  paint?: Record<string, unknown>;
   [key: string]: unknown;
 };
 type MutableMapStyle = Omit<StyleSpecification, "layers"> & {
@@ -167,6 +167,11 @@ export default function MapScreen() {
         // styleJson.glyphs = styleJson.glyphs || "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
         styleJson.layers = styleJson.layers.map((layer) => {
           const id = String(layer.id).toLowerCase();
+          const dashArray = layer.paint?.["line-dasharray"];
+          const hasInvalidDashArray =
+            Array.isArray(dashArray) &&
+            dashArray.length < 2 &&
+            dashArray.every((value) => typeof value === "number");
           const shouldHide =
             layer.type === "symbol" &&
             [
@@ -182,12 +187,19 @@ export default function MapScreen() {
               "atm",
               "parking",
             ].some((value) => id.includes(value));
-          return shouldHide
-            ? {
-                ...layer,
-                layout: { ...(layer.layout ?? {}), visibility: "none" },
-              }
-            : layer;
+          const nextLayer = { ...layer };
+          if (hasInvalidDashArray) {
+            const { ["line-dasharray"]: _dashArray, ...paint } =
+              layer.paint ?? {};
+            nextLayer.paint = paint;
+          }
+          if (shouldHide) {
+            nextLayer.layout = {
+              ...(layer.layout ?? {}),
+              visibility: "none",
+            };
+          }
+          return nextLayer;
         });
         setMapStyle(styleJson as StyleSpecification);
         setMapError(null);
@@ -329,6 +341,12 @@ export default function MapScreen() {
       />
     );
 
+  const currentLocationGeoJson = {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "Point" as const, coordinates: location },
+  };
+
   return (
     <MapCanvas>
       <MapSearchDock
@@ -377,7 +395,29 @@ export default function MapScreen() {
             ref={cameraRef}
             {...selectedCameraStop}
           />
-          <NativeUserLocation />
+          <GeoJSONSource data={currentLocationGeoJson} id="current-location">
+            <Layer
+              id="current-location-halo"
+              paint={{
+                "circle-color": colors.accentPrimary,
+                "circle-opacity": 0.2,
+                "circle-radius": 16,
+              }}
+              source="current-location"
+              type="circle"
+            />
+            <Layer
+              id="current-location-dot"
+              paint={{
+                "circle-color": colors.accentPrimary,
+                "circle-radius": 7,
+                "circle-stroke-color": colors.surfaceBase,
+                "circle-stroke-width": 2,
+              }}
+              source="current-location"
+              type="circle"
+            />
+          </GeoJSONSource>
           <GeoJSONSource
             cluster
             clusterMaxZoom={12}

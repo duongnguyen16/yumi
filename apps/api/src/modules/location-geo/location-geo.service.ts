@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
+export const LOCATION_PIN_MAX_DISTANCE_METERS = 200;
+export const LOCATION_PIN_MAX_ACCURACY_METERS = 50;
+
 @Injectable()
 export class LocationGeoService {
   getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -34,8 +37,10 @@ export class LocationGeoService {
     return {
       success: true,
       distanceMeters,
-      withinRange: distanceMeters <= 200,
-      requiresManualPin: (input.accuracyMeters ?? 0) > 50,
+      maxDistanceMeters: LOCATION_PIN_MAX_DISTANCE_METERS,
+      withinRange: distanceMeters <= LOCATION_PIN_MAX_DISTANCE_METERS,
+      requiresManualPin:
+        (input.accuracyMeters ?? 0) > LOCATION_PIN_MAX_ACCURACY_METERS,
     };
   }
 

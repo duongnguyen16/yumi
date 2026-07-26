@@ -48,14 +48,22 @@ describe("createAccess", () => {
 
   it("bắt đầu phiên xác minh request-access", async () => {
     (api.post as jest.Mock).mockResolvedValue({
-      data: { success: true, sessionId: "session-1", otpRequired: true },
+      data: {
+        success: true,
+        sessionId: "session-1",
+        otpRequired: true,
+        destinationPhone: "0900000000",
+        destinationType: "LOCATION_CONTACT",
+      },
     });
 
-    await startAccessVerification("location-1", "CREATE");
+    const result = await startAccessVerification("location-1", "CREATE");
 
     expect(api.post).toHaveBeenCalledWith("/request-access/verification/start", {
       locationId: "location-1",
       purpose: "CREATE",
     });
+    expect(result.destinationPhone).toBe("0900000000");
+    expect(result.destinationType).toBe("LOCATION_CONTACT");
   });
 });

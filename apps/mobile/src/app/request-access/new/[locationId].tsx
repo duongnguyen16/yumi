@@ -3,10 +3,12 @@ import {
   startAccessVerification,
   verifyAccessOtp,
 } from "@/service/requestAccessService";
-import { getAccessVerificationState } from "@/navigation/request-access-verification";
+import {
+  getRequestAccessPhoneHelper,
+  getRequestAccessSubmitAction,
+} from "@/navigation/request-access-verification";
 import { uploadContributionImage } from "@/service/contributePlaceService";
 import {
-  AppText,
   BottomActionBar,
   Button,
   FormSection,
@@ -19,7 +21,6 @@ import {
   TextField,
 } from "@/ui/components";
 import { getNoticeMessage } from "@/ui/feedback";
-import { colors } from "@/ui/tokens";
 import { returnAfterSuccess } from "@/navigation/return-after-success";
 import * as ImagePicker from "expo-image-picker";
 import * as ExpoLocation from "expo-location";
@@ -55,6 +56,7 @@ export default function NewAccessScreen() {
   const [otpRequired, setOtpRequired] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otp, setOtp] = useState("");
+  const [destinationPhone, setDestinationPhone] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +64,11 @@ export default function NewAccessScreen() {
 
     startAccessVerification(locationId, "CREATE").then((response) => {
       if (!active) return;
+      setSessionId(null);
+      setOtpRequired(false);
+      setOtpVerified(false);
+      setOtp("");
+      setDestinationPhone(null);
       if (!response.success || !response.sessionId) {
         setMessage(response.message || "Không thể bắt đầu xác minh.");
         return;
@@ -69,6 +76,7 @@ export default function NewAccessScreen() {
       setSessionId(response.sessionId);
       setOtpRequired(response.otpRequired === true);
       setOtpVerified(response.otpRequired !== true);
+      setDestinationPhone(response.destinationPhone ?? null);
     });
 
     return () => {
@@ -76,25 +84,13 @@ export default function NewAccessScreen() {
     };
   }, [locationId]);
 
-  const verificationState = getAccessVerificationState({
+  const submitAction = getRequestAccessSubmitAction({
     sessionId,
     otpRequired,
-    otpVerified,
+    otp,
+    proofCount: proofs.length,
     submitting: loading,
   });
-
-  const verifyOtp = async () => {
-    if (!sessionId || otp.length !== 6) return;
-    setLoading(true);
-    setMessage("");
-    const response = await verifyAccessOtp(sessionId, otp);
-    setLoading(false);
-    if (!response.success) {
-      setMessage(response.message || "Không thể xác minh OTP.");
-      return;
-    }
-    setOtpVerified(true);
-  };
 
   const takeProof = async () => {
     if (proofs.length >= 5) return;
@@ -124,11 +120,20 @@ export default function NewAccessScreen() {
   };
 
   const submit = async () => {
-    if (!locationId || !sessionId || verificationState !== "READY" || proofs.length === 0) return;
+    if (!locationId || !sessionId || submitAction.disabled) return;
 
     setLoading(true);
     setMessage("");
     try {
+      if (otpRequired && !otpVerified) {
+        const verification = await verifyAccessOtp(sessionId, otp);
+        if (!verification.success) {
+          setMessage(verification.message || "Không thể xác minh OTP.");
+          return;
+        }
+        setOtpVerified(true);
+      }
+
       let permission = await ExpoLocation.getForegroundPermissionsAsync();
       if (permission.status !== "granted") {
         permission = await ExpoLocation.requestForegroundPermissionsAsync();
@@ -175,6 +180,11 @@ export default function NewAccessScreen() {
 
   const locationName = name || "Địa điểm này";
   const supportingText = `${locationName} đang có chủ. Chủ hiện tại có 3 ngày để đồng ý hoặc từ chối.`;
+  const phoneHelper = getRequestAccessPhoneHelper({
+    destinationPhone,
+    locationName,
+    otpRequired,
+  });
   const proofItems = proofs.map((proof) => ({
     id: proof.uri,
     name: proof.fileName,
@@ -187,7 +197,7 @@ export default function NewAccessScreen() {
       <PageContent>
         <FormSection
           supportingText={supportingText}
-          title="Yêu cầu quyền quản lý"
+          title="Lý do yêu cầu"
         >
           <TextArea
             label="Lý do yêu cầu"
@@ -196,6 +206,11 @@ export default function NewAccessScreen() {
             placeholder="Mô tả mối liên hệ của bạn với địa điểm"
             value={reason}
           />
+        </FormSection>
+        <FormSection
+          supportingText="Chụp từ 1 đến 5 ảnh tại địa điểm; ảnh được gửi kèm vị trí hiện tại."
+          title="Bằng chứng xác thực"
+        >
           <MediaPicker
             addLabel="Chụp thêm bằng chứng"
             items={proofItems}
@@ -206,39 +221,31 @@ export default function NewAccessScreen() {
                 current.filter((proof) => proof.uri !== uri),
               )
             }
-            supportingText="Chụp từ 1 đến 5 ảnh tại địa điểm; ảnh được gửi kèm vị trí hiện tại."
+            layout="horizontal-square"
             title="Bằng chứng tại địa điểm"
           />
-          {otpRequired && !otpVerified ? (
-            <>
-              <TextField
-                keyboardType="number-pad"
-                label="Mã OTP"
-                maxLength={6}
-                onChangeText={(value) =>
-                  setOtp(value.replace(/\D/g, "").slice(0, 6))
-                }
-                value={otp}
-              />
-              <Button
-                disabled={loading || otp.length !== 6}
-                label="Xác minh OTP"
-                loading={loading}
-                onPress={verifyOtp}
-                width="full"
-              />
-            </>
-          ) : null}
-          <AppText style={{ color: colors.textSecondary }} variant="caption">
-            Nếu chủ không phản hồi sau 3 ngày, hệ thống sẽ yêu cầu xác minh lại
-            trước khi chuyển quyền.
-          </AppText>
         </FormSection>
+        {phoneHelper ? (
+          <FormSection
+            supportingText={phoneHelper}
+            title="Kiểm tra số điện thoại"
+          >
+            <TextField
+              keyboardType="number-pad"
+              label="Mã OTP gồm 6 số"
+              maxLength={6}
+              onChangeText={(value) =>
+                setOtp(value.replace(/\D/g, "").slice(0, 6))
+              }
+              value={otp}
+            />
+          </FormSection>
+        ) : null}
       </PageContent>
       <BottomActionBar>
         <Button
-          disabled={loading || verificationState !== "READY" || proofs.length === 0}
-          label="Gửi yêu cầu"
+          disabled={submitAction.disabled}
+          label={submitAction.label}
           loading={loading}
           onPress={submit}
           width="full"

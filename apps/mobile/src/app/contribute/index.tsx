@@ -12,7 +12,6 @@ import {
   Camera,
   Map,
   MapRef,
-  NativeUserLocation,
 } from "@maplibre/maplibre-react-native";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { TimePickerModal } from "react-native-paper-dates";
@@ -246,8 +245,8 @@ export default function ContributePlaceScreen() {
   const nearestSimilarLocation = similarLocations[0];
   const resolvedAddress = manualAddress.trim() || autoAddress.trim();
   const duplicateOptionMessage = nearestSimilarLocation
-    ? `Tìm thấy địa điểm gần tên "${nearestSimilarLocation.name}" trong bán kính 50m. Bạn muốn huỷ hay tiếp tục đăng địa điểm riêng?`
-    : "Tìm thấy địa điểm tương tự trong bán kính 50m. Bạn muốn huỷ hay tiếp tục đăng địa điểm riêng?";
+    ? `Tìm thấy địa điểm gần tên "${nearestSimilarLocation.name}" trong bán kính 200m. Bạn muốn huỷ hay tiếp tục đăng địa điểm riêng?`
+    : "Tìm thấy địa điểm tương tự trong bán kính 200m. Bạn muốn huỷ hay tiếp tục đăng địa điểm riêng?";
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -739,7 +738,7 @@ export default function ContributePlaceScreen() {
 
     if (step === 1) {
       if (!pinCoords || !deviceCoords) {
-        setNotice("Không lấy được vị trí để kiểm tra 50m.");
+        setNotice("Không lấy được vị trí để kiểm tra 200m.");
         return;
       }
 
@@ -763,12 +762,12 @@ export default function ContributePlaceScreen() {
         if (!validatePosition.success) {
           setNotice(
             validatePosition?.message ||
-              "Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.",
+              "Bạn phải đứng trong phạm vi 200m mới được tạo địa điểm.",
           );
           return;
         }
         if (!validatePosition.withinRange) {
-          setNotice("Bạn phải đứng trong phạm vi 50m mới được tạo địa điểm.");
+          setNotice("Bạn phải đứng trong phạm vi 200m mới được tạo địa điểm.");
           return;
         }
         checkingDuplicates = true;
@@ -1007,7 +1006,6 @@ export default function ContributePlaceScreen() {
                       zoom: 17,
                     }}
                   />
-                  <NativeUserLocation />
                 </Map>
                 <View
                   pointerEvents="none"

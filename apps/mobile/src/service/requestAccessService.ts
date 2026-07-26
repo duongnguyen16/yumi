@@ -62,6 +62,8 @@ export type AccessVerificationResult = ApiResult & {
   otpRequired?: boolean;
   expiresAt?: string;
   otpVerified?: boolean;
+  destinationPhone?: string;
+  destinationType?: "LOCATION_CONTACT";
 };
 
 export async function startAccessVerification(

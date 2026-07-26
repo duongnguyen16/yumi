@@ -20,7 +20,7 @@ import { TrustEngineService } from '../trust-engine/trust-engine.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 
-const REVIEW_ON_SITE_DISTANCE_METERS = 100;
+const REVIEW_ON_SITE_DISTANCE_METERS = 200;
 const REVIEW_ON_SITE_ACCURACY_METERS = 100;
 const MIN_REVIEW_COMMENT_LENGTH = 1;
 

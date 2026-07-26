@@ -13,6 +13,8 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  MenuItem,
+  TextField,
   Tooltip,
   Typography,
   type SxProps,
@@ -67,6 +69,14 @@ function formatTime(value?: string): string {
   return value ? dayjs(value).format('DD/MM/YYYY HH:mm') : '—';
 }
 
+function normalizeSearch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
 const headSx: SxProps<Theme> = {
   fontFamily: tokens.font.mono,
   fontSize: 11,
@@ -79,11 +89,21 @@ const headSx: SxProps<Theme> = {
   whiteSpace: 'nowrap',
 };
 
+const filterSx: SxProps<Theme> = {
+  minWidth: 160,
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 0,
+    bgcolor: tokens.color.inputBg,
+    fontSize: 14,
+  },
+};
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [panel, setPanel] = useState<PanelState>(CLOSED_PANEL);
   const [submitting, setSubmitting] = useState(false);
@@ -128,22 +148,26 @@ export default function CategoriesPage() {
   }, [fetchCategories]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return categories;
+    const q = normalizeSearch(search.trim());
+    const matchesStatus = (isActive: boolean) =>
+      !statusFilter || (statusFilter === 'active' ? isActive : !isActive);
     const result: AdminCategory[] = [];
     for (const cat of categories) {
       const catMatch =
-        cat.name.toLowerCase().includes(q) ||
-        (cat.description?.toLowerCase().includes(q) ?? false);
-      const subs = catMatch
+        !q ||
+        normalizeSearch([cat.name, cat.description].filter(Boolean).join(' ')).includes(q);
+      const searchableSubs = catMatch
         ? cat.subcategories
-        : cat.subcategories.filter((s) => s.name.toLowerCase().includes(q));
-      if (catMatch || subs.length > 0) {
+        : cat.subcategories.filter((s) => normalizeSearch(s.name).includes(q));
+      const subs = searchableSubs.filter((s) => matchesStatus(s.isActive));
+      if ((catMatch && matchesStatus(cat.isActive)) || subs.length > 0) {
         result.push({ ...cat, subcategories: subs });
       }
     }
     return result;
-  }, [categories, search]);
+  }, [categories, search, statusFilter]);
+
+  const hasCategoryFilter = Boolean(search.trim() || statusFilter);
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {
@@ -276,6 +300,20 @@ export default function CategoriesPage() {
                 placeholder="Tìm theo tên / mô tả..."
               />
             </Box>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <TextField
+                select
+                size="small"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                sx={filterSx}
+                slotProps={{ select: { displayEmpty: true } }}
+              >
+                <MenuItem value="">Tất cả trạng thái</MenuItem>
+                <MenuItem value="active">Đang hiển thị</MenuItem>
+                <MenuItem value="hidden">Đã ẩn</MenuItem>
+              </TextField>
+            </Box>
             <ActionButton
               variant="approve"
               icon={<AddOutlinedIcon />}
@@ -288,14 +326,26 @@ export default function CategoriesPage() {
         }
       />
 
-      <Box sx={{ display: { xs: 'block', sm: 'none' }, mb: 2 }}>
+      <Stack spacing={1.5} sx={{ display: { xs: 'flex', sm: 'none' }, mb: 2 }}>
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Tìm theo tên / mô tả..."
           sx={{ width: '100%' }}
         />
-      </Box>
+        <TextField
+          select
+          size="small"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          sx={{ ...filterSx, width: '100%' }}
+          slotProps={{ select: { displayEmpty: true } }}
+        >
+          <MenuItem value="">Tất cả trạng thái</MenuItem>
+          <MenuItem value="active">Đang hiển thị</MenuItem>
+          <MenuItem value="hidden">Đã ẩn</MenuItem>
+        </TextField>
+      </Stack>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -344,7 +394,11 @@ export default function CategoriesPage() {
                       <EmptyState
                         icon={<InboxOutlinedIcon sx={{ fontSize: 26 }} />}
                         title="Không có dữ liệu"
-                        subtitle="Chưa có danh mục nào khớp với tìm kiếm."
+                        subtitle={
+                          hasCategoryFilter
+                            ? 'Chưa có danh mục nào khớp với bộ lọc.'
+                            : 'Chưa có danh mục nào.'
+                        }
                       />
                     </TableCell>
                   </TableRow>

@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { Icon } from "react-native-paper";
 import { colors, radius, spacing } from "../tokens";
 import { Button, IconButton } from "./button";
@@ -9,7 +9,122 @@ import type { IconName } from "./types";
 
 export type MediaPickerItem = { id: string; uri?: string; name?: string; metadata?: string };
 
-export function MediaPicker({ title, supportingText, items, maxCount, onAdd, onRemove, icon = "image-outline", addLabel = "Thêm tệp", disabled = false }: { title: string; supportingText?: string; items: MediaPickerItem[]; maxCount: number; onAdd: () => void; onRemove: (id: string) => void; icon?: IconName; addLabel?: string; disabled?: boolean }) {
+type MediaPickerProps = {
+  title: string;
+  supportingText?: string;
+  items: MediaPickerItem[];
+  maxCount: number;
+  onAdd: () => void;
+  onRemove: (id: string) => void;
+  icon?: IconName;
+  addLabel?: string;
+  layout?: "default" | "horizontal-square";
+  disabled?: boolean;
+};
+
+export function MediaPicker({
+  title,
+  supportingText,
+  items,
+  maxCount,
+  onAdd,
+  onRemove,
+  icon = "image-outline",
+  addLabel = "Thêm tệp",
+  layout = "default",
+  disabled = false,
+}: MediaPickerProps) {
+  if (layout === "horizontal-square") {
+    return (
+      <ScrollView
+        contentContainerStyle={{ gap: spacing[2], paddingVertical: spacing[1] }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        {items.map((item) => (
+          <View
+            key={item.id}
+            style={{
+              borderRadius: radius.medium,
+              height: 92,
+              overflow: "hidden",
+              width: 92,
+            }}
+          >
+            {item.uri ? (
+              <Image
+                alt={item.name || title}
+                contentFit="cover"
+                source={{ uri: item.uri }}
+                style={{ height: 92, width: 92 }}
+              />
+            ) : (
+              <View
+                style={{
+                  alignItems: "center",
+                  backgroundColor: colors.surfaceControl,
+                  height: 92,
+                  justifyContent: "center",
+                  width: 92,
+                }}
+              >
+                <Icon color={colors.accentPrimary} size={28} source={icon} />
+              </View>
+            )}
+             <Pressable
+               accessibilityLabel={`Xóa ${item.name || title}`}
+               accessibilityRole="button"
+               disabled={disabled}
+               hitSlop={8}
+              onPress={() => onRemove(item.id)}
+              style={{
+                alignItems: "center",
+                backgroundColor: colors.surfaceRaised,
+                borderRadius: radius.pill,
+                height: 28,
+                justifyContent: "center",
+                position: "absolute",
+                right: spacing[1],
+                top: spacing[1],
+                width: 28,
+              }}
+            >
+              <Icon color={colors.textPrimary} size={16} source="close" />
+            </Pressable>
+          </View>
+        ))}
+        {items.length < maxCount ? (
+           <Pressable
+             accessibilityLabel={addLabel}
+             accessibilityRole="button"
+             disabled={disabled}
+             onPress={onAdd}
+            style={{
+              alignItems: "center",
+              backgroundColor: colors.surfaceControl,
+              borderColor: colors.borderSubtle,
+              borderRadius: radius.medium,
+              borderStyle: "dashed",
+              borderWidth: 1,
+              gap: spacing[1],
+              height: 92,
+              justifyContent: "center",
+              width: 92,
+            }}
+          >
+            <Icon color={colors.accentPrimary} size={28} source="plus" />
+            <AppText
+              style={{ color: colors.accentPrimary }}
+              variant="caption"
+            >
+              Thêm ảnh
+            </AppText>
+          </Pressable>
+        ) : null}
+      </ScrollView>
+    );
+  }
+
   return (
     <Card>
       <Stack>
